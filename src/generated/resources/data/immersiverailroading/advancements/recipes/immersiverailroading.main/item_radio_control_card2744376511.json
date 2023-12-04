@@ -1,0 +1,76 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "immersiverailroading:item_radio_control_card2744376511"
+    ]
+  },
+  "criteria": {
+    "hasbarsIron1": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "forge:barsiron"
+          }
+        ]
+      }
+    },
+    "hasoc:materialTransistor3": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "oc:materialtransistor"
+          }
+        ]
+      }
+    },
+    "hasingotIron4": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "forge:ingots/iron"
+          }
+        ]
+      }
+    },
+    "hasoc:materialTransistor5": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "oc:materialtransistor"
+          }
+        ]
+      }
+    },
+    "hasoc:dataCard17": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "oc:datacard1"
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "immersiverailroading:item_radio_control_card2744376511"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "hasbarsIron1",
+      "hasoc:materialTransistor3",
+      "hasingotIron4",
+      "hasoc:materialTransistor5",
+      "hasoc:dataCard17",
+      "has_the_recipe"
+    ]
+  ]
+}

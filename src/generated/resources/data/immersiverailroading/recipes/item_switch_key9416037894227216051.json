@@ -1,0 +1,41 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "value": {
+            "tag": "forge:ingots/steel",
+            "type": "forge:tag_empty"
+          },
+          "type": "forge:not"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "pattern": [
+          " 1",
+          " 3",
+          "45"
+        ],
+        "key": {
+          "1": {
+            "tag": "forge:ingots/steel"
+          },
+          "3": {
+            "tag": "forge:ingots/steel"
+          },
+          "4": {
+            "tag": "forge:ingots/steel"
+          },
+          "5": {
+            "tag": "forge:ingots/steel"
+          }
+        },
+        "result": {
+          "item": "immersiverailroading:item_switch_key"
+        }
+      }
+    }
+  ]
+}

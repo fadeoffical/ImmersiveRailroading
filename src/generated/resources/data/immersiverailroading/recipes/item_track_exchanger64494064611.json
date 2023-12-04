@@ -1,0 +1,40 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "012",
+    "345",
+    "678"
+  ],
+  "key": {
+    "0": {
+      "tag": "forge:glass_panes"
+    },
+    "1": {
+      "tag": "forge:glass_panes"
+    },
+    "2": {
+      "tag": "forge:glass_panes"
+    },
+    "3": {
+      "tag": "forge:item_large_wrench"
+    },
+    "4": {
+      "tag": "forge:ingots/iron"
+    },
+    "5": {
+      "tag": "forge:item_rail"
+    },
+    "6": {
+      "tag": "forge:glass_panes"
+    },
+    "7": {
+      "tag": "forge:dusts/redstone"
+    },
+    "8": {
+      "tag": "forge:glass_panes"
+    }
+  },
+  "result": {
+    "item": "immersiverailroading:item_track_exchanger"
+  }
+}

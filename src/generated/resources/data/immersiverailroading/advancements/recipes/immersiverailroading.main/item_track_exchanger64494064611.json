@@ -1,0 +1,120 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "immersiverailroading:item_track_exchanger64494064611"
+    ]
+  },
+  "criteria": {
+    "haspaneGlass0": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "forge:glass_panes"
+          }
+        ]
+      }
+    },
+    "haspaneGlass1": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "forge:glass_panes"
+          }
+        ]
+      }
+    },
+    "haspaneGlass2": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "forge:glass_panes"
+          }
+        ]
+      }
+    },
+    "hasitem_large_wrench3": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "forge:item_large_wrench"
+          }
+        ]
+      }
+    },
+    "hasingotIron4": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "forge:ingots/iron"
+          }
+        ]
+      }
+    },
+    "hasitem_rail5": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "forge:item_rail"
+          }
+        ]
+      }
+    },
+    "haspaneGlass6": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "forge:glass_panes"
+          }
+        ]
+      }
+    },
+    "hasdustRedstone7": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "forge:dusts/redstone"
+          }
+        ]
+      }
+    },
+    "haspaneGlass8": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "forge:glass_panes"
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "immersiverailroading:item_track_exchanger64494064611"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "haspaneGlass0",
+      "haspaneGlass1",
+      "haspaneGlass2",
+      "hasitem_large_wrench3",
+      "hasingotIron4",
+      "hasitem_rail5",
+      "haspaneGlass6",
+      "hasdustRedstone7",
+      "haspaneGlass8",
+      "has_the_recipe"
+    ]
+  ]
+}

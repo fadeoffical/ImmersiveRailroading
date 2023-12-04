@@ -1,0 +1,28 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " 1 ",
+    "345",
+    " 7 "
+  ],
+  "key": {
+    "1": {
+      "tag": "forge:barsiron"
+    },
+    "3": {
+      "tag": "oc:materialtransistor"
+    },
+    "4": {
+      "tag": "forge:ingots/iron"
+    },
+    "5": {
+      "tag": "oc:materialtransistor"
+    },
+    "7": {
+      "tag": "oc:datacard1"
+    }
+  },
+  "result": {
+    "item": "immersiverailroading:item_radio_control_card"
+  }
+}

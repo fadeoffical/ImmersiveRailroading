@@ -1,0 +1,31 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "01",
+    "23",
+    "45"
+  ],
+  "key": {
+    "0": {
+      "tag": "forge:ingots/gold"
+    },
+    "1": {
+      "tag": "forge:ingots/gold"
+    },
+    "2": {
+      "tag": "forge:ingots/gold"
+    },
+    "3": {
+      "tag": "forge:ingots/gold"
+    },
+    "4": {
+      "tag": "forge:ingots/gold"
+    },
+    "5": {
+      "tag": "forge:ingots/gold"
+    }
+  },
+  "result": {
+    "item": "immersiverailroading:item_conductor_whistle"
+  }
+}

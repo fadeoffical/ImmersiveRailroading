@@ -1,0 +1,54 @@
+{
+  "parent": "minecraft:recipes/root",
+  "rewards": {
+    "recipes": [
+      "immersiverailroading:item_paint_brush-63711514611"
+    ]
+  },
+  "criteria": {
+    "haswool0": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "minecraft:wool"
+          }
+        ]
+      }
+    },
+    "hasingotIron1": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "forge:ingots/iron"
+          }
+        ]
+      }
+    },
+    "hasstickWood2": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "tag": "forge:rods/wooden"
+          }
+        ]
+      }
+    },
+    "has_the_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": {
+        "recipe": "immersiverailroading:item_paint_brush-63711514611"
+      }
+    }
+  },
+  "requirements": [
+    [
+      "haswool0",
+      "hasingotIron1",
+      "hasstickWood2",
+      "has_the_recipe"
+    ]
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "0",
+    "1",
+    "2"
+  ],
+  "key": {
+    "0": {
+      "tag": "minecraft:wool"
+    },
+    "1": {
+      "tag": "forge:ingots/iron"
+    },
+    "2": {
+      "tag": "forge:rods/wooden"
+    }
+  },
+  "result": {
+    "item": "immersiverailroading:item_paint_brush"
+  }
+}
