@@ -29,7 +29,7 @@ public class BlockRailPreview extends BlockTypeEntity {
 
     @Override
     public boolean isConnectable() {
-        return super.isConnectable();
+        return false;
     }
 
     @Override
