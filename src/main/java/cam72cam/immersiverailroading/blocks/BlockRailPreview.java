@@ -7,6 +7,7 @@ import cam72cam.mod.block.BlockTypeEntity;
 import cam72cam.mod.block.Material;
 
 public class BlockRailPreview extends BlockTypeEntity {
+
     public BlockRailPreview() {
         super(ImmersiveRailroading.MODID, "block_rail_preview");
     }
