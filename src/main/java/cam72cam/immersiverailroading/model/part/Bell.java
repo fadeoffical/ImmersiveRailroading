@@ -10,14 +10,14 @@ import cam72cam.immersiverailroading.registry.EntityRollingStockDefinition;
 public class Bell extends PartSound {
     private final ModelComponent component;
 
+    public Bell(ModelComponent component, EntityRollingStockDefinition.SoundDefinition soundFile) {
+        super(soundFile, true, 150, ConfigSound.SoundCategories.Locomotive::bell);
+        this.component = component;
+    }
+
     public static Bell get(ComponentProvider provider, ModelState state, EntityRollingStockDefinition.SoundDefinition soundFile) {
         ModelComponent component = provider.parse(ModelComponentType.BELL);
         state.include(component);
         return new Bell(component, soundFile);
-    }
-
-    public Bell(ModelComponent component, EntityRollingStockDefinition.SoundDefinition soundFile) {
-        super(soundFile, true, 150, ConfigSound.SoundCategories.Locomotive::bell);
-        this.component = component;
     }
 }

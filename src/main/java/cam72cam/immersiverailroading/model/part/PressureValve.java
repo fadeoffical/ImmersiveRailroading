@@ -20,17 +20,6 @@ import java.util.UUID;
 public class PressureValve {
     private final List<ModelComponent> valves;
     private final Identifier sndFile;
-
-    public static PressureValve get(ComponentProvider provider, Identifier sndFile) {
-        List<ModelComponent> valves = provider.parseAll(ModelComponentType.PRESSURE_VALVE_X);
-        return new PressureValve(valves, sndFile); // allow empty for sound only
-    }
-
-    public PressureValve(List<ModelComponent> valves, Identifier sndFile) {
-        this.valves = valves;
-        this.sndFile = sndFile;
-    }
-
     private final ExpireableMap<UUID, ISound> sounds = new ExpireableMap<UUID, ISound>() {
         @Override
         public void onRemove(UUID key, ISound value) {
@@ -38,12 +27,22 @@ public class PressureValve {
         }
     };
 
+    public PressureValve(List<ModelComponent> valves, Identifier sndFile) {
+        this.valves = valves;
+        this.sndFile = sndFile;
+    }
+
+    public static PressureValve get(ComponentProvider provider, Identifier sndFile) {
+        List<ModelComponent> valves = provider.parseAll(ModelComponentType.PRESSURE_VALVE_X);
+        return new PressureValve(valves, sndFile); // allow empty for sound only
+    }
+
     public void effects(EntityMoveableRollingStock stock, boolean isBlowingOff) {
-        ISound sound = sounds.get(stock.getUUID());
+        ISound sound = this.sounds.get(stock.getUUID());
         if (sound == null) {
-            sound = stock.createSound(sndFile, true, 40, ConfigSound.SoundCategories.Locomotive.Steam::pressureValve);
+            sound = stock.createSound(this.sndFile, true, 40, ConfigSound.SoundCategories.Locomotive.Steam::pressureValve);
             sound.setVolume(0.3f);
-            sounds.put(stock.getUUID(), sound);
+            this.sounds.put(stock.getUUID(), sound);
         }
 
         if (isBlowingOff) {
@@ -59,16 +58,17 @@ public class PressureValve {
 
         if (ConfigGraphics.particlesEnabled && isBlowingOff) {
             Vec3d fakeMotion = stock.getVelocity();
-            for (ModelComponent valve : valves) {
-                Vec3d particlePos = stock.getPosition().add(VecUtil.rotateWrongYaw(valve.center.scale(stock.gauge.scale()), stock.getRotationYaw() + 180));
+            for (ModelComponent valve : this.valves) {
+                Vec3d particlePos = stock.getPosition()
+                        .add(VecUtil.rotateWrongYaw(valve.center.scale(stock.gauge.scale()), stock.getRotationYaw() + 180));
                 particlePos = particlePos.subtract(fakeMotion);
-                Particles.SMOKE.accept(new SmokeParticle.SmokeParticleData(stock.getWorld(), particlePos, new Vec3d(fakeMotion.x, fakeMotion.y + 0.2 * stock.gauge.scale(), fakeMotion.z),40, 0, 0.2f, valve.width() * stock.gauge.scale(), stock.getDefinition().steamParticleTexture));
+                Particles.SMOKE.accept(new SmokeParticle.SmokeParticleData(stock.getWorld(), particlePos, new Vec3d(fakeMotion.x, fakeMotion.y + 0.2 * stock.gauge.scale(), fakeMotion.z), 40, 0, 0.2f, valve.width() * stock.gauge.scale(), stock.getDefinition().steamParticleTexture));
             }
         }
     }
 
     public void removed(EntityMoveableRollingStock stock) {
-        ISound sound = sounds.get(stock.getUUID());
+        ISound sound = this.sounds.get(stock.getUUID());
         if (sound != null) {
             sound.stop();
         }

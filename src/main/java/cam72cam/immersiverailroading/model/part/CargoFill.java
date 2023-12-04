@@ -11,13 +11,6 @@ import java.util.Comparator;
 import java.util.List;
 
 public class CargoFill {
-    public static CargoFill get(ComponentProvider provider, ModelState state, boolean showCurrentLoadOnly, ModelPosition pos) {
-        List<ModelComponent> cargoLoads = pos == null ? provider.parseAll(ModelComponentType.CARGO_FILL_X) : provider.parseAll(ModelComponentType.CARGO_FILL_POS_X, pos);
-        // Make sure that cargo loads are in order for showCurrentLoadOnly (if enabled)
-        cargoLoads.sort(Comparator.comparingInt(a -> -a.id));
-        return cargoLoads.isEmpty() ? null : new CargoFill(cargoLoads, state, showCurrentLoadOnly);
-    }
-
     public CargoFill(List<ModelComponent> cargoLoads, ModelState state, boolean showCurrentLoadOnly) {
         state.push(settings -> settings.add((ModelState.GroupVisibility) (stock, group) -> {
             int percentFull = stock instanceof Freight ? ((Freight) stock).getPercentCargoFull() : 100;
@@ -34,6 +27,13 @@ public class CargoFill {
             }
             return false;
         })).include(cargoLoads);
+    }
+
+    public static CargoFill get(ComponentProvider provider, ModelState state, boolean showCurrentLoadOnly, ModelPosition pos) {
+        List<ModelComponent> cargoLoads = pos == null ? provider.parseAll(ModelComponentType.CARGO_FILL_X) : provider.parseAll(ModelComponentType.CARGO_FILL_POS_X, pos);
+        // Make sure that cargo loads are in order for showCurrentLoadOnly (if enabled)
+        cargoLoads.sort(Comparator.comparingInt(a -> -a.id));
+        return cargoLoads.isEmpty() ? null : new CargoFill(cargoLoads, state, showCurrentLoadOnly);
     }
 
 }

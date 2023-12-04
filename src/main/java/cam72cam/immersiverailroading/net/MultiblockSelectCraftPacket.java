@@ -9,29 +9,29 @@ import cam72cam.mod.net.Packet;
 import cam72cam.mod.serialization.TagField;
 
 public class MultiblockSelectCraftPacket extends Packet {
-	@TagField
-	private Vec3i pos;
-	@TagField
-	private ItemStack stack;
-	@TagField
-	private CraftingMachineMode mode;
+    @TagField
+    private Vec3i pos;
+    @TagField
+    private ItemStack stack;
+    @TagField
+    private CraftingMachineMode mode;
 
-	public MultiblockSelectCraftPacket() { }
+    public MultiblockSelectCraftPacket() {}
 
-	public MultiblockSelectCraftPacket(Vec3i tilePreviewPos, ItemStack selected, CraftingMachineMode mode) {
-		this.pos = tilePreviewPos;
-		this.stack = selected;
-		this.mode = mode;
-	}
+    public MultiblockSelectCraftPacket(Vec3i tilePreviewPos, ItemStack selected, CraftingMachineMode mode) {
+        this.pos = tilePreviewPos;
+        this.stack = selected;
+        this.mode = mode;
+    }
 
-	@Override
-	public void handle() {
-		TileMultiblock tile = getWorld().getBlockEntity(pos, TileMultiblock.class);
-		if (tile == null) {
-			ImmersiveRailroading.warn("Got invalid craft update packet at %s", pos);
-			return;
-		}
-		tile.setCraftItem(stack);
-		tile.setCraftMode(mode);
-	}
+    @Override
+    public void handle() {
+        TileMultiblock tile = this.getWorld().getBlockEntity(this.pos, TileMultiblock.class);
+        if (tile == null) {
+            ImmersiveRailroading.warn("Got invalid craft update packet at %s", this.pos);
+            return;
+        }
+        tile.setCraftItem(this.stack);
+        tile.setCraftMode(this.mode);
+    }
 }

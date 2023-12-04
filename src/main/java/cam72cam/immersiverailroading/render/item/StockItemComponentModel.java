@@ -22,6 +22,7 @@ public class StockItemComponentModel implements ItemRender.IItemModel {
     public StandardModel getModel(World world, ItemStack stack) {
         return new StandardModel().addCustom((state, pt) -> StockItemComponentModel.render(stack, state));
     }
+
     public static void render(ItemStack stack, RenderState state) {
         ItemRollingStockComponent.Data data = new ItemRollingStockComponent.Data(stack);
         double itemScale = data.gauge.scale();

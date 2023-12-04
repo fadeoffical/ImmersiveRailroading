@@ -11,77 +11,78 @@ import cam72cam.mod.render.opengl.Texture;
 import java.util.List;
 
 public class RailBaseOverlayRender {
-	private static final ExpireableMap<String, DirectDraw> cache = new ExpireableMap<String, DirectDraw>() {
-		@Override
-		public int lifespan() {
-			return 1;
-		}
-		@Override
-		public boolean sliding() {
-			return false;
-		}
-	};
+    private static final ExpireableMap<String, DirectDraw> cache = new ExpireableMap<String, DirectDraw>() {
+        @Override
+        public int lifespan() {
+            return 1;
+        }
 
-	private static DirectDraw doDraw(RailInfo info, List<TrackBase> tracks, Vec3i pos) {
-		DirectDraw draw = new DirectDraw();
-		Vec3i placePos = new Vec3i(info.placementInfo.placementPosition).add(pos);
+        @Override
+        public boolean sliding() {
+            return false;
+        }
+    };
 
-		for (TrackBase base : tracks) {
-			boolean canPlace = base.canPlaceTrack();
-			if (!canPlace) {
-				Vec3i tpos = base.getPos();
-				tpos = tpos.subtract(placePos);
+    public static void draw(RailInfo info, List<TrackBase> tracks, Vec3i pos, RenderState state) {
+        String key = info.uniqueID + pos.add(new Vec3i(info.placementInfo.placementPosition));
+        DirectDraw draw = cache.get(key);
+        if (draw == null) {
+            draw = doDraw(info, tracks, pos);
+            cache.put(key, draw);
+        }
+        state.texture(Texture.NO_TEXTURE);
+        state.color(1, 0, 0, 1);
+        draw.draw(state);
+    }
 
-				double width = 1.002;
-				double height = base.getBedHeight() + 0.2f;
-				double x = tpos.x + -0.001;
-				double y = tpos.y;
-				double z = tpos.z + 0.001 + 1;
+    private static DirectDraw doDraw(RailInfo info, List<TrackBase> tracks, Vec3i pos) {
+        DirectDraw draw = new DirectDraw();
+        Vec3i placePos = new Vec3i(info.placementInfo.placementPosition).add(pos);
 
-				// front
-				draw.vertex(x + 0.0f, y + 0.0f, z + 0.0f);
-				draw.vertex(x + width, y + 0.0f, z + 0.0f);
-				draw.vertex(x + width, y + height, z + 0.0f);
-				draw.vertex(x + 0.0f, y + height, z + 0.0f);
-				// back
-				draw.vertex(x + 0.0f, y + height, z + -width);
-				draw.vertex(x + width, y + height, z + -width);
-				draw.vertex(x + width, y + 0.0f, z + -width);
-				draw.vertex(x + 0.0f, y + 0.0f, z + -width);
-				// right
-				draw.vertex(x + width, y + 0.0f, z + 0.0f);
-				draw.vertex(x + width, y + 0.0f, z + -width);
-				draw.vertex(x + width, y + height, z + -width);
-				draw.vertex(x + width, y + height, z + 0.0f);
-				// left
-				draw.vertex(x + 0.0f, y + height, z + 0.0f);
-				draw.vertex(x + 0.0f, y + height, z + -width);
-				draw.vertex(x + 0.0f, y + 0.0f, z + -width);
-				draw.vertex(x + 0.0f, y + 0.0f, z + 0.0f);
-				// top
-				draw.vertex(x + 0.0f, y + height, z + 0.0f);
-				draw.vertex(x + width, y + height, z + 0.0f);
-				draw.vertex(x + width, y + height, z + -width);
-				draw.vertex(x + 0.0f, y + height, z + -width);
-				// bottom
-				draw.vertex(x + 0.0f, y + 0.0f, z + 0.0f);
-				draw.vertex(x + width, y + 0.0f, z + 0.0f);
-				draw.vertex(x + width, y + 0.0f, z + -width);
-				draw.vertex(x + 0.0f, y + 0.0f, z + -width);
-			}
-		}
-		return draw;
-	}
+        for (TrackBase base : tracks) {
+            boolean canPlace = base.canPlaceTrack();
+            if (!canPlace) {
+                Vec3i tpos = base.getPos();
+                tpos = tpos.subtract(placePos);
 
-	public static void draw(RailInfo info, List<TrackBase> tracks, Vec3i pos, RenderState state) {
-		String key = info.uniqueID + pos.add(new Vec3i(info.placementInfo.placementPosition));
-		DirectDraw draw = cache.get(key);
-		if (draw == null) {
-			draw = doDraw(info, tracks, pos);
-			cache.put(key, draw);
-		}
-		state.texture(Texture.NO_TEXTURE);
-		state.color(1, 0, 0, 1);
-		draw.draw(state);
-	}
+                double width = 1.002;
+                double height = base.getBedHeight() + 0.2f;
+                double x = tpos.x + -0.001;
+                double y = tpos.y;
+                double z = tpos.z + 0.001 + 1;
+
+                // front
+                draw.vertex(x + 0.0f, y + 0.0f, z + 0.0f);
+                draw.vertex(x + width, y + 0.0f, z + 0.0f);
+                draw.vertex(x + width, y + height, z + 0.0f);
+                draw.vertex(x + 0.0f, y + height, z + 0.0f);
+                // back
+                draw.vertex(x + 0.0f, y + height, z + -width);
+                draw.vertex(x + width, y + height, z + -width);
+                draw.vertex(x + width, y + 0.0f, z + -width);
+                draw.vertex(x + 0.0f, y + 0.0f, z + -width);
+                // right
+                draw.vertex(x + width, y + 0.0f, z + 0.0f);
+                draw.vertex(x + width, y + 0.0f, z + -width);
+                draw.vertex(x + width, y + height, z + -width);
+                draw.vertex(x + width, y + height, z + 0.0f);
+                // left
+                draw.vertex(x + 0.0f, y + height, z + 0.0f);
+                draw.vertex(x + 0.0f, y + height, z + -width);
+                draw.vertex(x + 0.0f, y + 0.0f, z + -width);
+                draw.vertex(x + 0.0f, y + 0.0f, z + 0.0f);
+                // top
+                draw.vertex(x + 0.0f, y + height, z + 0.0f);
+                draw.vertex(x + width, y + height, z + 0.0f);
+                draw.vertex(x + width, y + height, z + -width);
+                draw.vertex(x + 0.0f, y + height, z + -width);
+                // bottom
+                draw.vertex(x + 0.0f, y + 0.0f, z + 0.0f);
+                draw.vertex(x + width, y + 0.0f, z + 0.0f);
+                draw.vertex(x + width, y + 0.0f, z + -width);
+                draw.vertex(x + 0.0f, y + 0.0f, z + -width);
+            }
+        }
+        return draw;
+    }
 }

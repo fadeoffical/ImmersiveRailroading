@@ -25,6 +25,12 @@ import java.util.List;
 
 public abstract class ValveGear {
 
+    private static final ExpireableMap<String, ChuffSound> chuffSounds = new ExpireableMap<String, ChuffSound>() {
+        @Override
+        public void onRemove(String key, ChuffSound value) {
+            value.free();
+        }
+    };
     protected final WheelSet wheels;
     private final ModelState state;
     protected float angleOffset;
@@ -60,30 +66,40 @@ public abstract class ValveGear {
         }
     }
 
-    void effects(EntityMoveableRollingStock stock) {
-        if (frontExhaust != null) {
-            frontExhaust.effects(stock);
+    private static Vec3d findDirection(String name) {
+        Vec3d result = Vec3d.ZERO;
+        for (Direction value : Direction.values()) {
+            if (name.contains("__" + value.name())) {
+                result = result.add(value.vec);
+            }
         }
-        if (rearExhaust != null) {
-            rearExhaust.effects(stock);
+        return result;
+    }
+
+    void effects(EntityMoveableRollingStock stock) {
+        if (this.frontExhaust != null) {
+            this.frontExhaust.effects(stock);
+        }
+        if (this.rearExhaust != null) {
+            this.rearExhaust.effects(stock);
         }
     }
 
     public boolean isEndStroke(EntityMoveableRollingStock stock) {
-        return (frontExhaust != null && frontExhaust.isEndStroke(stock)) ||
-                (rearExhaust != null && rearExhaust.isEndStroke(stock));
+        return (this.frontExhaust != null && this.frontExhaust.isEndStroke(stock)) ||
+                (this.rearExhaust != null && this.rearExhaust.isEndStroke(stock));
     }
 
     float angle(double distance) {
-        return wheels.angle(distance) + angleOffset;
+        return this.wheels.angle(distance) + this.angleOffset;
     }
 
     public void removed(EntityMoveableRollingStock stock) {
-        if (frontExhaust != null) {
-            frontExhaust.removed(stock);
+        if (this.frontExhaust != null) {
+            this.frontExhaust.removed(stock);
         }
-        if (rearExhaust != null) {
-            rearExhaust.removed(stock);
+        if (this.rearExhaust != null) {
+            this.rearExhaust.removed(stock);
         }
     }
 
@@ -102,14 +118,91 @@ public abstract class ValveGear {
         }
     }
 
-    private static Vec3d findDirection(String name) {
-        Vec3d result = Vec3d.ZERO;
-        for (Direction value : Direction.values()) {
-            if (name.contains("__" + value.name())) {
-                result = result.add(value.vec);
+    private static class ChuffSound {
+        private final LocomotiveSteam stock;
+        private final float pitchOffset;
+        private final List<ISound> chuffs;
+        private final ISound cylinder_drain;
+        private boolean pitchStroke;
+        private boolean chuffOn;
+        private int chuffId;
+        private float drain_volume = 0;
+
+        public ChuffSound(LocomotiveSteam stock) {
+            this.chuffOn = false;
+            this.chuffId = 0;
+            this.chuffs = new ArrayList<>();
+            for (int i = 0; i < 6; i++) {
+                this.chuffs.add(stock.createSound(stock.getDefinition().chuff, false, 40, ConfigSound.SoundCategories.Locomotive.Steam::chuff));
+            }
+            this.cylinder_drain = stock.createSound(stock.getDefinition().cylinder_drain, true, 40, ConfigSound.SoundCategories.Locomotive.Steam::cylinder_drain);
+            this.stock = stock;
+            this.pitchOffset = (float) (Math.random() / 50);
+            this.pitchStroke = false;
+        }
+
+        public void update(Vec3d particlePos, boolean enteredStroke, boolean drain_enabled) {
+            if (!this.chuffOn) {
+                if (enteredStroke && Math.abs(this.stock.getThrottle() * this.stock.getReverser()) > 0) {
+                    this.chuffOn = true;
+                    this.pitchStroke = !this.pitchStroke;
+
+                    double speed = Math.abs(this.stock.getCurrentSpeed().minecraft());
+                    double maxSpeed = Math.abs(this.stock.getDefinition().getMaxSpeed(this.stock.gauge).minecraft());
+                    float volume = (float) Math.max(1 - speed / maxSpeed, 0.3) * Math.abs(this.stock.getThrottle() * this.stock.getReverser());
+                    volume = (float) Math.sqrt(volume);
+                    double fraction = 3;
+                    float pitch = 0.8f + (float) (speed / maxSpeed / fraction * 0.2);
+                    float delta = this.pitchOffset - (this.pitchStroke ? -0.02f : 0);
+                    ISound chuff = this.chuffs.get(this.chuffId);
+                    chuff.setPitch(pitch + delta);
+                    chuff.setVolume(volume + delta);
+                    chuff.play(particlePos);
+
+                    this.chuffId = (this.chuffId + 1) % this.chuffs.size();
+                }
+            } else {
+                if (!enteredStroke) {
+                    // Reset for next stroke
+                    this.chuffOn = false;
+                }
+            }
+            for (ISound chuff : this.chuffs) {
+                if (chuff.isPlaying()) {
+                    chuff.setPosition(particlePos);
+                    chuff.setVelocity(this.stock.getVelocity());
+                }
+            }
+
+            if (drain_enabled) {
+                this.drain_volume += 0.5f;
+                this.drain_volume = Math.min(1, this.drain_volume);
+            }
+            if (!drain_enabled && this.drain_volume > 0) {
+                this.drain_volume -= 0.2f;
+            }
+
+            if (this.drain_volume > 0 && !this.cylinder_drain.isPlaying()) {
+                this.cylinder_drain.setPitch(1 - this.pitchOffset * 5);
+                this.cylinder_drain.setVolume(this.drain_volume * this.stock.getThrottle());
+                this.cylinder_drain.play(particlePos);
+            }
+            if (this.drain_volume <= 0 && this.cylinder_drain.isPlaying()) {
+                this.cylinder_drain.stop();
+            }
+            if (this.cylinder_drain.isPlaying()) {
+                this.cylinder_drain.setVolume(this.drain_volume * this.stock.getThrottle());
+                this.cylinder_drain.setPosition(particlePos);
+                this.cylinder_drain.setVelocity(this.stock.getVelocity());
             }
         }
-        return result;
+
+        void free() {
+            for (ISound chuff : this.chuffs) {
+                chuff.stop();
+            }
+            this.cylinder_drain.stop();
+        }
     }
 
     public class Exhaust {
@@ -135,34 +228,27 @@ public abstract class ValveGear {
             this(component.center, findDirection(component.key), angle);
         }
 
-        private Pair<Matrix4, Vec3d> particlePos(EntityMoveableRollingStock stock) {
-            Matrix4 m = state.getMatrix(stock);
-            if (m == null) {
-                // Just in case...
-                m = new Matrix4();
-            }
-            return Pair.of(m, stock.getPosition().add(VecUtil.rotateWrongYaw(m.apply(position).scale(stock.gauge.scale()), stock.getRotationYaw() + 180)));
-
-        }
-
         public void effects(EntityMoveableRollingStock stock) {
-            boolean drains_enabled = isEndStroke(stock) && stock instanceof LocomotiveSteam && ((LocomotiveSteam) stock).cylinderDrainsEnabled();
+            boolean drains_enabled = this.isEndStroke(stock) && stock instanceof LocomotiveSteam && ((LocomotiveSteam) stock).cylinderDrainsEnabled();
 
-            if (stock instanceof Locomotive && (((LocomotiveSteam)stock).getBoilerPressure() <= 0 && Config.ConfigBalance.FuelRequired)) {
+            if (stock instanceof Locomotive && (((LocomotiveSteam) stock).getBoilerPressure() <= 0 && Config.ConfigBalance.FuelRequired)) {
                 return;
             }
 
             Pair<Matrix4, Vec3d> particlePos = null; //Lazy eval
             if (ConfigGraphics.particlesEnabled && drains_enabled) {
-                particlePos = particlePos(stock);
+                particlePos = this.particlePos(stock);
                 double accell = 0.3 * stock.gauge.scale();
-                Vec3d sideMotion = stock.getVelocity().add(VecUtil.rotateWrongYaw(particlePos.getLeft().apply(direction).scale(accell), stock.getRotationYaw()+180));
-                Particles.SMOKE.accept(new SmokeParticle.SmokeParticleData(stock.getWorld(), particlePos.getRight(), new Vec3d(sideMotion.x, sideMotion.y+0.01 * stock.gauge.scale(), sideMotion.z), 80, 0, 0.6f, 0.2 * stock.gauge.scale(), stock.getDefinition().steamParticleTexture));
+                Vec3d sideMotion = stock.getVelocity()
+                        .add(VecUtil.rotateWrongYaw(particlePos.getLeft()
+                                .apply(this.direction)
+                                .scale(accell), stock.getRotationYaw() + 180));
+                Particles.SMOKE.accept(new SmokeParticle.SmokeParticleData(stock.getWorld(), particlePos.getRight(), new Vec3d(sideMotion.x, sideMotion.y + 0.01 * stock.gauge.scale(), sideMotion.z), 80, 0, 0.6f, 0.2 * stock.gauge.scale(), stock.getDefinition().steamParticleTexture));
             }
 
             if (stock instanceof LocomotiveSteam) {
                 if (particlePos == null) {
-                    particlePos = particlePos(stock);
+                    particlePos = this.particlePos(stock);
                 }
                 String key = String.format("%s-%s", stock.getUUID(), this.hashCode());
                 ChuffSound sound = chuffSounds.get(key);
@@ -170,13 +256,8 @@ public abstract class ValveGear {
                     sound = new ChuffSound((LocomotiveSteam) stock);
                     chuffSounds.put(key, sound);
                 }
-                sound.update(particlePos.getRight(), isEndStroke(stock, 0.125f), drains_enabled);
+                sound.update(particlePos.getRight(), this.isEndStroke(stock, 0.125f), drains_enabled);
             }
-        }
-
-        public void removed(EntityMoveableRollingStock stock) {
-            String key = String.format("%s-%s", stock.getUUID(), this.hashCode());
-            chuffSounds.remove(key);
         }
 
         public boolean isEndStroke(EntityMoveableRollingStock stock) {
@@ -187,12 +268,25 @@ public abstract class ValveGear {
                     return false;
                 }
 
-                delta = Math.abs(loco.getReverser())/4;
+                delta = Math.abs(loco.getReverser()) / 4;
             }
-            return isEndStroke(stock, delta);
+            return this.isEndStroke(stock, delta);
         }
+
+        private Pair<Matrix4, Vec3d> particlePos(EntityMoveableRollingStock stock) {
+            Matrix4 m = ValveGear.this.state.getMatrix(stock);
+            if (m == null) {
+                // Just in case...
+                m = new Matrix4();
+            }
+            return Pair.of(m, stock.getPosition()
+                    .add(VecUtil.rotateWrongYaw(m.apply(this.position)
+                            .scale(stock.gauge.scale()), stock.getRotationYaw() + 180)));
+
+        }
+
         public boolean isEndStroke(EntityMoveableRollingStock stock, float delta) {
-            double percent = angle(stock.distanceTraveled / stock.gauge.scale()) / 360;
+            double percent = ValveGear.this.angle(stock.distanceTraveled / stock.gauge.scale()) / 360;
             double pistonPos = this.angle / 360;
 
             // There's probably a much better way of doing this...
@@ -200,99 +294,10 @@ public abstract class ValveGear {
                     Math.abs(percent - pistonPos - 1) < delta ||
                     Math.abs(percent - pistonPos + 1) < delta;
         }
-    }
 
-    private static class ChuffSound {
-        private final LocomotiveSteam stock;
-        private final float pitchOffset;
-        private boolean pitchStroke;
-        private boolean chuffOn;
-        private final List<ISound> chuffs;
-        private final ISound cylinder_drain;
-        private int chuffId;
-        private float drain_volume = 0;
-
-        public ChuffSound(LocomotiveSteam stock) {
-            chuffOn = false;
-            chuffId = 0;
-            chuffs = new ArrayList<>();
-            for (int i = 0; i < 6; i++) {
-                chuffs.add(stock.createSound(stock.getDefinition().chuff, false, 40, ConfigSound.SoundCategories.Locomotive.Steam::chuff));
-            }
-            cylinder_drain = stock.createSound(stock.getDefinition().cylinder_drain, true, 40, ConfigSound.SoundCategories.Locomotive.Steam::cylinder_drain);
-            this.stock = stock;
-            this.pitchOffset = (float) (Math.random() / 50);
-            this.pitchStroke = false;
-        }
-
-        public void update(Vec3d particlePos, boolean enteredStroke, boolean drain_enabled) {
-            if (!chuffOn) {
-                if (enteredStroke && Math.abs(stock.getThrottle() * stock.getReverser()) > 0) {
-                    chuffOn = true;
-                    pitchStroke = !pitchStroke;
-
-                    double speed = Math.abs(stock.getCurrentSpeed().minecraft());
-                    double maxSpeed = Math.abs(stock.getDefinition().getMaxSpeed(stock.gauge).minecraft());
-                    float volume = (float) Math.max(1-speed/maxSpeed, 0.3) * Math.abs(stock.getThrottle() * stock.getReverser());
-                    volume = (float) Math.sqrt(volume);
-                    double fraction = 3;
-                    float pitch = 0.8f + (float) (speed/maxSpeed/fraction * 0.2);
-                    float delta = pitchOffset - (pitchStroke ? -0.02f : 0);
-                    ISound chuff = chuffs.get(chuffId);
-                    chuff.setPitch(pitch + delta);
-                    chuff.setVolume(volume + delta);
-                    chuff.play(particlePos);
-
-                    chuffId = (chuffId + 1) % chuffs.size();
-                }
-            } else {
-                if (!enteredStroke) {
-                    // Reset for next stroke
-                    chuffOn = false;
-                }
-            }
-            for (ISound chuff : chuffs) {
-                if (chuff.isPlaying()) {
-                    chuff.setPosition(particlePos);
-                    chuff.setVelocity(stock.getVelocity());
-                }
-            }
-
-            if (drain_enabled){
-                drain_volume += 0.5f;
-                drain_volume = Math.min(1, drain_volume);
-            }
-            if (!drain_enabled && drain_volume > 0) {
-                drain_volume -= 0.2f;
-            }
-
-            if (drain_volume > 0 && !cylinder_drain.isPlaying()) {
-                cylinder_drain.setPitch(1 - pitchOffset*5);
-                cylinder_drain.setVolume(drain_volume * stock.getThrottle());
-                cylinder_drain.play(particlePos);
-            }
-            if (drain_volume <= 0 && cylinder_drain.isPlaying()) {
-                cylinder_drain.stop();
-            }
-            if (cylinder_drain.isPlaying()) {
-                cylinder_drain.setVolume(drain_volume * stock.getThrottle());
-                cylinder_drain.setPosition(particlePos);
-                cylinder_drain.setVelocity(stock.getVelocity());
-            }
-        }
-
-        void free() {
-            for (ISound chuff : chuffs) {
-                chuff.stop();
-            }
-            cylinder_drain.stop();
+        public void removed(EntityMoveableRollingStock stock) {
+            String key = String.format("%s-%s", stock.getUUID(), this.hashCode());
+            chuffSounds.remove(key);
         }
     }
-
-    private static ExpireableMap<String, ChuffSound> chuffSounds = new ExpireableMap<String, ChuffSound>() {
-        @Override
-        public void onRemove(String key, ChuffSound value) {
-            value.free();
-        }
-    };
 }

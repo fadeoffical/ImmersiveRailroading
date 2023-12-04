@@ -7,18 +7,18 @@ import cam72cam.immersiverailroading.entity.EntityBuildableRollingStock;
 import cam72cam.immersiverailroading.entity.EntityCoupleableRollingStock.CouplerType;
 import cam72cam.immersiverailroading.entity.EntityMoveableRollingStock;
 import cam72cam.immersiverailroading.entity.EntityRollingStock;
-import cam72cam.immersiverailroading.util.*;
 import cam72cam.immersiverailroading.gui.overlay.GuiBuilder;
 import cam72cam.immersiverailroading.gui.overlay.Readouts;
 import cam72cam.immersiverailroading.library.*;
 import cam72cam.immersiverailroading.model.StockModel;
 import cam72cam.immersiverailroading.model.components.ModelComponent;
+import cam72cam.immersiverailroading.util.*;
 import cam72cam.mod.entity.EntityRegistry;
 import cam72cam.mod.math.Vec3d;
 import cam72cam.mod.model.obj.OBJGroup;
 import cam72cam.mod.model.obj.VertexBuffer;
 import cam72cam.mod.resource.Identifier;
-import cam72cam.mod.serialization.*;
+import cam72cam.mod.serialization.ResourceCache;
 import cam72cam.mod.serialization.ResourceCache.GenericByteBuffer;
 import cam72cam.mod.serialization.TagCompound;
 import cam72cam.mod.serialization.TagField;
@@ -31,7 +31,6 @@ import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -43,9 +42,13 @@ public abstract class EntityRollingStockDefinition {
     private static final Identifier DEFAULT_PARTICLE_TEXTURE = new Identifier(ImmersiveRailroading.MODID, "textures/light.png");
 
     public final String defID;
-    private final Class<? extends EntityRollingStock> type;
-
     public final List<String> itemGroups;
+    protected final Map<String, ControlSoundsDefinition> controlSounds = new HashMap<>();
+    private final Class<? extends EntityRollingStock> type;
+    private final Map<ModelComponentType, List<ModelComponent>> renderComponents;
+    private final List<ItemComponentType> itemComponents;
+    private final Function<EntityBuildableRollingStock, float[][]> heightmap;
+    private final Map<String, LightDefinition> lights = new HashMap<>();
     public Map<String, String> textureNames;
     public float dampeningAmount;
     public Gauge recommended_gauge;
@@ -59,14 +62,20 @@ public abstract class EntityRollingStockDefinition {
     public Identifier flange_sound;
     public Identifier collision_sound;
     public double flange_min_yaw;
+    public float darken;
+    public Identifier modelLoc;
+    public Identifier smokeParticleTexture;
+    public Identifier steamParticleTexture;
+    public double rollingResistanceCoefficient;
+    public double directFrictionCoefficient;
+    public List<AnimationDefinition> animations;
+    public Map<String, Float> cgDefaults;
+    protected StockModel<?, ?> model;
     double internal_inv_scale;
     private String name;
     private String modelerName;
     private String packName;
     private ValveGearConfig valveGear;
-    public float darken;
-    public Identifier modelLoc;
-    protected StockModel<?, ?> model;
     private Vec3d passengerCenter;
     private float bogeyFront;
     private float bogeyRear;
@@ -75,10 +84,10 @@ public abstract class EntityRollingStockDefinition {
     private float couplerSlackFront;
     private float couplerSlackRear;
     private boolean scalePitch;
-    private double frontBounds;
-    private double rearBounds;
-    private double heightBounds;
-    private double widthBounds;
+    private final double frontBounds;
+    private final double rearBounds;
+    private final double heightBounds;
+    private final double widthBounds;
     private double passengerCompartmentLength;
     private double passengerCompartmentWidth;
     private double weight;
@@ -86,13 +95,6 @@ public abstract class EntityRollingStockDefinition {
     private float interiorLightLevel;
     private boolean hasIndependentBrake;
     private boolean hasPressureBrake;
-    private final Map<ModelComponentType, List<ModelComponent>> renderComponents;
-    private final List<ItemComponentType> itemComponents;
-    private final Function<EntityBuildableRollingStock, float[][]> heightmap;
-    private final Map<String, LightDefinition> lights = new HashMap<>();
-    protected final Map<String, ControlSoundsDefinition> controlSounds = new HashMap<>();
-    public Identifier smokeParticleTexture;
-    public Identifier steamParticleTexture;
     private boolean isLinearBrakeControl;
     private GuiBuilder overlay;
     private List<String> extraTooltipInfo;
@@ -100,234 +102,39 @@ public abstract class EntityRollingStockDefinition {
     private double swayMultiplier;
     private double tiltMultiplier;
     private float brakeCoefficient;
-    public double rollingResistanceCoefficient;
-    public double directFrictionCoefficient;
-
-    public List<AnimationDefinition> animations;
-    public Map<String, Float> cgDefaults;
-
-    public static class SoundDefinition {
-        public final Identifier start;
-        public final Identifier main;
-        public final boolean looping;
-        public final Identifier stop;
-        public final Float distance;
-        public final float volume;
-
-        public SoundDefinition(Identifier fallback) {
-            // Simple
-            start = null;
-            main = fallback;
-            looping = true;
-            stop = null;
-            distance = null;
-            volume = 1;
-        }
-
-        public SoundDefinition(DataBlock obj) {
-            start = obj.getValue("start").asIdentifier();
-            main = obj.getValue("main").asIdentifier();
-            looping = obj.getValue("looping").asBoolean(true);
-            stop = obj.getValue("stop").asIdentifier();
-            distance = obj.getValue("distance").asFloat();
-            volume = obj.getValue("volume").asFloat(1.0f);
-        }
-
-        public static SoundDefinition getOrDefault(DataBlock block, String key) {
-            DataBlock found = block.getBlock(key);
-            if (found != null) {
-                return new SoundDefinition(found);
-            }
-            Identifier ident = block.getValue(key).asIdentifier();
-            if (ident != null && ident.canLoad()) {
-                return new SoundDefinition(ident);
-            }
-            return null;
-        }
-    }
-
-    public static class AnimationDefinition {
-        public enum AnimationMode {
-            VALUE,
-            PLAY_FORWARD,
-            PLAY_REVERSE,
-            PLAY_BOTH,
-            LOOP,
-            LOOP_SPEED
-        }
-        public final String control_group;
-        public final AnimationMode mode;
-        public final Readouts readout;
-        public final Identifier animatrix;
-        public final float offset;
-        public final boolean invert;
-        public final float frames_per_tick;
-        public final SoundDefinition sound;
-
-        public AnimationDefinition(DataBlock obj) {
-            control_group = obj.getValue("control_group").asString();
-            String readout = obj.getValue("readout").asString();
-            this.readout = readout != null ? Readouts.valueOf(readout.toUpperCase(Locale.ROOT)) : null;
-            if (control_group == null && readout == null) {
-                throw new IllegalArgumentException("Must specify either a control group or a readout for an animation");
-            }
-            animatrix = obj.getValue("animatrix").asIdentifier();
-            mode = AnimationMode.valueOf(obj.getValue("mode").asString().toUpperCase(Locale.ROOT));
-            offset = obj.getValue("offset").asFloat(0f);
-            invert = obj.getValue("invert").asBoolean(false);
-            frames_per_tick = obj.getValue("frames_per_tick").asFloat(1f);
-            sound = SoundDefinition.getOrDefault(obj, "sound");
-        }
-
-        public boolean valid() {
-            return animatrix != null && (control_group != null || readout != null);
-        }
-    }
-
-    public static class LightDefinition {
-        public static final Identifier default_light_tex = new Identifier(ImmersiveRailroading.MODID, "textures/light.png");
-
-        public final float blinkIntervalSeconds;
-        public final float blinkOffsetSeconds;
-        public final boolean blinkFullBright;
-        public final String reverseColor;
-        public final Identifier lightTex;
-        public final boolean castsLight;
-
-        private LightDefinition(DataBlock data) {
-            blinkIntervalSeconds = data.getValue("blinkIntervalSeconds").asFloat(0f);
-            blinkOffsetSeconds = data.getValue("blinkOffsetSeconds").asFloat(0f);
-            blinkFullBright = data.getValue("blinkFullBright").asBoolean(true);
-            reverseColor = data.getValue("reverseColor").asString();
-            lightTex = data.getValue("texture").asIdentifier(default_light_tex);
-            castsLight = data.getValue("castsLight").asBoolean(true);
-        }
-    }
-
-    public static class ControlSoundsDefinition {
-        public final Identifier engage;
-        public final Identifier move;
-        public final Float movePercent;
-        public final Identifier disengage;
-
-        private final Map<UUID, List<ISound>> sounds = new HashMap<>();
-        private final Map<UUID, Float> lastMoveSoundValue = new HashMap<>();
-        private final Map<UUID, Boolean> wasSoundPressed = new HashMap<>();
-        private static final List<ISound> toStop = new ArrayList<>();
-
-        public ControlSoundsDefinition(Identifier engage, Identifier move, Float movePercent, Identifier disengage) {
-            this.engage = engage;
-            this.move = move;
-            this.movePercent = movePercent;
-            this.disengage = disengage;
-        }
-
-        public ControlSoundsDefinition(DataBlock data) {
-            engage = data.getValue("engage").asIdentifier();
-            move = data.getValue("move").asIdentifier();
-            movePercent = data.getValue("movePercent").asFloat();
-            disengage = data.getValue("disengage").asIdentifier();
-        }
-
-        public static void cleanupStoppedSounds() {
-            if (toStop.isEmpty()) {
-                return;
-            }
-            for (ISound sound : toStop) {
-                sound.stop();
-            }
-            toStop.clear();
-        }
-
-        private void createSound(EntityRollingStock stock, Identifier sound, Vec3d pos, boolean repeats) {
-            if (sound == null) {
-                return;
-            }
-            ISound snd = stock.createSound(sound, repeats, 10, ConfigSound.SoundCategories::controls);
-            snd.setVelocity(stock.getVelocity());
-            snd.setVolume(1);
-            snd.setPitch(1f);
-            snd.play(pos);
-            sounds.computeIfAbsent(stock.getUUID(), k -> new ArrayList<>()).add(snd);
-        }
-
-        public void effects(EntityRollingStock stock, boolean isPressed, float value, Vec3d pos) {
-            if (this.sounds.containsKey(stock.getUUID())) {
-                for (ISound snd : new ArrayList<>(this.sounds.get(stock.getUUID()))) {
-                    if (snd.isPlaying()) {
-                        snd.setVelocity(stock.getVelocity());
-                        snd.setPosition(pos);
-                    }
-                }
-            }
-
-            Boolean wasPressed = wasSoundPressed.getOrDefault(stock.getUUID(), false);
-            wasSoundPressed.put(stock.getUUID(), isPressed);
-
-            float lastValue = lastMoveSoundValue.computeIfAbsent(stock.getUUID(), k -> value);
-
-            if (!wasPressed && isPressed) {
-                // Start
-                createSound(stock, engage, pos, false);
-                if (move != null && movePercent == null) {
-                    // Start move repeat
-                    createSound(stock, move, pos, true);
-                }
-            } else if (wasPressed && !isPressed) {
-                // Release
-                if (this.sounds.containsKey(stock.getUUID())) {
-                    // Start and Stop may have happend between ticks, we want to wait till the next tick to stop the sound
-                    toStop.addAll(this.sounds.remove(stock.getUUID()));
-                }
-                createSound(stock, disengage, pos, false);
-            } else if (move != null && movePercent != null){
-                // Move
-                if (Math.abs(lastValue - value) > movePercent) {
-                    createSound(stock, move, pos, false);
-                    lastMoveSoundValue.put(stock.getUUID(), value);
-                }
-            }
-        }
-
-        public <T extends EntityMoveableRollingStock> void removed(T stock) {
-            List<ISound> removed = this.sounds.remove(stock.getUUID());
-            if (removed != null) {
-                for (ISound sound : removed) {
-                    sound.stop();
-                }
-            }
-        }
-    }
 
     public EntityRollingStockDefinition(Class<? extends EntityRollingStock> type, String defID, DataBlock data) throws Exception {
         this.type = type;
         this.defID = defID;
 
 
-        loadData(transformData(data));
+        this.loadData(this.transformData(data));
 
-        this.model = createModel();
-        this.itemGroups = model.groups.keySet().stream().filter(x -> !ModelComponentType.shouldRender(x)).collect(Collectors.toList());
+        this.model = this.createModel();
+        this.itemGroups = this.model.groups.keySet()
+                .stream()
+                .filter(x -> !ModelComponentType.shouldRender(x))
+                .collect(Collectors.toList());
 
         this.renderComponents = new HashMap<>();
-        for (ModelComponent component : model.allComponents) {
-            renderComponents.computeIfAbsent(component.type, v -> new ArrayList<>())
+        for (ModelComponent component : this.model.allComponents) {
+            this.renderComponents.computeIfAbsent(component.type, v -> new ArrayList<>())
                     .add(0, component);
         }
 
-        itemComponents = model.allComponents.stream()
+        this.itemComponents = this.model.allComponents.stream()
                 .map(component -> component.type)
                 .map(ItemComponentType::from)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
-        frontBounds = -model.minOfGroup(model.groups()).x;
-        rearBounds = model.maxOfGroup(model.groups()).x;
-        widthBounds = model.widthOfGroups(model.groups());
+        this.frontBounds = -this.model.minOfGroup(this.model.groups()).x;
+        this.rearBounds = this.model.maxOfGroup(this.model.groups()).x;
+        this.widthBounds = this.model.widthOfGroups(this.model.groups());
 
         // Bad hack for height bounds
         ArrayList<String> heightGroups = new ArrayList<>();
-        for (String group : model.groups()) {
+        for (String group : this.model.groups()) {
             boolean ignore = false;
             for (ModelComponentType rct : ModelComponentType.values()) {
                 if (rct.collisionsEnabled) {
@@ -347,13 +154,13 @@ public abstract class EntityRollingStockDefinition {
                 heightGroups.add(group);
             }
         }
-        heightBounds = model.heightOfGroups(heightGroups);
+        this.heightBounds = this.model.heightOfGroups(heightGroups);
 
-        this.heightmap = initHeightmap();
+        this.heightmap = this.initHeightmap();
     }
 
     public final EntityRollingStock spawn(World world, Vec3d pos, float yaw, Gauge gauge, String texture) {
-        EntityRollingStock stock = (EntityRollingStock) EntityRegistry.create(world, type);
+        EntityRollingStock stock = (EntityRollingStock) EntityRegistry.create(world, this.type);
         stock.setPosition(pos);
         stock.setRotationYaw(yaw);
         // Override prev
@@ -364,7 +171,7 @@ public abstract class EntityRollingStockDefinition {
     }
 
     public boolean shouldScalePitch() {
-        return ConfigSound.scaleSoundToGauge && scalePitch;
+        return ConfigSound.scaleSoundToGauge && this.scalePitch;
     }
 
     protected Identifier defaultDataLocation() {
@@ -376,7 +183,7 @@ public abstract class EntityRollingStockDefinition {
         if (imports != null) {
             for (DataBlock.Value toImport : imports) {
                 DataBlock loaded = DataBlock.load(toImport.asIdentifier());
-                loaded = withImports(loaded);
+                loaded = this.withImports(loaded);
                 // Graft data on TOP of loaded
                 data = new MergedBlocks(loaded, data);
             }
@@ -385,43 +192,44 @@ public abstract class EntityRollingStockDefinition {
     }
 
     private DataBlock transformData(DataBlock data) throws IOException {
-        DataBlock base = DataBlock.load(defaultDataLocation());
-        return new MergedBlocks(withImports(base), withImports(data));
+        DataBlock base = DataBlock.load(this.defaultDataLocation());
+        return new MergedBlocks(this.withImports(base), this.withImports(data));
     }
 
     public void loadData(DataBlock data) throws Exception {
-        name = data.getValue("name").asString();
-        modelerName = data.getValue("modeler").asString();
-        packName = data.getValue("pack").asString();
-        darken = data.getValue("darken_model").asFloat();
-        internal_model_scale = 1;
-        internal_inv_scale = 1;
+        this.name = data.getValue("name").asString();
+        this.modelerName = data.getValue("modeler").asString();
+        this.packName = data.getValue("pack").asString();
+        this.darken = data.getValue("darken_model").asFloat();
+        this.internal_model_scale = 1;
+        this.internal_inv_scale = 1;
         // TODO Gauge.from(Gauge.STANDARD).value() what happens when != Gauge.STANDARD
         this.recommended_gauge = Gauge.from(Gauge.STANDARD);
         Double model_gauge_m = data.getValue("model_gauge_m").asDouble();
         if (model_gauge_m != null) {
             this.recommended_gauge = Gauge.from(model_gauge_m);
-            internal_model_scale = Gauge.STANDARD / model_gauge_m;
+            this.internal_model_scale = Gauge.STANDARD / model_gauge_m;
         }
         Double recommended_gauge_m = data.getValue("recommended_gauge_m").asDouble();
         if (recommended_gauge_m != null) {
             this.recommended_gauge = Gauge.from(recommended_gauge_m);
         }
         if (this.recommended_gauge != Gauge.from(Gauge.STANDARD)) {
-            internal_inv_scale = Gauge.STANDARD / recommended_gauge.value();
+            this.internal_inv_scale = Gauge.STANDARD / this.recommended_gauge.value();
         }
 
-        textureNames = new LinkedHashMap<>();
+        this.textureNames = new LinkedHashMap<>();
         //textureNames.put("", "Default");
         DataBlock tex_variants = data.getBlock("tex_variants");
         if (tex_variants != null) {
-            tex_variants.getValueMap().forEach((key, value) -> textureNames.put(value.asString(), key));
+            tex_variants.getValueMap().forEach((key, value) -> this.textureNames.put(value.asString(), key));
         }
 
         try {
             List<DataBlock> alternates = new ArrayList<>();
 
-            Identifier alt_textures = new Identifier(ImmersiveRailroading.MODID, defID.replace(".caml", ".json").replace(".json", "_variants.json"));
+            Identifier alt_textures = new Identifier(ImmersiveRailroading.MODID, this.defID.replace(".caml", ".json")
+                    .replace(".json", "_variants.json"));
             List<InputStream> alts = alt_textures.getResourceStreamAll();
             for (InputStream input : alts) {
                 alternates.add(JSON.parse(input));
@@ -433,64 +241,66 @@ public abstract class EntityRollingStockDefinition {
                 alternates.add(CAML.parse(input));
             }
             for (DataBlock alternate : alternates) {
-                alternate.getValueMap().forEach((key, value) -> textureNames.put(value.asString(), key));
+                alternate.getValueMap().forEach((key, value) -> this.textureNames.put(value.asString(), key));
             }
         } catch (java.io.FileNotFoundException ex) {
             ImmersiveRailroading.catching(ex);
         }
 
-        modelLoc = data.getValue("model").asIdentifier();
+        this.modelLoc = data.getValue("model").asIdentifier();
 
         DataBlock passenger = data.getBlock("passenger");
-        passengerCenter = new Vec3d(0, passenger.getValue("center_y").asDouble() - 0.35, passenger.getValue("center_x").asDouble()).scale(internal_model_scale);
-        passengerCompartmentLength = passenger.getValue("length").asDouble() * internal_model_scale;
-        passengerCompartmentWidth = passenger.getValue("width").asDouble() * internal_model_scale;
-        maxPassengers = passenger.getValue("slots").asInteger();
-        shouldSit = passenger.getValue("should_sit").asBoolean();
+        this.passengerCenter = new Vec3d(0, passenger.getValue("center_y").asDouble() - 0.35, passenger.getValue("center_x")
+                .asDouble()).scale(this.internal_model_scale);
+        this.passengerCompartmentLength = passenger.getValue("length").asDouble() * this.internal_model_scale;
+        this.passengerCompartmentWidth = passenger.getValue("width").asDouble() * this.internal_model_scale;
+        this.maxPassengers = passenger.getValue("slots").asInteger();
+        this.shouldSit = passenger.getValue("should_sit").asBoolean();
 
         DataBlock pivot = data.getBlock("trucks"); // Legacy
         if (pivot == null) {
             pivot = data.getBlock("pivot");
         }
-        bogeyFront = pivot.getValue("front").asFloat() * (float) internal_model_scale;
-        bogeyRear = pivot.getValue("rear").asFloat() * (float) internal_model_scale;
+        this.bogeyFront = pivot.getValue("front").asFloat() * (float) this.internal_model_scale;
+        this.bogeyRear = pivot.getValue("rear").asFloat() * (float) this.internal_model_scale;
 
-        dampeningAmount = data.getValue("sound_dampening_percentage").asFloat();
-        if (dampeningAmount < 0 || dampeningAmount > 1) {
-            dampeningAmount = 0.75f;
+        this.dampeningAmount = data.getValue("sound_dampening_percentage").asFloat();
+        if (this.dampeningAmount < 0 || this.dampeningAmount > 1) {
+            this.dampeningAmount = 0.75f;
         }
-        scalePitch = data.getValue("scale_pitch").asBoolean();
+        this.scalePitch = data.getValue("scale_pitch").asBoolean();
 
         DataBlock couplers = data.getBlock("couplers");
-        couplerOffsetFront = couplers.getValue("front_offset").asFloat() * (float) internal_model_scale;
-        couplerOffsetRear = couplers.getValue("rear_offset").asFloat() * (float) internal_model_scale;
-        couplerSlackFront = couplers.getValue("front_slack").asFloat() * (float) internal_model_scale;
-        couplerSlackRear = couplers.getValue("rear_slack").asFloat() * (float) internal_model_scale;
+        this.couplerOffsetFront = couplers.getValue("front_offset").asFloat() * (float) this.internal_model_scale;
+        this.couplerOffsetRear = couplers.getValue("rear_offset").asFloat() * (float) this.internal_model_scale;
+        this.couplerSlackFront = couplers.getValue("front_slack").asFloat() * (float) this.internal_model_scale;
+        this.couplerSlackRear = couplers.getValue("rear_slack").asFloat() * (float) this.internal_model_scale;
 
         DataBlock properties = data.getBlock("properties");
-        weight = properties.getValue("weight_kg").asInteger() * internal_inv_scale;
-        valveGear = ValveGearConfig.get(properties, "valve_gear");
-        hasIndependentBrake = properties.getValue("independent_brake").asBoolean();
-        hasPressureBrake = properties.getValue("pressure_brake").asBoolean();
+        this.weight = properties.getValue("weight_kg").asInteger() * this.internal_inv_scale;
+        this.valveGear = ValveGearConfig.get(properties, "valve_gear");
+        this.hasIndependentBrake = properties.getValue("independent_brake").asBoolean();
+        this.hasPressureBrake = properties.getValue("pressure_brake").asBoolean();
         // Locomotives default to linear brake control
-        isLinearBrakeControl = properties.getValue("linear_brake_control").asBoolean();
+        this.isLinearBrakeControl = properties.getValue("linear_brake_control").asBoolean();
 
-        brakeCoefficient = PhysicalMaterials.STEEL.kineticFriction(PhysicalMaterials.CAST_IRON);
+        this.brakeCoefficient = PhysicalMaterials.STEEL.kineticFriction(PhysicalMaterials.CAST_IRON);
         try {
-            brakeCoefficient = PhysicalMaterials.STEEL.kineticFriction(PhysicalMaterials.valueOf(properties.getValue("brake_shoe_material").asString()));
+            this.brakeCoefficient = PhysicalMaterials.STEEL.kineticFriction(PhysicalMaterials.valueOf(properties.getValue("brake_shoe_material")
+                    .asString()));
         } catch (Exception ex) {
             ImmersiveRailroading.warn("Invalid brake_shoe_material, possible values are: %s", Arrays.toString(PhysicalMaterials.values()));
         }
-        brakeCoefficient = properties.getValue("brake_friction_coefficient").asFloat(brakeCoefficient);
+        this.brakeCoefficient = properties.getValue("brake_friction_coefficient").asFloat(this.brakeCoefficient);
         // https://en.wikipedia.org/wiki/Rolling_resistance#Rolling_resistance_coefficient_examples
-        rollingResistanceCoefficient = properties.getValue("rolling_resistance_coefficient").asDouble();
-        directFrictionCoefficient = properties.getValue("direct_friction_coefficient").asDouble();
+        this.rollingResistanceCoefficient = properties.getValue("rolling_resistance_coefficient").asDouble();
+        this.directFrictionCoefficient = properties.getValue("direct_friction_coefficient").asDouble();
 
-        swayMultiplier = properties.getValue("swayMultiplier").asDouble();
-        tiltMultiplier = properties.getValue("tiltMultiplier").asDouble();
+        this.swayMultiplier = properties.getValue("swayMultiplier").asDouble();
+        this.tiltMultiplier = properties.getValue("tiltMultiplier").asDouble();
 
-        interiorLightLevel = properties.getValue("interior_light_level").asFloat();
-        hasInternalLighting = properties.getValue("internalLighting").asBoolean();
+        this.interiorLightLevel = properties.getValue("interior_light_level").asFloat();
+        this.hasInternalLighting = properties.getValue("internalLighting").asBoolean();
 
         DataBlock lights = data.getBlock("lights");
         if (lights != null) {
@@ -498,39 +308,40 @@ public abstract class EntityRollingStockDefinition {
         }
 
         DataBlock sounds = data.getBlock("sounds");
-        wheel_sound = sounds.getValue("wheels").asIdentifier();
-        clackFront = clackRear = sounds.getValue("clack").asIdentifier();
-        clackFront = sounds.getValue("clack_front").asIdentifier(clackFront);
-        clackRear = sounds.getValue("clack_rear").asIdentifier(clackRear);
-        couple_sound = sounds.getValue("couple").asIdentifier();
-        sliding_sound = sounds.getValue("sliding").asIdentifier();
-        flange_sound = sounds.getValue("flange").asIdentifier();
-        flange_min_yaw = sounds.getValue("flange_min_yaw").asDouble();
-        collision_sound = sounds.getValue("collision").asIdentifier();
+        this.wheel_sound = sounds.getValue("wheels").asIdentifier();
+        this.clackFront = this.clackRear = sounds.getValue("clack").asIdentifier();
+        this.clackFront = sounds.getValue("clack_front").asIdentifier(this.clackFront);
+        this.clackRear = sounds.getValue("clack_rear").asIdentifier(this.clackRear);
+        this.couple_sound = sounds.getValue("couple").asIdentifier();
+        this.sliding_sound = sounds.getValue("sliding").asIdentifier();
+        this.flange_sound = sounds.getValue("flange").asIdentifier();
+        this.flange_min_yaw = sounds.getValue("flange_min_yaw").asDouble();
+        this.collision_sound = sounds.getValue("collision").asIdentifier();
         DataBlock soundControls = sounds.getBlock("controls");
         if (soundControls != null) {
-            soundControls.getBlockMap().forEach((key, block) -> controlSounds.put(key, new ControlSoundsDefinition(block)));
+            soundControls.getBlockMap()
+                    .forEach((key, block) -> this.controlSounds.put(key, new ControlSoundsDefinition(block)));
         }
 
         Identifier overlay = data.getValue("overlay").asIdentifier();
-        this.overlay = overlay != null ? GuiBuilder.parse(overlay) : getDefaultOverlay(data);
+        this.overlay = overlay != null ? GuiBuilder.parse(overlay) : this.getDefaultOverlay(data);
 
-        extraTooltipInfo = new ArrayList<>();
+        this.extraTooltipInfo = new ArrayList<>();
         List<DataBlock.Value> extra_tooltip_info = data.getValues("extra_tooltip_info");
         if (extra_tooltip_info != null) {
-            extra_tooltip_info.forEach(value -> extraTooltipInfo.add(value.asString()));
+            extra_tooltip_info.forEach(value -> this.extraTooltipInfo.add(value.asString()));
         }
 
-        smokeParticleTexture = steamParticleTexture = DEFAULT_PARTICLE_TEXTURE;
+        this.smokeParticleTexture = this.steamParticleTexture = DEFAULT_PARTICLE_TEXTURE;
         DataBlock particles = data.getBlock("particles");
         if (particles != null) {
             DataBlock smoke = particles.getBlock("smoke");
             if (smoke != null) {
-                smokeParticleTexture = new Identifier(smoke.getValue("texture").asString());
+                this.smokeParticleTexture = new Identifier(smoke.getValue("texture").asString());
             }
             DataBlock steam = particles.getBlock("steam");
             if (steam != null) {
-                steamParticleTexture = new Identifier(steam.getValue("texture").asString());
+                this.steamParticleTexture = new Identifier(steam.getValue("texture").asString());
             }
         }
 
@@ -541,7 +352,7 @@ public abstract class EntityRollingStockDefinition {
         }
         if (aobjs != null) {
             for (DataBlock entry : aobjs) {
-                animations.add(new AnimationDefinition(entry));
+                this.animations.add(new AnimationDefinition(entry));
             }
         }
 
@@ -555,10 +366,10 @@ public abstract class EntityRollingStockDefinition {
     }
 
     public List<ModelComponent> getComponents(ModelComponentType name) {
-        if (!renderComponents.containsKey(name)) {
+        if (!this.renderComponents.containsKey(name)) {
             return null;
         }
-        return renderComponents.get(name);
+        return this.renderComponents.get(name);
     }
 
     public Vec3d correctPassengerBounds(Gauge gauge, Vec3d pos, boolean shouldSit) {
@@ -583,17 +394,17 @@ public abstract class EntityRollingStockDefinition {
     }
 
     public boolean isAtFront(Gauge gauge, Vec3d pos) {
-        pos = pos.subtract(passengerCenter.scale(gauge.scale()));
+        pos = pos.subtract(this.passengerCenter.scale(gauge.scale()));
         return pos.z >= this.passengerCompartmentLength * gauge.scale();
     }
 
     public boolean isAtRear(Gauge gauge, Vec3d pos) {
-        pos = pos.subtract(passengerCenter.scale(gauge.scale()));
+        pos = pos.subtract(this.passengerCenter.scale(gauge.scale()));
         return pos.z <= -this.passengerCompartmentLength * gauge.scale();
     }
 
     public List<ItemComponentType> getItemComponents() {
-        return itemComponents;
+        return this.itemComponents;
     }
 
     public float getBogeyFront(Gauge gauge) {
@@ -608,9 +419,9 @@ public abstract class EntityRollingStockDefinition {
         switch (coupler) {
             default:
             case FRONT:
-                return gauge.scale() * (this.frontBounds + couplerOffsetFront);
+                return gauge.scale() * (this.frontBounds + this.couplerOffsetFront);
             case BACK:
-                return gauge.scale() * (this.rearBounds + couplerOffsetRear);
+                return gauge.scale() * (this.rearBounds + this.couplerOffsetRear);
         }
     }
 
@@ -627,90 +438,21 @@ public abstract class EntityRollingStockDefinition {
         }
     }
 
-
     public boolean hasIndependentBrake() {
-        return hasIndependentBrake;
+        return this.hasIndependentBrake;
     }
 
     public boolean hasPressureBrake() {
-        return hasPressureBrake;
-    }
-
-    private static class HeightMapData {
-        final int xRes;
-        final int zRes;
-        final List<ModelComponent> components;
-        final float[] data;
-
-        HeightMapData(EntityRollingStockDefinition def) {
-            ImmersiveRailroading.info("Generating heightmap %s", def.defID);
-
-            double ratio = 8;
-            int precision = (int) Math.ceil(def.heightBounds * 4);
-
-            xRes = (int) Math.ceil((def.frontBounds + def.rearBounds) * ratio);
-            zRes = (int) Math.ceil(def.widthBounds * ratio);
-            components = def.renderComponents.values().stream()
-                    .flatMap(Collection::stream)
-                    .filter(rc -> rc.type.collisionsEnabled)
-                    .collect(Collectors.toList());
-            data = new float[components.size() * xRes * zRes];
-
-            VertexBuffer vb = def.model.vbo.buffer.get();
-
-            for (int i = 0; i < components.size(); i++) {
-                ModelComponent rc = components.get(i);
-                int idx = i * xRes * zRes;
-                for (String group : rc.modelIDs) {
-                    OBJGroup faces = def.model.groups.get(group);
-
-                    for (int face = faces.faceStart; face <= faces.faceStop; face++) {
-                        Path2D path = new Path2D.Float();
-                        float fheight = 0;
-                        boolean first = true;
-                        for (int point = 0; point < vb.vertsPerFace; point++) {
-                            int vertex = face * vb.vertsPerFace * vb.stride + point * vb.stride;
-                            float vertX = vb.data[vertex + 0];
-                            float vertY = vb.data[vertex + 1];
-                            float vertZ = vb.data[vertex + 2];
-                            vertX += def.frontBounds;
-                            vertZ += def.widthBounds / 2;
-                            if (first) {
-                                path.moveTo(vertX * ratio, vertZ * ratio);
-                                first = false;
-                            } else {
-                                path.lineTo(vertX * ratio, vertZ * ratio);
-                            }
-                            fheight += vertY / vb.vertsPerFace;
-                        }
-                        Rectangle2D bounds = path.getBounds2D();
-                        if (bounds.getWidth() * bounds.getHeight() < 1) {
-                            continue;
-                        }
-                        for (int x = 0; x < xRes; x++) {
-                            for (int z = 0; z < zRes; z++) {
-                                float relX = ((xRes - 1) - x);
-                                float relZ = z;
-                                if (bounds.contains(relX, relZ) && path.contains(relX, relZ)) {
-                                    float relHeight = fheight / (float) def.heightBounds;
-                                    relHeight = ((int) Math.ceil(relHeight * precision)) / (float) precision;
-                                    data[idx + x * zRes + z] = Math.max(data[idx + x * zRes + z], relHeight);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        return this.hasPressureBrake;
     }
 
     private Function<EntityBuildableRollingStock, float[][]> initHeightmap() {
         String key = String.format(
                 "%s-%s-%s-%s-%s-%s",
-                model.hash, frontBounds, rearBounds, widthBounds, heightBounds, renderComponents.size());
+                this.model.hash, this.frontBounds, this.rearBounds, this.widthBounds, this.heightBounds, this.renderComponents.size());
         try {
             ResourceCache<HeightMapData> cache = new ResourceCache<>(
-                    new Identifier(modelLoc.getDomain(), modelLoc.getPath() + "_heightmap_" + key.hashCode()),
+                    new Identifier(this.modelLoc.getDomain(), this.modelLoc.getPath() + "_heightmap_" + key.hashCode()),
                     provider -> new HeightMapData(this)
             );
             Supplier<GenericByteBuffer> data = cache.getResource("data.bin", builder -> new GenericByteBuffer(builder.data));
@@ -782,34 +524,27 @@ public abstract class EntityRollingStockDefinition {
     }
 
     public float[][] createHeightMap(EntityBuildableRollingStock stock) {
-        return heightmap.apply(stock);
+        return this.heightmap.apply(stock);
     }
 
     public RealBB getBounds(float yaw, Gauge gauge) {
-        return new RealBB(gauge.scale() * frontBounds, gauge.scale() * -rearBounds, gauge.scale() * widthBounds,
-                gauge.scale() * heightBounds, yaw);
+        return new RealBB(gauge.scale() * this.frontBounds, gauge.scale() * -this.rearBounds, gauge.scale() * this.widthBounds,
+                gauge.scale() * this.heightBounds, yaw);
     }
 
     public String name() {
         String[] sp = this.defID.replaceAll(".json", "").split("/");
         String localStr = String.format("%s:entity.%s.%s", ImmersiveRailroading.MODID, sp[sp.length - 2], sp[sp.length - 1]);
         String transStr = TextUtil.translate(localStr);
-        return !localStr.equals(transStr) ? transStr : name;
+        return !localStr.equals(transStr) ? transStr : this.name;
     }
 
     public List<String> getTooltip(Gauge gauge) {
         List<String> tips = new ArrayList<>();
         tips.add(GuiText.WEIGHT_TOOLTIP.toString(this.getWeight(gauge)));
-        tips.add(GuiText.MODELER_TOOLTIP.toString(modelerName));
-        tips.add(GuiText.PACK_TOOLTIP.toString(packName));
+        tips.add(GuiText.MODELER_TOOLTIP.toString(this.modelerName));
+        tips.add(GuiText.PACK_TOOLTIP.toString(this.packName));
         return tips;
-    }
-
-    protected StockModel<?, ?> createModel() throws Exception {
-        return new StockModel<>(this);
-    }
-    public StockModel<?, ?> getModel() {
-        return this.model;
     }
 
     /**
@@ -817,6 +552,14 @@ public abstract class EntityRollingStockDefinition {
      */
     public int getWeight(Gauge gauge) {
         return (int) Math.ceil(gauge.scale() * this.weight);
+    }
+
+    protected StockModel<?, ?> createModel() throws Exception {
+        return new StockModel<>(this);
+    }
+
+    public StockModel<?, ?> getModel() {
+        return this.model;
     }
 
     public double getHeight(Gauge gauge) {
@@ -843,6 +586,314 @@ public abstract class EntityRollingStockDefinition {
         return false;
     }
 
+    public ValveGearConfig getValveGear() {
+        return this.valveGear;
+    }
+
+    public LightDefinition getLight(String name) {
+        return this.lights.get(name);
+    }
+
+    public ControlSoundsDefinition getControlSound(String name) {
+        return this.controlSounds.get(name);
+    }
+
+    public float interiorLightLevel() {
+        return this.interiorLightLevel;
+    }
+
+    public boolean isLinearBrakeControl() {
+        return this.isLinearBrakeControl;
+    }
+
+    protected GuiBuilder getDefaultOverlay(DataBlock data) throws IOException {
+        return this.hasIndependentBrake() ? GuiBuilder.parse(new Identifier(ImmersiveRailroading.MODID, "gui/default/independent.caml")) : null;
+    }
+
+    public GuiBuilder getOverlay() {
+        return this.overlay;
+    }
+
+    public List<String> getExtraTooltipInfo() {
+        return this.extraTooltipInfo;
+    }
+
+    public boolean hasInternalLighting() {
+        return this.hasInternalLighting;
+    }
+
+    public double getSwayMultiplier() {
+        return this.swayMultiplier;
+    }
+
+    public double getTiltMultiplier() {
+        return this.tiltMultiplier;
+    }
+
+    public double getBrakeShoeFriction() {
+        return this.brakeCoefficient;
+    }
+
+    public static class SoundDefinition {
+        public final Identifier start;
+        public final Identifier main;
+        public final boolean looping;
+        public final Identifier stop;
+        public final Float distance;
+        public final float volume;
+
+        public SoundDefinition(Identifier fallback) {
+            // Simple
+            this.start = null;
+            this.main = fallback;
+            this.looping = true;
+            this.stop = null;
+            this.distance = null;
+            this.volume = 1;
+        }
+
+        public SoundDefinition(DataBlock obj) {
+            this.start = obj.getValue("start").asIdentifier();
+            this.main = obj.getValue("main").asIdentifier();
+            this.looping = obj.getValue("looping").asBoolean(true);
+            this.stop = obj.getValue("stop").asIdentifier();
+            this.distance = obj.getValue("distance").asFloat();
+            this.volume = obj.getValue("volume").asFloat(1.0f);
+        }
+
+        public static SoundDefinition getOrDefault(DataBlock block, String key) {
+            DataBlock found = block.getBlock(key);
+            if (found != null) {
+                return new SoundDefinition(found);
+            }
+            Identifier ident = block.getValue(key).asIdentifier();
+            if (ident != null && ident.canLoad()) {
+                return new SoundDefinition(ident);
+            }
+            return null;
+        }
+    }
+
+    public static class AnimationDefinition {
+        public final String control_group;
+        public final AnimationMode mode;
+        public final Readouts readout;
+        public final Identifier animatrix;
+        public final float offset;
+        public final boolean invert;
+        public final float frames_per_tick;
+        public final SoundDefinition sound;
+        public AnimationDefinition(DataBlock obj) {
+            this.control_group = obj.getValue("control_group").asString();
+            String readout = obj.getValue("readout").asString();
+            this.readout = readout != null ? Readouts.valueOf(readout.toUpperCase(Locale.ROOT)) : null;
+            if (this.control_group == null && readout == null) {
+                throw new IllegalArgumentException("Must specify either a control group or a readout for an animation");
+            }
+            this.animatrix = obj.getValue("animatrix").asIdentifier();
+            this.mode = AnimationMode.valueOf(obj.getValue("mode").asString().toUpperCase(Locale.ROOT));
+            this.offset = obj.getValue("offset").asFloat(0f);
+            this.invert = obj.getValue("invert").asBoolean(false);
+            this.frames_per_tick = obj.getValue("frames_per_tick").asFloat(1f);
+            this.sound = SoundDefinition.getOrDefault(obj, "sound");
+        }
+
+        public boolean valid() {
+            return this.animatrix != null && (this.control_group != null || this.readout != null);
+        }
+
+        public enum AnimationMode {
+            VALUE,
+            PLAY_FORWARD,
+            PLAY_REVERSE,
+            PLAY_BOTH,
+            LOOP,
+            LOOP_SPEED
+        }
+    }
+
+    public static class LightDefinition {
+        public static final Identifier default_light_tex = new Identifier(ImmersiveRailroading.MODID, "textures/light.png");
+
+        public final float blinkIntervalSeconds;
+        public final float blinkOffsetSeconds;
+        public final boolean blinkFullBright;
+        public final String reverseColor;
+        public final Identifier lightTex;
+        public final boolean castsLight;
+
+        private LightDefinition(DataBlock data) {
+            this.blinkIntervalSeconds = data.getValue("blinkIntervalSeconds").asFloat(0f);
+            this.blinkOffsetSeconds = data.getValue("blinkOffsetSeconds").asFloat(0f);
+            this.blinkFullBright = data.getValue("blinkFullBright").asBoolean(true);
+            this.reverseColor = data.getValue("reverseColor").asString();
+            this.lightTex = data.getValue("texture").asIdentifier(default_light_tex);
+            this.castsLight = data.getValue("castsLight").asBoolean(true);
+        }
+    }
+
+    public static class ControlSoundsDefinition {
+        private static final List<ISound> toStop = new ArrayList<>();
+        public final Identifier engage;
+        public final Identifier move;
+        public final Float movePercent;
+        public final Identifier disengage;
+        private final Map<UUID, List<ISound>> sounds = new HashMap<>();
+        private final Map<UUID, Float> lastMoveSoundValue = new HashMap<>();
+        private final Map<UUID, Boolean> wasSoundPressed = new HashMap<>();
+
+        public ControlSoundsDefinition(Identifier engage, Identifier move, Float movePercent, Identifier disengage) {
+            this.engage = engage;
+            this.move = move;
+            this.movePercent = movePercent;
+            this.disengage = disengage;
+        }
+
+        public ControlSoundsDefinition(DataBlock data) {
+            this.engage = data.getValue("engage").asIdentifier();
+            this.move = data.getValue("move").asIdentifier();
+            this.movePercent = data.getValue("movePercent").asFloat();
+            this.disengage = data.getValue("disengage").asIdentifier();
+        }
+
+        public static void cleanupStoppedSounds() {
+            if (toStop.isEmpty()) {
+                return;
+            }
+            for (ISound sound : toStop) {
+                sound.stop();
+            }
+            toStop.clear();
+        }
+
+        public void effects(EntityRollingStock stock, boolean isPressed, float value, Vec3d pos) {
+            if (this.sounds.containsKey(stock.getUUID())) {
+                for (ISound snd : new ArrayList<>(this.sounds.get(stock.getUUID()))) {
+                    if (snd.isPlaying()) {
+                        snd.setVelocity(stock.getVelocity());
+                        snd.setPosition(pos);
+                    }
+                }
+            }
+
+            Boolean wasPressed = this.wasSoundPressed.getOrDefault(stock.getUUID(), false);
+            this.wasSoundPressed.put(stock.getUUID(), isPressed);
+
+            float lastValue = this.lastMoveSoundValue.computeIfAbsent(stock.getUUID(), k -> value);
+
+            if (!wasPressed && isPressed) {
+                // Start
+                this.createSound(stock, this.engage, pos, false);
+                if (this.move != null && this.movePercent == null) {
+                    // Start move repeat
+                    this.createSound(stock, this.move, pos, true);
+                }
+            } else if (wasPressed && !isPressed) {
+                // Release
+                if (this.sounds.containsKey(stock.getUUID())) {
+                    // Start and Stop may have happend between ticks, we want to wait till the next tick to stop the sound
+                    toStop.addAll(this.sounds.remove(stock.getUUID()));
+                }
+                this.createSound(stock, this.disengage, pos, false);
+            } else if (this.move != null && this.movePercent != null) {
+                // Move
+                if (Math.abs(lastValue - value) > this.movePercent) {
+                    this.createSound(stock, this.move, pos, false);
+                    this.lastMoveSoundValue.put(stock.getUUID(), value);
+                }
+            }
+        }
+
+        private void createSound(EntityRollingStock stock, Identifier sound, Vec3d pos, boolean repeats) {
+            if (sound == null) {
+                return;
+            }
+            ISound snd = stock.createSound(sound, repeats, 10, ConfigSound.SoundCategories::controls);
+            snd.setVelocity(stock.getVelocity());
+            snd.setVolume(1);
+            snd.setPitch(1f);
+            snd.play(pos);
+            this.sounds.computeIfAbsent(stock.getUUID(), k -> new ArrayList<>()).add(snd);
+        }
+
+        public <T extends EntityMoveableRollingStock> void removed(T stock) {
+            List<ISound> removed = this.sounds.remove(stock.getUUID());
+            if (removed != null) {
+                for (ISound sound : removed) {
+                    sound.stop();
+                }
+            }
+        }
+    }
+
+    private static class HeightMapData {
+        final int xRes;
+        final int zRes;
+        final List<ModelComponent> components;
+        final float[] data;
+
+        HeightMapData(EntityRollingStockDefinition def) {
+            ImmersiveRailroading.info("Generating heightmap %s", def.defID);
+
+            double ratio = 8;
+            int precision = (int) Math.ceil(def.heightBounds * 4);
+
+            this.xRes = (int) Math.ceil((def.frontBounds + def.rearBounds) * ratio);
+            this.zRes = (int) Math.ceil(def.widthBounds * ratio);
+            this.components = def.renderComponents.values().stream()
+                    .flatMap(Collection::stream)
+                    .filter(rc -> rc.type.collisionsEnabled)
+                    .collect(Collectors.toList());
+            this.data = new float[this.components.size() * this.xRes * this.zRes];
+
+            VertexBuffer vb = def.model.vbo.buffer.get();
+
+            for (int i = 0; i < this.components.size(); i++) {
+                ModelComponent rc = this.components.get(i);
+                int idx = i * this.xRes * this.zRes;
+                for (String group : rc.modelIDs) {
+                    OBJGroup faces = def.model.groups.get(group);
+
+                    for (int face = faces.faceStart; face <= faces.faceStop; face++) {
+                        Path2D path = new Path2D.Float();
+                        float fheight = 0;
+                        boolean first = true;
+                        for (int point = 0; point < vb.vertsPerFace; point++) {
+                            int vertex = face * vb.vertsPerFace * vb.stride + point * vb.stride;
+                            float vertX = vb.data[vertex];
+                            float vertY = vb.data[vertex + 1];
+                            float vertZ = vb.data[vertex + 2];
+                            vertX += def.frontBounds;
+                            vertZ += def.widthBounds / 2;
+                            if (first) {
+                                path.moveTo(vertX * ratio, vertZ * ratio);
+                                first = false;
+                            } else {
+                                path.lineTo(vertX * ratio, vertZ * ratio);
+                            }
+                            fheight += vertY / vb.vertsPerFace;
+                        }
+                        Rectangle2D bounds = path.getBounds2D();
+                        if (bounds.getWidth() * bounds.getHeight() < 1) {
+                            continue;
+                        }
+                        for (int x = 0; x < this.xRes; x++) {
+                            for (int z = 0; z < this.zRes; z++) {
+                                float relX = ((this.xRes - 1) - x);
+                                float relZ = z;
+                                if (bounds.contains(relX, relZ) && path.contains(relX, relZ)) {
+                                    float relHeight = fheight / (float) def.heightBounds;
+                                    relHeight = ((int) Math.ceil(relHeight * precision)) / (float) precision;
+                                    this.data[idx + x * this.zRes + z] = Math.max(this.data[idx + x * this.zRes + z], relHeight);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     static class TagMapper implements cam72cam.mod.serialization.TagMapper<EntityRollingStockDefinition> {
         @Override
         public TagAccessor<EntityRollingStockDefinition> apply(Class<EntityRollingStockDefinition> type, String fieldName, TagField tag) {
@@ -851,53 +902,6 @@ public abstract class EntityRollingStockDefinition {
                     d -> DefinitionManager.getDefinition(d.getString(fieldName))
             );
         }
-    }
-
-    public ValveGearConfig getValveGear() {
-        return valveGear;
-    }
-
-    public LightDefinition getLight(String name) {
-        return lights.get(name);
-    }
-    public ControlSoundsDefinition getControlSound(String name) {
-        return controlSounds.get(name);
-    }
-
-    public float interiorLightLevel() {
-        return interiorLightLevel;
-    }
-
-    public boolean isLinearBrakeControl() {
-        return isLinearBrakeControl;
-    }
-
-    protected GuiBuilder getDefaultOverlay(DataBlock data) throws IOException {
-        return hasIndependentBrake() ? GuiBuilder.parse(new Identifier(ImmersiveRailroading.MODID, "gui/default/independent.caml")) : null;
-    }
-
-    public GuiBuilder getOverlay() {
-        return overlay;
-    }
-
-    public List<String> getExtraTooltipInfo() {
-        return extraTooltipInfo;
-    }
-
-    public boolean hasInternalLighting() {
-        return hasInternalLighting;
-    }
-
-    public double getSwayMultiplier() {
-        return swayMultiplier;
-    }
-
-    public double getTiltMultiplier() {
-        return tiltMultiplier;
-    }
-
-    public double getBrakeShoeFriction() {
-        return brakeCoefficient;
     }
 
 }

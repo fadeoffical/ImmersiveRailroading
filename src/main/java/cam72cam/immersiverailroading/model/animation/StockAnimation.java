@@ -25,41 +25,36 @@ public class StockAnimation {
     public StockAnimation(AnimationDefinition def, double internal_model_scale) throws IOException {
         this.def = def;
         this.animatrix = new Animatrix(def.animatrix.getResourceStream(), internal_model_scale);
-        tickStart = new HashMap<>();
-        tickStop = new HashMap<>();
+        this.tickStart = new HashMap<>();
+        this.tickStop = new HashMap<>();
         switch (def.mode) {
             case VALUE:
             case PLAY_FORWARD:
             case PLAY_REVERSE:
             case PLAY_BOTH:
-                looping = false;
+                this.looping = false;
                 break;
             case LOOP:
             case LOOP_SPEED:
             default:
-                looping = true;
+                this.looping = true;
         }
         this.sound = def.sound != null ? new PartSound(def.sound, true, 20, ConfigSound.SoundCategories::animations) : null;
     }
 
-    public float getValue(EntityRollingStock stock) {
-        float value = def.control_group != null ? stock.getControlPosition(def.control_group) : def.readout.getValue(stock);
-        value += def.offset;
-        if (def.invert) {
-            value = 1-value;
-        }
-        return value;
+    public Matrix4 getMatrix(EntityRollingStock stock, String group) {
+        return this.animatrix.groups().contains(group) ? this.animatrix.getMatrix(group, this.getPercent(stock), this.looping) : null;
     }
 
     public float getPercent(EntityRollingStock stock) {
-        float value = getValue(stock);
+        float value = this.getValue(stock);
 
-        float total_ticks_per_loop = animatrix.frameCount() / def.frames_per_tick;
-        if (def.mode == AnimationMode.LOOP_SPEED) {
+        float total_ticks_per_loop = this.animatrix.frameCount() / this.def.frames_per_tick;
+        if (this.def.mode == AnimationMode.LOOP_SPEED) {
             total_ticks_per_loop /= value;
         }
 
-        switch (def.mode) {
+        switch (this.def.mode) {
             case VALUE:
                 return value;
             case PLAY_FORWARD:
@@ -69,27 +64,27 @@ public class StockAnimation {
                 float tickDelta;
                 if (value >= 0.95) {
                     // FORWARD
-                    if (!tickStart.containsKey(key)) {
-                        tickStart.put(key, stock.getTickCount());
-                        tickStop.remove(key);
+                    if (!this.tickStart.containsKey(key)) {
+                        this.tickStart.put(key, stock.getTickCount());
+                        this.tickStop.remove(key);
                     }
-                    if (def.mode == AnimationMode.PLAY_REVERSE) {
+                    if (this.def.mode == AnimationMode.PLAY_REVERSE) {
                         return 1;
                     }
                     // 0 -> 1+
-                    tickDelta = stock.getTickCount() - tickStart.get(key);
+                    tickDelta = stock.getTickCount() - this.tickStart.get(key);
                 } else {
                     // REVERSE
-                    if (!tickStop.containsKey(key)) {
-                        tickStop.put(key, stock.getTickCount());
-                        tickStart.remove(key);
+                    if (!this.tickStop.containsKey(key)) {
+                        this.tickStop.put(key, stock.getTickCount());
+                        this.tickStart.remove(key);
                     }
-                    if (def.mode == AnimationMode.PLAY_FORWARD) {
+                    if (this.def.mode == AnimationMode.PLAY_FORWARD) {
                         return 0;
                     }
                     // 0 -> 1+
-                    tickDelta = stock.getTickCount() - tickStop.get(key);
-                    if (def.mode == AnimationMode.PLAY_BOTH) {
+                    tickDelta = stock.getTickCount() - this.tickStop.get(key);
+                    if (this.def.mode == AnimationMode.PLAY_BOTH) {
                         // 1 -> 0-
                         tickDelta = total_ticks_per_loop - tickDelta;
                     }
@@ -111,38 +106,43 @@ public class StockAnimation {
         return (stock.getTickCount() % total_ticks_per_loop) / total_ticks_per_loop;
     }
 
-    public Matrix4 getMatrix(EntityRollingStock stock, String group) {
-        return animatrix.groups().contains(group) ? animatrix.getMatrix(group, getPercent(stock), looping) : null;
+    public float getValue(EntityRollingStock stock) {
+        float value = this.def.control_group != null ? stock.getControlPosition(this.def.control_group) : this.def.readout.getValue(stock);
+        value += this.def.offset;
+        if (this.def.invert) {
+            value = 1 - value;
+        }
+        return value;
     }
 
     public <ENTITY extends EntityMoveableRollingStock> void effects(ENTITY stock) {
-        if (sound != null) {
+        if (this.sound != null) {
             float volume = 0;
             float pitch = 1;
-            switch (def.mode) {
+            switch (this.def.mode) {
                 case VALUE:
-                    volume = getValue(stock);
+                    volume = this.getValue(stock);
                     break;
                 case PLAY_FORWARD:
                 case PLAY_REVERSE:
                 case PLAY_BOTH:
-                    volume = getPercent(stock) > 0 && getPercent(stock) < 1 ? 1 : 0;
+                    volume = this.getPercent(stock) > 0 && this.getPercent(stock) < 1 ? 1 : 0;
                     break;
                 case LOOP:
-                    volume = getValue(stock) > 0.95 ? 1 : 0;
+                    volume = this.getValue(stock) > 0.95 ? 1 : 0;
                     break;
                 case LOOP_SPEED:
-                    volume = getValue(stock) > 0 ? 1 : 0;
-                    pitch = getValue(stock);
+                    volume = this.getValue(stock) > 0 ? 1 : 0;
+                    pitch = this.getValue(stock);
                     break;
             }
-            sound.effects(stock, volume, pitch);
+            this.sound.effects(stock, volume, pitch);
         }
     }
 
     public <ENTITY extends EntityMoveableRollingStock> void removed(ENTITY stock) {
-        if (sound != null) {
-            sound.removed(stock);
+        if (this.sound != null) {
+            this.sound.removed(stock);
         }
     }
 }

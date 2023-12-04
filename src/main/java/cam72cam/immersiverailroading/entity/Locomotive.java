@@ -4,7 +4,10 @@ import cam72cam.immersiverailroading.Config;
 import cam72cam.immersiverailroading.IRItems;
 import cam72cam.immersiverailroading.entity.physics.SimulationState;
 import cam72cam.immersiverailroading.items.ItemRadioCtrlCard;
-import cam72cam.immersiverailroading.library.*;
+import cam72cam.immersiverailroading.library.ChatText;
+import cam72cam.immersiverailroading.library.KeyTypes;
+import cam72cam.immersiverailroading.library.ModelComponentType;
+import cam72cam.immersiverailroading.library.Permissions;
 import cam72cam.immersiverailroading.model.part.Control;
 import cam72cam.immersiverailroading.physics.MovementTrack;
 import cam72cam.immersiverailroading.registry.LocomotiveDefinition;
@@ -22,622 +25,628 @@ import cam72cam.mod.world.World;
 import java.util.OptionalDouble;
 import java.util.UUID;
 
-import static cam72cam.immersiverailroading.library.PhysicalMaterials.*;
+import static cam72cam.immersiverailroading.library.PhysicalMaterials.STEEL;
 
 public abstract class Locomotive extends FreightTank {
-	private static final float throttleDelta = 0.04f;
-	private static final float trainBrakeNotch = 0.04f;
+    private static final float throttleDelta = 0.04f;
+    private static final float trainBrakeNotch = 0.04f;
+    @TagSync
+    @TagField(value = "HORN_PULL")
+    public float hornPull;
+    @TagSync
+    @TagField("HORN")
+    protected int hornTime = 0;
+    @TagSync
+    @TagField(value = "HORN_PLAYER", mapper = StrictTagMapper.class)
+    protected UUID hornPlayer = null;
+    @TagField("deadMansSwitch")
+    private boolean deadMansSwitch;
+    private int deadManChangeTimeout;
+    @TagSync
+    @TagField("THROTTLE")
+    private float throttle = 0;
+    @TagSync
+    @TagField("REVERSER")
+    private float reverser = 0;
+    @TagSync
+    @TagField("AIR_BRAKE")
+    private float trainBrake = 0;
+    @TagSync
+    @TagField("BELL")
+    private int bellTime = 0;
+    private boolean bellControl = false;
 
-	@TagField("deadMansSwitch")
-	private boolean deadMansSwitch;
-	private int deadManChangeTimeout;
+    private int bellKeyTimeout;
 
-	@TagSync
-	@TagField("THROTTLE")
-	private float throttle = 0;
+    @TagSync
+    @TagField("cogging")
+    private boolean cogging = false;
 
-	@TagSync
-	@TagField("REVERSER")
-	private float reverser = 0;
+    private boolean slipping = false;
 
-	@TagSync
-	@TagField("AIR_BRAKE")
-	private float trainBrake = 0;
+    /*
+     *
+     * Stock Definitions
+     *
+     */
 
-	@TagSync
-	@TagField("HORN")
-	protected int hornTime = 0;
+    @Override
+    public boolean openGui(Player player) {
+        return false;
+    }
 
-	@TagSync
-	@TagField(value = "HORN_PLAYER", mapper = StrictTagMapper.class)
-	protected UUID hornPlayer = null;
-	@TagSync
-	@TagField(value = "HORN_PULL")
-	public float hornPull;
+    /*
+     *
+     * EntityRollingStock Overrides
+     */
 
-	@TagSync
-	@TagField("BELL")
-	private int bellTime = 0;
-	private boolean bellControl = false;
+    @Override
+    public void onTick() {
+        super.onTick();
 
-	private int bellKeyTimeout;
+        if (this.getWorld().isServer) {
+            this.sync.setInterval(5);
+            for (Control<?> control : this.getDefinition().getModel().getControls()) {
+                // Logic duplicated in Readouts#setValue
+                if (!this.getDefinition().isLinearBrakeControl() && control.part.type == ModelComponentType.TRAIN_BRAKE_X) {
+                    this.setTrainBrake(Math.max(0, Math.min(1, this.getTrainBrake() + (this.getControlPosition(control) - 0.5f) / 8)));
+                }
+            }
 
-	@TagSync
-	@TagField("cogging")
-	private boolean cogging = false;
+            if (this.deadManChangeTimeout > 0) {
+                this.deadManChangeTimeout -= 1;
+            }
+            if (this.bellKeyTimeout > 0) {
+                this.bellKeyTimeout--;
+            }
 
-	private boolean slipping = false;
+            if (this.deadMansSwitch && !this.getCurrentSpeed().isZero()) {
+                boolean hasDriver = this.getPassengers().stream().anyMatch(Entity::isPlayer);
+                if (!hasDriver) {
+                    this.setThrottle(0);
+                    this.setTrainBrake(1);
+                }
+            }
+            if (this.hornTime > 0) {
+                this.hornTime--;
+            } else if (this.hornPlayer != null) {
+                this.hornPlayer = null;
+            }
+            if (this.hornTime == 0) {
+                this.hornPull = 0;
+            }
+            OptionalDouble control = this.getDefinition().getModel().getControls().stream()
+                    .filter(x -> x.part.type == ModelComponentType.BELL_CONTROL_X)
+                    .mapToDouble(this::getControlPosition)
+                    .max();
+            if (control.isPresent() && control.getAsDouble() > 0) {
+                this.bellTime = 10;
+                this.bellControl = true;
+            }
+            if (this.bellTime > 0 && (!this.getDefinition().toggleBell || this.bellControl)) {
+                this.bellTime--;
+                if (this.bellTime == 0) {
+                    this.bellControl = false;
+                }
+            }
+        }
 
-	/*
-	 * 
-	 * Stock Definitions
-	 * 
-	 */
-	
-	@Override
-	public LocomotiveDefinition getDefinition() {
-		return super.getDefinition(LocomotiveDefinition.class);
-	}
+        this.distanceTraveled += this.simulateWheelSlip();
 
-	/*
-	 * 
-	 * EntityRollingStock Overrides
-	 */
+        if (this.getWorld().isServer) {
+            this.setControlPosition("REVERSERFORWARD", this.getReverser() > 0 ? 1 : 0);
+            this.setControlPosition("REVERSERNEUTRAL", this.getReverser() == 0 ? 1 : 0);
+            this.setControlPosition("REVERSERBACKWARD", this.getReverser() < 0 ? 1 : 0);
+        }
 
-	@Override
-	public boolean openGui(Player player) {
-		return false;
-	}
+        if (this.getWorld().isServer) {
+            if (this.getDefinition().isCog() && this.getTickCount() % 20 == 0) {
+                SimulationState state = this.getCurrentState();
+                if (state != null) {
+                    ITrack found = MovementTrack.findTrack(this.getWorld(), state.couplerPositionFront, state.yaw, this.gauge.value());
+                    if (found instanceof TileRailBase) {
+                        TileRailBase onTrack = (TileRailBase) found;
+                        this.cogging = onTrack.isCog();
+                    }
+                }
+            }
+        }
+    }
 
-	@Override
-	public void handleKeyPress(Player source, KeyTypes key, boolean disableIndependentThrottle) {
+    protected boolean forceLinkThrottleReverser() {
+        return false;
+    }
 
-		if (disableIndependentThrottle) {
-			switch (key) {
-				case THROTTLE_UP:
-					key = KeyTypes.REVERSER_UP;
-					break;
-				case THROTTLE_ZERO:
-					key = KeyTypes.REVERSER_ZERO;
-					break;
-				case THROTTLE_DOWN:
-					key = KeyTypes.REVERSER_DOWN;
-					break;
-				case REVERSER_UP:
-				case REVERSER_ZERO:
-				case REVERSER_DOWN:
-					return;
-			}
-		} else if (getDefinition().isLinkedBrakeThrottle()) {
-			switch (key) {
-				case THROTTLE_UP:
-					if (getTrainBrake() > 0) {
-						key = KeyTypes.TRAIN_BRAKE_DOWN;
-					}
-					break;
-				case THROTTLE_ZERO:
-					setTrainBrake(0);
-					break;
-				case THROTTLE_DOWN:
-					if (getThrottle() == 0) {
-						key = KeyTypes.TRAIN_BRAKE_UP;
-					}
-					break;
-				case TRAIN_BRAKE_UP:
-				case TRAIN_BRAKE_ZERO:
-				case TRAIN_BRAKE_DOWN:
-					return;
-			}
-		}
+    protected float getReverserDelta() {
+        return throttleDelta;
+    }
 
-		boolean linkThrottleReverser = forceLinkThrottleReverser() || disableIndependentThrottle;
+    public void onDrag(Control<?> component, double newValue) {
+        super.onDrag(component, newValue);
+        //System.out.println("DRAG " + component + ": "+ getControlPosition(component));
+        switch (component.part.type) {
+            case THROTTLE_X:
+                this.setThrottle(this.getControlPosition(component));
+                break;
+            case TRAIN_BRAKE_X:
+                if (this.getDefinition().isLinearBrakeControl()) {
+                    this.setTrainBrake(this.getControlPosition(component));
+                }
+                break;
+            case REVERSER_X:
+                this.setReverser((0.5f - this.getControlPosition(component)) * 2);
+                break;
+            case THROTTLE_BRAKE_X:
+                // value 0     0.5     1
+                // throt 0      0      1
+                // brake 1      0      0
+                this.setTrainBrake(1 - this.getControlPosition(component) * 2);
+                this.setThrottle(this.getControlPosition(component) * 2 - 1);
+                break;
+        }
+    }
 
-		switch(key) {
-			case HORN:
-				setHorn(10, source.getUUID());
-				break;
-			case BELL:
-				if (this.getDefinition().toggleBell) {
-					if (bellKeyTimeout == 0) {
-						bellTime = bellTime != 0 ? 0 : 10;
-						bellKeyTimeout = 10;
-					}
-				} else {
-					setBell(10);
-				}
-            break;
-		case THROTTLE_UP:
-			setThrottle(getThrottle() + throttleDelta);
-			break;
-		case THROTTLE_ZERO:
-			setThrottle(0f);
-			break;
-		case THROTTLE_DOWN:
-			setThrottle(getThrottle() - throttleDelta);
-			break;
-		case REVERSER_UP:
-			if (linkThrottleReverser) {
-				float mixed = getThrottle() * (getReverser() >= 0 ? 1 : -1);
-				if (mixed < 0) {
-					setRealThrottle(-mixed - throttleDelta);
-					setReverser(-1);
-				} else {
-					setRealThrottle(mixed + throttleDelta);
-					setReverser(1);
-				}
-			} else {
-				setReverser(getReverser() + getReverserDelta());
-			}
-			break;
-		case REVERSER_ZERO:
-			if (linkThrottleReverser) {
-				setRealThrottle(0);
-			}
-			setReverser(0f);
-			break;
-		case REVERSER_DOWN:
-			if (linkThrottleReverser) {
-				float mixed = getThrottle() * (getReverser() >= 0 ? 1 : -1);
-				if (mixed > 0) {
-					setRealThrottle(mixed - throttleDelta);
-					setReverser(1);
-				} else {
-					setRealThrottle(-mixed + throttleDelta);
-					setReverser(-1);
-				}
-			} else {
-				setReverser(getReverser() - getReverserDelta());
-			}
-			break;
-		case TRAIN_BRAKE_UP:
-			setTrainBrake(getTrainBrake() + trainBrakeNotch);
-			break;
-		case TRAIN_BRAKE_ZERO:
-			setTrainBrake(0f);
-			break;
-		case TRAIN_BRAKE_DOWN:
-			setTrainBrake(getTrainBrake() - trainBrakeNotch);
-			break;
-		case DEAD_MANS_SWITCH:
-			if (deadManChangeTimeout == 0) { 
-				deadMansSwitch = !deadMansSwitch;
-				if (deadMansSwitch) {
-					source.sendMessage(ChatText.DEADMANS_SWITCH_ENABLED.getMessage());
-				} else {
-					source.sendMessage(ChatText.DEADMANS_SWITCH_DISABLED.getMessage());
-				}
-				this.deadManChangeTimeout = 5;
-			}
-			break;
-			default:
-				super.handleKeyPress(source, key, disableIndependentThrottle);
-		}
-	}
+    @Override
+    public void onDragRelease(Control<?> control) {
+        super.onDragRelease(control);
+        if (!this.getDefinition().isLinearBrakeControl() && control.part.type == ModelComponentType.TRAIN_BRAKE_X) {
+            this.setControlPosition(control, 0.5f);
+        }
+    }
 
-	protected boolean forceLinkThrottleReverser() {
-		return false;
-	}
+    @Override
+    protected float defaultControlPosition(Control<?> control) {
+        switch (control.part.type) {
+            case THROTTLE_BRAKE_X:
+            case REVERSER_X:
+                return 0.5f;
+            case TRAIN_BRAKE_X:
+                return this.getDefinition().isLinearBrakeControl() ? 0 : 0.5f;
+            default:
+                return super.defaultControlPosition(control);
+        }
+    }
 
+    @Override
+    public void handleKeyPress(Player source, KeyTypes key, boolean disableIndependentThrottle) {
 
-	protected float getReverserDelta() {
-		return throttleDelta;
-	}
+        if (disableIndependentThrottle) {
+            switch (key) {
+                case THROTTLE_UP:
+                    key = KeyTypes.REVERSER_UP;
+                    break;
+                case THROTTLE_ZERO:
+                    key = KeyTypes.REVERSER_ZERO;
+                    break;
+                case THROTTLE_DOWN:
+                    key = KeyTypes.REVERSER_DOWN;
+                    break;
+                case REVERSER_UP:
+                case REVERSER_ZERO:
+                case REVERSER_DOWN:
+                    return;
+            }
+        } else if (this.getDefinition().isLinkedBrakeThrottle()) {
+            switch (key) {
+                case THROTTLE_UP:
+                    if (this.getTrainBrake() > 0) {
+                        key = KeyTypes.TRAIN_BRAKE_DOWN;
+                    }
+                    break;
+                case THROTTLE_ZERO:
+                    this.setTrainBrake(0);
+                    break;
+                case THROTTLE_DOWN:
+                    if (this.getThrottle() == 0) {
+                        key = KeyTypes.TRAIN_BRAKE_UP;
+                    }
+                    break;
+                case TRAIN_BRAKE_UP:
+                case TRAIN_BRAKE_ZERO:
+                case TRAIN_BRAKE_DOWN:
+                    return;
+            }
+        }
 
-	public void onDrag(Control<?> component, double newValue) {
-		super.onDrag(component, newValue);
-		//System.out.println("DRAG " + component + ": "+ getControlPosition(component));
-		switch (component.part.type) {
-			case THROTTLE_X:
-				setThrottle(getControlPosition(component));
-				break;
-			case TRAIN_BRAKE_X:
-				if (getDefinition().isLinearBrakeControl()) {
-					setTrainBrake(getControlPosition(component));
-				}
-				break;
-			case REVERSER_X:
-				setReverser((0.5f-getControlPosition(component))*2);
-				break;
-			case THROTTLE_BRAKE_X:
-				// value 0     0.5     1
-				// throt 0      0      1
-				// brake 1      0      0
-				setTrainBrake(1 - getControlPosition(component)*2);
-				setThrottle(getControlPosition(component)*2 - 1);
-				break;
-		}
-	}
+        boolean linkThrottleReverser = this.forceLinkThrottleReverser() || disableIndependentThrottle;
 
-	@Override
-	public void onDragRelease(Control<?> control) {
-		super.onDragRelease(control);
-		if (!getDefinition().isLinearBrakeControl() && control.part.type == ModelComponentType.TRAIN_BRAKE_X) {
-			setControlPosition(control, 0.5f);
-		}
-	}
+        switch (key) {
+            case HORN:
+                this.setHorn(10, source.getUUID());
+                break;
+            case BELL:
+                if (this.getDefinition().toggleBell) {
+                    if (this.bellKeyTimeout == 0) {
+                        this.bellTime = this.bellTime != 0 ? 0 : 10;
+                        this.bellKeyTimeout = 10;
+                    }
+                } else {
+                    this.setBell(10);
+                }
+                break;
+            case THROTTLE_UP:
+                this.setThrottle(this.getThrottle() + throttleDelta);
+                break;
+            case THROTTLE_ZERO:
+                this.setThrottle(0f);
+                break;
+            case THROTTLE_DOWN:
+                this.setThrottle(this.getThrottle() - throttleDelta);
+                break;
+            case REVERSER_UP:
+                if (linkThrottleReverser) {
+                    float mixed = this.getThrottle() * (this.getReverser() >= 0 ? 1 : -1);
+                    if (mixed < 0) {
+                        this.setRealThrottle(-mixed - throttleDelta);
+                        this.setReverser(-1);
+                    } else {
+                        this.setRealThrottle(mixed + throttleDelta);
+                        this.setReverser(1);
+                    }
+                } else {
+                    this.setReverser(this.getReverser() + this.getReverserDelta());
+                }
+                break;
+            case REVERSER_ZERO:
+                if (linkThrottleReverser) {
+                    this.setRealThrottle(0);
+                }
+                this.setReverser(0f);
+                break;
+            case REVERSER_DOWN:
+                if (linkThrottleReverser) {
+                    float mixed = this.getThrottle() * (this.getReverser() >= 0 ? 1 : -1);
+                    if (mixed > 0) {
+                        this.setRealThrottle(mixed - throttleDelta);
+                        this.setReverser(1);
+                    } else {
+                        this.setRealThrottle(-mixed + throttleDelta);
+                        this.setReverser(-1);
+                    }
+                } else {
+                    this.setReverser(this.getReverser() - this.getReverserDelta());
+                }
+                break;
+            case TRAIN_BRAKE_UP:
+                this.setTrainBrake(this.getTrainBrake() + trainBrakeNotch);
+                break;
+            case TRAIN_BRAKE_ZERO:
+                this.setTrainBrake(0f);
+                break;
+            case TRAIN_BRAKE_DOWN:
+                this.setTrainBrake(this.getTrainBrake() - trainBrakeNotch);
+                break;
+            case DEAD_MANS_SWITCH:
+                if (this.deadManChangeTimeout == 0) {
+                    this.deadMansSwitch = !this.deadMansSwitch;
+                    if (this.deadMansSwitch) {
+                        source.sendMessage(ChatText.DEADMANS_SWITCH_ENABLED.getMessage());
+                    } else {
+                        source.sendMessage(ChatText.DEADMANS_SWITCH_DISABLED.getMessage());
+                    }
+                    this.deadManChangeTimeout = 5;
+                }
+                break;
+            default:
+                super.handleKeyPress(source, key, disableIndependentThrottle);
+        }
+    }
 
-	@Override
-	protected float defaultControlPosition(Control<?> control) {
-		switch (control.part.type) {
-			case THROTTLE_BRAKE_X:
-			case REVERSER_X:
-				return 0.5f;
-			case TRAIN_BRAKE_X:
-				return getDefinition().isLinearBrakeControl() ? 0 : 0.5f;
-			default:
-				return super.defaultControlPosition(control);
-		}
-	}
+    @Override
+    public void setIndependentBrake(float newIndependentBrake) {
+        this.setRealIndependentBrake(newIndependentBrake);
+        if (this.getDefinition().muliUnitCapable) {
+            this.mapTrain(this, true, false, this::copySettings);
+        }
+    }
+
+    @Override
+    public double getBrakeSystemEfficiency() {
+        if (this.cogging) {
+            return 10;
+        }
+        return super.getBrakeSystemEfficiency();
+    }
+
+    @Override
+    public double getBrakeAdhesionEfficiency() {
+        if (this.cogging) {
+            return 10;
+        }
+        return super.getBrakeAdhesionEfficiency();
+    }
 
     @Override
     public boolean playerCanDrag(Player player, Control<?> control) {
         if (!super.playerCanDrag(player, control)) {
-        	return false;
-		}
+            return false;
+        }
         switch (control.part.type) {
-			case THROTTLE_X:
-			case REVERSER_X:
-			case TRAIN_BRAKE_X:
-			case INDEPENDENT_BRAKE_X:
-			case THROTTLE_BRAKE_X:
-			case BELL_CONTROL_X:
-			case WHISTLE_CONTROL_X:
-			case HORN_CONTROL_X:
-			case ENGINE_START_X:
-				return player.hasPermission(Permissions.LOCOMOTIVE_CONTROL);
-			default:
-				return true;
-		}
+            case THROTTLE_X:
+            case REVERSER_X:
+            case TRAIN_BRAKE_X:
+            case INDEPENDENT_BRAKE_X:
+            case THROTTLE_BRAKE_X:
+            case BELL_CONTROL_X:
+            case WHISTLE_CONTROL_X:
+            case HORN_CONTROL_X:
+            case ENGINE_START_X:
+                return player.hasPermission(Permissions.LOCOMOTIVE_CONTROL);
+            default:
+                return true;
+        }
     }
 
     public ClickResult onClick(Player player, Player.Hand hand) {
-		if (player.getHeldItem(hand).is(IRItems.ITEM_RADIO_CONTROL_CARD) && player.hasPermission(Permissions.LOCOMOTIVE_CONTROL)) {
-			if (getWorld().isClient) {
-				return ClickResult.ACCEPTED;
-			}
-			if(this.gauge.isModel() || this.getDefinition().getRadioCapability() || !Config.ConfigBalance.RadioEquipmentRequired) {
-				ItemRadioCtrlCard.Data data = new ItemRadioCtrlCard.Data(player.getHeldItem(hand));
-				if (player.isCrouching()) {
-					player.sendMessage(data.linked == null ? ChatText.RADIO_NOLINK.getMessage() : ChatText.RADIO_UNLINK.getMessage());
-					data.linked = null;
-				} else {
-					player.sendMessage(data.linked == null ? ChatText.RADIO_LINK.getMessage() : ChatText.RADIO_RELINK.getMessage());
-					data.linked = this.getUUID();
-				}
-				data.write();
-			}
-			else {
-				player.sendMessage(ChatText.RADIO_CANT_LINK.getMessage(this.getDefinition().name()));;
-			}
-			return ClickResult.ACCEPTED;
-		}
-		return super.onClick(player, hand);
-	}
+        if (player.getHeldItem(hand)
+                .is(IRItems.ITEM_RADIO_CONTROL_CARD) && player.hasPermission(Permissions.LOCOMOTIVE_CONTROL)) {
+            if (this.getWorld().isClient) {
+                return ClickResult.ACCEPTED;
+            }
+            if (this.gauge.isModel() || this.getDefinition()
+                    .getRadioCapability() || !Config.ConfigBalance.RadioEquipmentRequired) {
+                ItemRadioCtrlCard.Data data = new ItemRadioCtrlCard.Data(player.getHeldItem(hand));
+                if (player.isCrouching()) {
+                    player.sendMessage(data.linked == null ? ChatText.RADIO_NOLINK.getMessage() : ChatText.RADIO_UNLINK.getMessage());
+                    data.linked = null;
+                } else {
+                    player.sendMessage(data.linked == null ? ChatText.RADIO_LINK.getMessage() : ChatText.RADIO_RELINK.getMessage());
+                    data.linked = this.getUUID();
+                }
+                data.write();
+            } else {
+                player.sendMessage(ChatText.RADIO_CANT_LINK.getMessage(this.getDefinition().name()));
+            }
+            return ClickResult.ACCEPTED;
+        }
+        return super.onClick(player, hand);
+    }
 
-	@Override
-	public boolean canFitPassenger(Entity passenger) {
-		if (passenger instanceof Player && !((Player) passenger).hasPermission(Permissions.BOARD_LOCOMOTIVE)) {
-			return false;
-		}
-		return super.canFitPassenger(passenger);
-	}
+    @Override
+    public LocomotiveDefinition getDefinition() {
+        return super.getDefinition(LocomotiveDefinition.class);
+    }
 
-	@Override
-	public void onTick() {
-		super.onTick();
-		
-		if (getWorld().isServer) {
-			sync.setInterval(5);
-			for (Control<?> control : getDefinition().getModel().getControls()) {
-				// Logic duplicated in Readouts#setValue
-				if (!getDefinition().isLinearBrakeControl() && control.part.type == ModelComponentType.TRAIN_BRAKE_X) {
-					setTrainBrake(Math.max(0, Math.min(1, getTrainBrake() + (getControlPosition(control) - 0.5f) / 8)));
-				}
-			}
+    @Override
+    public boolean canFitPassenger(Entity passenger) {
+        if (passenger instanceof Player && !((Player) passenger).hasPermission(Permissions.BOARD_LOCOMOTIVE)) {
+            return false;
+        }
+        return super.canFitPassenger(passenger);
+    }
 
-			if (deadManChangeTimeout > 0) {
-				deadManChangeTimeout -= 1;
-			}
-			if (bellKeyTimeout > 0) {
-				bellKeyTimeout--;
-			}
-			
-			if (deadMansSwitch && !this.getCurrentSpeed().isZero()) {
-				boolean hasDriver = this.getPassengers().stream().anyMatch(Entity::isPlayer);
-				if (!hasDriver) {
-					this.setThrottle(0);
-					this.setTrainBrake(1);
-				}
-			}
-			if (hornTime > 0) {
-				hornTime--;
-			} else if (hornPlayer != null) {
-				hornPlayer = null;
-			}
-			if (hornTime == 0) {
-				hornPull = 0;
-			}
-			OptionalDouble control = this.getDefinition().getModel().getControls().stream()
-					.filter(x -> x.part.type == ModelComponentType.BELL_CONTROL_X)
-					.mapToDouble(this::getControlPosition)
-					.max();
-			if (control.isPresent() && control.getAsDouble() > 0) {
-				bellTime = 10;
-				bellControl = true;
-			}
-			if (bellTime > 0 && (!this.getDefinition().toggleBell || bellControl)) {
-				bellTime--;
-				if (bellTime == 0) {
-					bellControl = false;
-				}
-			}
-		}
+    protected double simulateWheelSlip() {
+        if (this.cogging) {
+            return 0;
+        }
 
-		this.distanceTraveled += simulateWheelSlip();
+        double adhesionFactor = Math.abs(this.getAppliedTractiveEffort(this.getCurrentSpeed())) /
+                this.getStaticTractiveEffort(this.getCurrentSpeed());
+        this.slipping = adhesionFactor > 1;
+        if (this.slipping) {
+            return Math.copySign((adhesionFactor - 1) / 5, this.getReverser());
+        }
+        return 0;
+    }
 
-		if (getWorld().isServer) {
-			setControlPosition("REVERSERFORWARD", getReverser() > 0 ? 1 : 0);
-			setControlPosition("REVERSERNEUTRAL", getReverser() == 0 ? 1 : 0);
-			setControlPosition("REVERSERBACKWARD", getReverser() < 0 ? 1 : 0);
-		}
+    public double getTractiveEffortNewtons(Speed speed) {
+        if (!this.isBuilt()) {
+            return 0;
+        }
 
-		if (getWorld().isServer) {
-			if (getDefinition().isCog() && getTickCount() % 20 == 0) {
-				SimulationState state = getCurrentState();
-				if (state != null) {
-					ITrack found = MovementTrack.findTrack(getWorld(), state.couplerPositionFront, state.yaw, gauge.value());
-					if (found instanceof TileRailBase) {
-						TileRailBase onTrack = (TileRailBase) found;
-						cogging = onTrack.isCog();
-					}
-				}
-			}
-		}
-	}
+        if (Math.abs(speed.minecraft()) > this.getDefinition().getMaxSpeed(this.gauge).minecraft()) {
+            return 0;
+        }
 
-	/** Force applied between the wheels and the rails */
-	public abstract double getAppliedTractiveEffort(Speed speed);
+        double appliedTractiveEffort = this.getAppliedTractiveEffort(speed);
 
-	/** Maximum force that can be between the wheels and the rails before it slips */
-	private double getStaticTractiveEffort(Speed speed) {
-		return (Config.ConfigBalance.FuelRequired ? this.getWeight() : this.getMaxWeight()) // KG
-				* 9.8 // M/S/S
-				* (slipping ? STEEL.kineticFriction(STEEL) : STEEL.staticFriction(STEEL))
-				* slipCoefficient(speed)
-				/ getDefinition().factorOfAdhesion()
-				* Config.ConfigBalance.tractionMultiplier;
-	}
-	
-	protected double simulateWheelSlip() {
-		if (cogging) {
-			return 0;
-		}
+        if (!this.cogging && Math.abs(appliedTractiveEffort) > 0) {
+            double staticTractiveEffort = this.getStaticTractiveEffort(speed);
 
-		double adhesionFactor = Math.abs(getAppliedTractiveEffort(getCurrentSpeed())) /
-								getStaticTractiveEffort(getCurrentSpeed());
-		slipping = adhesionFactor > 1;
-		if (slipping) {
-			return Math.copySign((adhesionFactor-1)/5, getReverser());
-		}
-		return 0;
-	}
-	
-	public double getTractiveEffortNewtons(Speed speed) {	
-		if (!this.isBuilt()) {
-			return 0;
-		}
+            if (Math.abs(appliedTractiveEffort) > staticTractiveEffort) {
+                // This is a guess, but seems to be fairly accurate
 
-		if (Math.abs(speed.minecraft()) > this.getDefinition().getMaxSpeed(gauge).minecraft()) {
-			return 0;
-		}
+                // Reduce tractive effort to max static translated into kinetic
+                double tractiveEffortNewtons = staticTractiveEffort /
+                        STEEL.staticFriction(STEEL) *
+                        STEEL.kineticFriction(STEEL);
 
-		double appliedTractiveEffort = getAppliedTractiveEffort(speed);
+                // How badly tractive effort is overwhelming static effort
+                tractiveEffortNewtons *= staticTractiveEffort / tractiveEffortNewtons;
 
-		if (!cogging && Math.abs(appliedTractiveEffort) > 0) {
-			double staticTractiveEffort = getStaticTractiveEffort(speed);
+                return Math.copySign(tractiveEffortNewtons, appliedTractiveEffort);
+            }
+        }
 
-			if (Math.abs(appliedTractiveEffort) > staticTractiveEffort) {
-				// This is a guess, but seems to be fairly accurate
+        return appliedTractiveEffort;
+    }
 
-				// Reduce tractive effort to max static translated into kinetic
-				double tractiveEffortNewtons = staticTractiveEffort /
-						STEEL.staticFriction(STEEL) *
-						STEEL.kineticFriction(STEEL);
+    /**
+     * Force applied between the wheels and the rails
+     */
+    public abstract double getAppliedTractiveEffort(Speed speed);
+    /*
+     *
+     * Misc Helper functions
+     */
 
-				// How badly tractive effort is overwhelming static effort
-				tractiveEffortNewtons *= staticTractiveEffort / tractiveEffortNewtons;
+    /**
+     * Maximum force that can be between the wheels and the rails before it slips
+     */
+    private double getStaticTractiveEffort(Speed speed) {
+        return (Config.ConfigBalance.FuelRequired ? this.getWeight() : this.getMaxWeight()) // KG
+                * 9.8 // M/S/S
+                * (this.slipping ? STEEL.kineticFriction(STEEL) : STEEL.staticFriction(STEEL))
+                * this.slipCoefficient(speed)
+                / this.getDefinition().factorOfAdhesion()
+                * Config.ConfigBalance.tractionMultiplier;
+    }
 
-				return Math.copySign(tractiveEffortNewtons, appliedTractiveEffort);
-			}
-		}
+    public double slipCoefficient(Speed speed) {
+        double slipMult = 1.0;
+        World world = this.getWorld();
+        if (world.isPrecipitating() && world.canSeeSky(this.getBlockPosition())) {
+            if (world.isRaining(this.getBlockPosition())) {
+                slipMult = 0.6;
+            }
+            if (world.isSnowing(this.getBlockPosition())) {
+                slipMult = 0.4;
+            }
+        }
+        // Wheel balance messing with friction
+        if (speed.metric() != 0) {
+            double balance = 1d / (Math.abs(speed.metric()) + 300) / (1d / 300);
+            slipMult *= balance;
+        }
+        return slipMult;
+    }
 
-		return appliedTractiveEffort;
-	}
+    public void setHorn(int val, UUID uuid) {
+        if (uuid == null) {
+            // Legacy API
+            this.hornPull = 1;
+        }
 
-	@Override
-	public double getBrakeSystemEfficiency() {
-		if (cogging) {
-			return 10;
-		}
-		return super.getBrakeSystemEfficiency();
-	}
+        if (this.hornPlayer == null && uuid != null) {
+            this.hornPlayer = uuid;
+        }
+        if (this.hornPlayer == null || this.hornPlayer.equals(uuid)) {
+            this.hornTime = val;
+        }
+    }
 
-	@Override
-	public double getBrakeAdhesionEfficiency() {
-		if (cogging) {
-			return 10;
-		}
-		return super.getBrakeAdhesionEfficiency();
-	}
-	/*
-	 * 
-	 * Misc Helper functions
-	 */
+    public void setHorn(int time, float value) {
+        this.hornTime = time;
+        this.hornPull = value;
+    }
 
-	private void copySettings(EntityRollingStock stock, boolean direction) {
-		if (stock instanceof Locomotive && ((Locomotive)stock).getDefinition().muliUnitCapable) {
-			((Locomotive) stock).setRealThrottle(this.getThrottle());
-			((Locomotive) stock).setRealReverser(this.getReverser() * (direction ? 1 : -1));
-			((Locomotive) stock).setRealTrainBrake(this.getTrainBrake());
-			((Locomotive) stock).setRealIndependentBrake(this.getIndependentBrake());
-		}
-	}
-	
-	public float getThrottle() {
-		return throttle;
-	}
-	public void setThrottle(float newThrottle) {
-		setRealThrottle(newThrottle);
-		if (this.getDefinition().muliUnitCapable) {
-			this.mapTrain(this, true, false, this::copySettings);
-		}
-	}
-	private void setRealThrottle(float newThrottle) {
-		newThrottle = Math.min(1, Math.max(0, newThrottle));
-		if (this.getThrottle() != newThrottle) {
-			setControlPositions(ModelComponentType.THROTTLE_X, newThrottle);
-			throttle = newThrottle;
-			setControlPositions(ModelComponentType.THROTTLE_BRAKE_X, getThrottle()/2 + (1- getTrainBrake())/2);
-		}
-	}
+    public int getHornTime() {
+        return this.hornTime;
+    }
 
-	public float getReverser() {
-		return reverser;
-	}
-	public void setReverser(float newReverser) {
-		setRealReverser(newReverser);
-		if (this.getDefinition().muliUnitCapable) {
-			this.mapTrain(this, true, false, this::copySettings);
-		}
-	}
-	private void setRealReverser(float newReverser){
-		newReverser = Math.min(1, Math.max(-1, newReverser));
+    public float getHornPull() {
+        if (this.getHornPlayer() != null) {
+            return (this.getHornPlayer().getRotationPitch() + 90) / 180;
+        }
+        double control = this.getDefinition().getModel().getControls().stream()
+                .filter(x -> x.part.type == ModelComponentType.WHISTLE_CONTROL_X)
+                .mapToDouble(this::getControlPosition)
+                .max().orElse(0);
 
-		if (this.getReverser() != newReverser) {
-			setControlPositions(ModelComponentType.REVERSER_X, newReverser/-2 + 0.5f);
-			reverser = newReverser;
-		}
-	}
+        return Math.max((float) control, this.hornPull);
+    }
 
-	public void setHorn(int val, UUID uuid) {
-		if (uuid == null) {
-			// Legacy API
-			hornPull = 1;
-		}
+    public Entity getHornPlayer() {
+        for (Entity pass : this.getPassengers()) {
+            if (pass.getUUID().equals(this.hornPlayer)) {
+                return pass;
+            }
+        }
+        return null;
+    }
 
-		if (hornPlayer == null && uuid != null) {
-			hornPlayer = uuid;
-		}
-		if (hornPlayer == null || hornPlayer.equals(uuid)) {
-			hornTime = val;
-		}
-	}
+    @Deprecated
+    public float getAirBrake() {
+        return this.getTrainBrake();
+    }
 
-	public void setHorn(int time, float value) {
-		hornTime = time;
-		hornPull = value;
-	}
+    public float getTrainBrake() {
+        return this.trainBrake;
+    }
 
-	public int getHornTime() {
-		return hornTime;
-	}
+    public void setTrainBrake(float newTrainBrake) {
+        this.setRealTrainBrake(newTrainBrake);
+        if (this.getDefinition().muliUnitCapable) {
+            this.mapTrain(this, true, false, this::copySettings);
+        }
+    }
 
-	public Entity getHornPlayer() {
-		for (Entity pass : getPassengers()) {
-			if (pass.getUUID().equals(hornPlayer)) {
-				return pass;
-			}
-		}
-		return null;
-	}
+    @Deprecated
+    public void setAirBrake(float value) {
+        this.setTrainBrake(value);
+    }
 
-	public float getHornPull() {
-		if (getHornPlayer() != null) {
-			return (getHornPlayer().getRotationPitch() + 90) / 180;
-		}
-		double control = this.getDefinition().getModel().getControls().stream()
-				.filter(x -> x.part.type == ModelComponentType.WHISTLE_CONTROL_X)
-				.mapToDouble(this::getControlPosition)
-				.max().orElse(0);
+    private void setRealTrainBrake(float newTrainBrake) {
+        newTrainBrake = Math.min(1, Math.max(0, newTrainBrake));
+        if (this.getTrainBrake() != newTrainBrake) {
+            if (this.getDefinition().isLinearBrakeControl()) {
+                this.setControlPositions(ModelComponentType.TRAIN_BRAKE_X, newTrainBrake);
+            }
+            this.trainBrake = newTrainBrake;
+            this.setControlPositions(ModelComponentType.THROTTLE_BRAKE_X, this.getThrottle() / 2 + (1 - this.getTrainBrake()) / 2);
+        }
+    }
 
-		return Math.max((float)control, hornPull);
-	}
+    private void copySettings(EntityRollingStock stock, boolean direction) {
+        if (stock instanceof Locomotive && ((Locomotive) stock).getDefinition().muliUnitCapable) {
+            ((Locomotive) stock).setRealThrottle(this.getThrottle());
+            ((Locomotive) stock).setRealReverser(this.getReverser() * (direction ? 1 : -1));
+            ((Locomotive) stock).setRealTrainBrake(this.getTrainBrake());
+            ((Locomotive) stock).setRealIndependentBrake(this.getIndependentBrake());
+        }
+    }
 
-	@Deprecated
-	public float getAirBrake() {
-		return getTrainBrake();
-	}
-	public float getTrainBrake() {
-		return trainBrake;
-	}
-	@Deprecated
-	public void setAirBrake(float value) {
-		setTrainBrake(value);
-	}
-	public void setTrainBrake(float newTrainBrake) {
-		setRealTrainBrake(newTrainBrake);
-		if (this.getDefinition().muliUnitCapable) {
-			this.mapTrain(this, true, false, this::copySettings);
-		}
-	}
-	private void setRealTrainBrake(float newTrainBrake) {
-		newTrainBrake = Math.min(1, Math.max(0, newTrainBrake));
-		if (this.getTrainBrake() != newTrainBrake) {
-			if (getDefinition().isLinearBrakeControl()) {
-				setControlPositions(ModelComponentType.TRAIN_BRAKE_X, newTrainBrake);
-			}
-			trainBrake = newTrainBrake;
-			setControlPositions(ModelComponentType.THROTTLE_BRAKE_X, getThrottle()/2 + (1- getTrainBrake())/2);
-		}
-	}
+    public float getThrottle() {
+        return this.throttle;
+    }
 
-	@Override
-	public void setIndependentBrake(float newIndependentBrake) {
-		setRealIndependentBrake(newIndependentBrake);
-		if (this.getDefinition().muliUnitCapable) {
-			this.mapTrain(this, true, false, this::copySettings);
-		}
-	}
-	private void setRealIndependentBrake(float newIndependentBrake) {
-		super.setIndependentBrake(newIndependentBrake);
-	}
+    public void setThrottle(float newThrottle) {
+        this.setRealThrottle(newThrottle);
+        if (this.getDefinition().muliUnitCapable) {
+            this.mapTrain(this, true, false, this::copySettings);
+        }
+    }
 
+    private void setRealThrottle(float newThrottle) {
+        newThrottle = Math.min(1, Math.max(0, newThrottle));
+        if (this.getThrottle() != newThrottle) {
+            this.setControlPositions(ModelComponentType.THROTTLE_X, newThrottle);
+            this.throttle = newThrottle;
+            this.setControlPositions(ModelComponentType.THROTTLE_BRAKE_X, this.getThrottle() / 2 + (1 - this.getTrainBrake()) / 2);
+        }
+    }
 
-	public int getBell() {
-		return bellTime;
-	}
-	public void setBell(int newBell) {
-		this.bellTime = newBell;
-	}
+    private void setRealReverser(float newReverser) {
+        newReverser = Math.min(1, Math.max(-1, newReverser));
 
-	public double slipCoefficient(Speed speed) {
-		double slipMult = 1.0;
-		World world = getWorld();
-		if (world.isPrecipitating() && world.canSeeSky(getBlockPosition())) {
-			if (world.isRaining(getBlockPosition())) {
-				slipMult = 0.6;
-			}
-			if (world.isSnowing(getBlockPosition())) {
-				slipMult = 0.4;
-			}
-		}
-		// Wheel balance messing with friction
-		if (speed.metric() != 0) {
-			double balance = 1d/(Math.abs(speed.metric())+300) / (1d/300);
-			slipMult *= balance;
-		}
-		return slipMult;
-	}
+        if (this.getReverser() != newReverser) {
+            this.setControlPositions(ModelComponentType.REVERSER_X, newReverser / -2 + 0.5f);
+            this.reverser = newReverser;
+        }
+    }
 
-	public abstract boolean providesElectricalPower();
+    public float getReverser() {
+        return this.reverser;
+    }
 
-	@Override
-	public boolean hasElectricalPower() {
-		return super.hasElectricalPower() || providesElectricalPower();
-	}
+    public void setReverser(float newReverser) {
+        this.setRealReverser(newReverser);
+        if (this.getDefinition().muliUnitCapable) {
+            this.mapTrain(this, true, false, this::copySettings);
+        }
+    }
 
-	public float ambientTemperature() {
-	    // null during registration
-		return internal != null ? getWorld().getTemperature(getBlockPosition()) : 0f;
-	}
+    private void setRealIndependentBrake(float newIndependentBrake) {
+        super.setIndependentBrake(newIndependentBrake);
+    }
+
+    public int getBell() {
+        return this.bellTime;
+    }
+
+    public void setBell(int newBell) {
+        this.bellTime = newBell;
+    }
+
+    @Override
+    public boolean hasElectricalPower() {
+        return super.hasElectricalPower() || this.providesElectricalPower();
+    }
+
+    public abstract boolean providesElectricalPower();
+
+    public float ambientTemperature() {
+        // null during registration
+        return this.internal != null ? this.getWorld().getTemperature(this.getBlockPosition()) : 0f;
+    }
 }

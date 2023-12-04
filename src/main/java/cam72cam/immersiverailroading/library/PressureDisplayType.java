@@ -11,6 +11,6 @@ public enum PressureDisplayType {
     }
 
     public String toUnitString() {
-        return toString().toUpperCase(Locale.ROOT);
+        return this.toString().toUpperCase(Locale.ROOT);
     }
 }

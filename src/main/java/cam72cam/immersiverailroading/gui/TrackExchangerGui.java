@@ -24,99 +24,97 @@ import static cam72cam.immersiverailroading.gui.ClickListHelper.next;
 import static cam72cam.immersiverailroading.gui.TrackGui.getStackName;
 
 public class TrackExchangerGui implements IScreen {
-	private Button trackSelector;
-	private Button bedTypeButton;
-	private Button gaugeButton;
+    List<ItemStack> oreDict;
+    private Button trackSelector;
+    private Button bedTypeButton;
+    private Button gaugeButton;
+    private String track;
+    private ItemStack railBed;
+    private Gauge gauge;
 
-	private String track;
-	private ItemStack railBed;
-	private Gauge gauge;
+    public TrackExchangerGui() {
+        Player player = MinecraftClient.getPlayer();
 
-	List<ItemStack> oreDict;
+        ItemTrackExchanger.Data data = new ItemTrackExchanger.Data(player.getHeldItem(Player.Hand.PRIMARY));
+        this.track = data.track;
+        this.railBed = data.railBed;
+        this.gauge = data.gauge;
 
-	public TrackExchangerGui () {
-		Player player = MinecraftClient.getPlayer();
+        this.oreDict = new ArrayList<>();
+        this.oreDict.add(ItemStack.EMPTY);
+        this.oreDict.addAll(IRFuzzy.IR_RAIL_BED.enumerate());
+    }
 
-		ItemTrackExchanger.Data data = new ItemTrackExchanger.Data(player.getHeldItem(Player.Hand.PRIMARY));
-		this.track = data.track;
-		this.railBed = data.railBed;
-		this.gauge = data.gauge;
+    @Override
+    public void init(IScreenBuilder screen) {
+        this.trackSelector = new Button(screen, -100, 22, GuiText.SELECTOR_TRACK.toString(DefinitionManager.getTrack(this.track).name)) {
+            @Override
+            public void onClick(Player.Hand hand) {
+                TrackExchangerGui.this.track = next(DefinitionManager.getTrackIDs(), TrackExchangerGui.this.track, hand);
+                TrackExchangerGui.this.trackSelector.setText(GuiText.SELECTOR_TRACK.toString(DefinitionManager.getTrack(TrackExchangerGui.this.track).name));
+            }
+        };
+        this.bedTypeButton = new Button(screen, -100, 2 * 22, GuiText.SELECTOR_RAIL_BED.toString(getStackName(this.railBed))) {
+            @Override
+            public void onClick(Player.Hand hand) {
+                ItemPickerGUI ip = new ItemPickerGUI(TrackExchangerGui.this.oreDict, (ItemStack bed) -> {
+                    if (bed != null) {
+                        TrackExchangerGui.this.railBed = bed;
+                        TrackExchangerGui.this.bedTypeButton.setText(GuiText.SELECTOR_RAIL_BED.toString(getStackName(bed)));
+                    }
+                    screen.show();
+                });
+                ip.choosenItem = TrackExchangerGui.this.railBed;
+                ip.show();
+            }
+        };
+        this.gaugeButton = new Button(screen, -100, 3 * 22, GuiText.SELECTOR_GAUGE.toString(this.gauge)) {
+            @Override
+            public void onClick(Player.Hand hand) {
+                TrackExchangerGui.this.gauge = next(Gauge.values(), TrackExchangerGui.this.gauge, hand);
+                TrackExchangerGui.this.gaugeButton.setText(GuiText.SELECTOR_GAUGE.toString(TrackExchangerGui.this.gauge));
+            }
+        };
+    }
 
-		oreDict = new ArrayList<>();
-		oreDict.add(ItemStack.EMPTY);
-		oreDict.addAll(IRFuzzy.IR_RAIL_BED.enumerate());
-	}
+    @Override
+    public void onEnterKey(IScreenBuilder builder) {
+        builder.close();
+    }
 
-	@Override
-	public void init(IScreenBuilder screen) {
-		trackSelector = new Button(screen, -100, 1 * 22, GuiText.SELECTOR_TRACK.toString(DefinitionManager.getTrack(this.track).name)) {
-			@Override
-			public void onClick(Player.Hand hand) {
-				track = next(DefinitionManager.getTrackIDs(), track, hand);
-				trackSelector.setText(GuiText.SELECTOR_TRACK.toString(DefinitionManager.getTrack(track).name));
-			}
-		};
-		bedTypeButton = new Button(screen, -100, 2 * 22, GuiText.SELECTOR_RAIL_BED.toString(getStackName(railBed))) {
-			@Override
-			public void onClick(Player.Hand hand) {
-				ItemPickerGUI ip = new ItemPickerGUI(oreDict, (ItemStack bed) -> {
-					if (bed != null) {
-						TrackExchangerGui.this.railBed = bed;
-						bedTypeButton.setText(GuiText.SELECTOR_RAIL_BED.toString(getStackName(bed)));
-					}
-					screen.show();
-				});
-				ip.choosenItem = railBed;
-				ip.show();
-			}
-		};
-		gaugeButton = new Button(screen, -100, 3 * 22, GuiText.SELECTOR_GAUGE.toString(gauge)) {
-			@Override
-			public void onClick(Player.Hand hand) {
-				gauge = next(Gauge.values(), gauge, hand);
-				gaugeButton.setText(GuiText.SELECTOR_GAUGE.toString(gauge));
-			}
-		};
-	}
+    @Override
+    public void onClose() {
+        new ItemTrackExchangerUpdatePacket(this.track, this.railBed, this.gauge).sendToServer();
+    }
 
-	@Override
-	public void onEnterKey(IScreenBuilder builder) {
-		builder.close();
-	}
+    @Override
+    public void draw(IScreenBuilder builder) {
+        int scale = 8;
+        // This could be more efficient...
+        RailSettings settings = new RailSettings(this.gauge,
+                this.track,
+                TrackItems.STRAIGHT,
+                10,
+                0,
+                1, TrackPositionType.FIXED,
+                TrackSmoothing.BOTH,
+                TrackDirection.NONE,
+                this.railBed,
+                ItemStack.EMPTY,
+                false,
+                false
+        );
+        ItemStack stack = new ItemStack(IRItems.ITEM_TRACK_BLUEPRINT, 1);
+        settings.write(stack);
 
-	@Override
-	public void onClose() {
-		new ItemTrackExchangerUpdatePacket(this.track, this.railBed, this.gauge).sendToServer();
-	}
+        Matrix4 matrix = new Matrix4();
+        matrix.translate(GUIHelpers.getScreenWidth() / 2 + builder.getWidth() / 4, builder.getHeight() / 4, 0);
+        matrix.scale(scale, scale, 1);
+        GUIHelpers.drawItem(stack, 0, 0, matrix);
 
-	@Override
-	public void draw(IScreenBuilder builder) {
-		int scale = 8;
-		// This could be more efficient...
-		RailSettings settings = new RailSettings(gauge,
-				track,
-				TrackItems.STRAIGHT,
-				10,
-				0,
-				1, TrackPositionType.FIXED,
-				TrackSmoothing.BOTH,
-				TrackDirection.NONE,
-				railBed,
-				ItemStack.EMPTY,
-				false,
-				false
-		);
-		ItemStack stack = new ItemStack(IRItems.ITEM_TRACK_BLUEPRINT, 1);
-		settings.write(stack);
-
-		Matrix4 matrix = new Matrix4();
-		matrix.translate(GUIHelpers.getScreenWidth() / 2 + builder.getWidth() / 4, builder.getHeight() / 4, 0);
-		matrix.scale(scale, scale, 1);
-		GUIHelpers.drawItem(stack, 0, 0, matrix);
-
-		matrix.setIdentity();
-		matrix.translate(GUIHelpers.getScreenWidth() / 2 - builder.getWidth() / 4, builder.getHeight() / 4, 0);
-		matrix.scale(-scale, scale, 1);
-		GUIHelpers.drawItem(stack, 0, 0, matrix);
-	}
+        matrix.setIdentity();
+        matrix.translate(GUIHelpers.getScreenWidth() / 2 - builder.getWidth() / 4, builder.getHeight() / 4, 0);
+        matrix.scale(-scale, scale, 1);
+        GUIHelpers.drawItem(stack, 0, 0, matrix);
+    }
 }

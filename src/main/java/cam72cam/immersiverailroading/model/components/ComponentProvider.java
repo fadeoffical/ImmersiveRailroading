@@ -22,17 +22,64 @@ public class ComponentProvider {
         this.internal_model_scale = internal_model_scale;
     }
 
+    public List<ModelComponent> parse(ModelComponentType... types) {
+        return Arrays.stream(types).map(this::parse).filter(Objects::nonNull).collect(Collectors.toList());
+    }
+
+    public ModelComponent parse(ModelComponentType type) {
+        Set<String> ids = this.modelIDs(type.regex);
+        if (!ids.isEmpty()) {
+            ModelComponent component = new ModelComponent(type, null, null, this.model, ids);
+            this.components.add(component);
+            return component;
+        }
+        return null;
+    }
+
     private Set<String> modelIDs(String pattern) {
         Pattern regex = Pattern.compile(pattern);
-        Set<String> modelIDs = groups.stream().filter(group -> regex.matcher(group).matches()).collect(Collectors.toSet());
-        groups.removeAll(modelIDs);
+        Set<String> modelIDs = this.groups.stream()
+                .filter(group -> regex.matcher(group).matches())
+                .collect(Collectors.toSet());
+        this.groups.removeAll(modelIDs);
 
         return modelIDs;
     }
 
+    public List<ModelComponent> parse(ModelPosition pos, ModelComponentType... types) {
+        return Arrays.stream(types).map(type -> this.parse(type, pos)).filter(Objects::nonNull).collect(Collectors.toList());
+    }
+
+    public ModelComponent parse(ModelComponentType type, ModelPosition pos) {
+        Set<String> ids = this.modelIDs(type.regex.replace("#POS#", pos.toString()).replace("#SIDE#", pos.toString()));
+        if (!ids.isEmpty()) {
+            ModelComponent component = new ModelComponent(type, pos, null, this.model, ids);
+            this.components.add(component);
+            return component;
+        }
+        return null;
+    }
+
+    public List<ModelComponent> parseAll(ModelComponentType... types) {
+        return Arrays.stream(types)
+                .flatMap(type -> this.parseAll(type).stream())
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    public List<ModelComponent> parseAll(ModelComponentType type) {
+        return this.modelIDMap(
+                type.regex.replace("#ID#", "([\\d]+)")
+        ).entrySet().stream().map(e -> {
+            ModelComponent component = new ModelComponent(type, null, Integer.parseInt(e.getKey()), this.model, e.getValue());
+            this.components.add(component);
+            return component;
+        }).collect(Collectors.toList());
+    }
+
     private Map<String, Set<String>> modelIDMap(String pattern) {
         Pattern rgx = Pattern.compile(pattern);
-        Map<String, Set<String>> modelIDs = groups.stream()
+        Map<String, Set<String>> modelIDs = this.groups.stream()
                 .map(rgx::matcher)
                 .filter(Matcher::matches)
                 .collect(
@@ -41,50 +88,8 @@ public class ComponentProvider {
                                 Collectors.mapping(m -> m.group(0), Collectors.toSet())
                         )
                 );
-        modelIDs.forEach((k, v) -> groups.removeAll(v));
+        modelIDs.forEach((k, v) -> this.groups.removeAll(v));
         return modelIDs;
-    }
-
-    public ModelComponent parse(ModelComponentType type) {
-        Set<String> ids = modelIDs(type.regex);
-        if (!ids.isEmpty()) {
-            ModelComponent component = new ModelComponent(type, null, null, model, ids);
-            this.components.add(component);
-            return component;
-        }
-        return null;
-    }
-
-    public List<ModelComponent> parse(ModelComponentType... types) {
-        return Arrays.stream(types).map(this::parse).filter(Objects::nonNull).collect(Collectors.toList());
-    }
-
-    public ModelComponent parse(ModelComponentType type, ModelPosition pos) {
-        Set<String> ids = modelIDs(type.regex.replace("#POS#", pos.toString()).replace("#SIDE#", pos.toString()));
-        if (!ids.isEmpty()) {
-            ModelComponent component = new ModelComponent(type, pos, null, model, ids);
-            this.components.add(component);
-            return component;
-        }
-        return null;
-    }
-
-    public List<ModelComponent> parse(ModelPosition pos, ModelComponentType... types) {
-        return Arrays.stream(types).map(type -> parse(type, pos)).filter(Objects::nonNull).collect(Collectors.toList());
-    }
-
-    public List<ModelComponent> parseAll(ModelComponentType type) {
-        return modelIDMap(
-                type.regex.replace("#ID#", "([\\d]+)")
-        ).entrySet().stream().map(e -> {
-            ModelComponent component = new ModelComponent(type, null, Integer.parseInt(e.getKey()), model, e.getValue());
-            this.components.add(component);
-            return component;
-        }).collect(Collectors.toList());
-    }
-
-    public List<ModelComponent> parseAll(ModelComponentType... types) {
-        return Arrays.stream(types).flatMap(type -> parseAll(type).stream()).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
     public List<ModelComponent> parseAll(ModelComponentType type, ModelPosition pos) {
@@ -97,15 +102,15 @@ public class ComponentProvider {
             // Hack pos into #ID# slot
             re = re.replace("#ID#", pos + "_([\\d]+)");
         }
-        return modelIDMap(re).entrySet().stream().map(e -> {
-            ModelComponent component = new ModelComponent(type, pos, Integer.parseInt(e.getKey()), model, e.getValue());
+        return this.modelIDMap(re).entrySet().stream().map(e -> {
+            ModelComponent component = new ModelComponent(type, pos, Integer.parseInt(e.getKey()), this.model, e.getValue());
             this.components.add(component);
             return component;
         }).collect(Collectors.toList());
     }
 
     public List<ModelComponent> components() {
-        return components;
+        return this.components;
     }
 
 }

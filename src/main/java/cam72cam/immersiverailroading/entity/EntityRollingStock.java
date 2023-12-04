@@ -5,13 +5,21 @@ import cam72cam.immersiverailroading.ConfigSound;
 import cam72cam.immersiverailroading.IRItems;
 import cam72cam.immersiverailroading.ImmersiveRailroading;
 import cam72cam.immersiverailroading.items.ItemPaintBrush;
-import cam72cam.immersiverailroading.library.*;
+import cam72cam.immersiverailroading.library.Gauge;
+import cam72cam.immersiverailroading.library.KeyTypes;
+import cam72cam.immersiverailroading.library.ModelComponentType;
+import cam72cam.immersiverailroading.library.Permissions;
 import cam72cam.immersiverailroading.model.part.Control;
 import cam72cam.immersiverailroading.registry.DefinitionManager;
 import cam72cam.immersiverailroading.registry.EntityRollingStockDefinition;
-import cam72cam.mod.entity.*;
+import cam72cam.mod.entity.CustomEntity;
+import cam72cam.mod.entity.DamageType;
+import cam72cam.mod.entity.Entity;
+import cam72cam.mod.entity.Player;
+import cam72cam.mod.entity.custom.IClickable;
+import cam72cam.mod.entity.custom.IKillable;
+import cam72cam.mod.entity.custom.ITickable;
 import cam72cam.mod.entity.sync.TagSync;
-import cam72cam.mod.entity.custom.*;
 import cam72cam.mod.item.ClickResult;
 import cam72cam.mod.item.Fuzzy;
 import cam72cam.mod.math.Vec3d;
@@ -31,47 +39,46 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class EntityRollingStock extends CustomEntity implements ITickable, IClickable, IKillable {
-	@TagField("defID")
+    @TagField("gauge")
+    public Gauge gauge;
+    @TagField("tag")
+    @TagSync
+    public String tag = "";
+    @TagField("defID")
     protected String defID;
-	@TagField("gauge")
-	public Gauge gauge;
-	@TagField("tag")
-	@TagSync
-	public String tag = "";
+    @TagSync
+    @TagField(value = "controlPositions", mapper = ControlPositionMapper.class)
+    protected Map<String, Pair<Boolean, Float>> controlPositions = new HashMap<>();
+    @TagSync
+    @TagField(value = "texture", mapper = StrictTagMapper.class)
+    private String texture = null;
+    private final SingleCache<Vec3d, Matrix4> modelMatrix = new SingleCache<>(v -> new Matrix4()
+            .translate(this.getPosition().x, this.getPosition().y, this.getPosition().z)
+            .rotate(Math.toRadians(180 - this.getRotationYaw()), 0, 1, 0)
+            .rotate(Math.toRadians(this.getRotationPitch()), 1, 0, 0)
+            .rotate(Math.toRadians(-90), 0, 1, 0)
+            .scale(this.gauge.scale(), this.gauge.scale(), this.gauge.scale())
+    );
 
-	@TagSync
-	@TagField(value = "texture", mapper = StrictTagMapper.class)
-	private String texture = null;
-	private SingleCache<Vec3d, Matrix4> modelMatrix = new SingleCache<>(v -> new Matrix4()
-			.translate(this.getPosition().x, this.getPosition().y, this.getPosition().z)
-			.rotate(Math.toRadians(180 - this.getRotationYaw()), 0, 1, 0)
-			.rotate(Math.toRadians(this.getRotationPitch()), 1, 0, 0)
-			.rotate(Math.toRadians(-90), 0, 1, 0)
-			.scale(this.gauge.scale(), this.gauge.scale(), this.gauge.scale())
-	);
+    public void setup(EntityRollingStockDefinition def, Gauge gauge, String texture) {
+        this.defID = def.defID;
+        this.gauge = gauge;
+        this.texture = texture;
+        def.cgDefaults.forEach(this::setControlPosition);
+    }
 
-	public void setup(EntityRollingStockDefinition def, Gauge gauge, String texture) {
-		this.defID = def.defID;
-		this.gauge = gauge;
-		this.texture = texture;
-		def.cgDefaults.forEach(this::setControlPosition);
-	}
+    public void setControlPosition(String control, float val) {
+        val = Math.min(1, Math.max(0, val));
+        this.controlPositions.put(control, Pair.of(false, val));
+    }
 
-	public boolean isImmuneToFire() {
-		return true;
-	}
+    public boolean isImmuneToFire() {
+        return true;
+    }
 
-	public float getCollisionReduction() {
-		return 1;
-	}
-
-	public boolean canBePushed() {
-		return false;
-	}
-
-	public boolean allowsDefaultMovement() {
-		return false;
-	}
+    public float getCollisionReduction() {
+        return 1;
+    }
 
 
 	/* TODO?
@@ -81,118 +88,153 @@ public class EntityRollingStock extends CustomEntity implements ITickable, IClic
 	}
 	*/
 
-	public String tryJoinWorld() {
-		if (DefinitionManager.getDefinition(defID) == null) {
-			String error = String.format("Missing definition %s, do you have all of the required resource packs?", defID);
-			ImmersiveRailroading.error(error);
-			return error;
-		}
-		return null;
-	}
+    public boolean canBePushed() {
+        return false;
+    }
 
-	public EntityRollingStockDefinition getDefinition() {
-		return this.getDefinition(EntityRollingStockDefinition.class);
-	}
-	public <T extends EntityRollingStockDefinition> T getDefinition(Class<T> type) {
-		EntityRollingStockDefinition def = DefinitionManager.getDefinition(defID);
-		if (def == null) {
-			// This should not be hit, entity should be removed handled by tryJoinWorld
-			throw new RuntimeException(String.format("Definition %s has been removed!  This stock will not function!", defID));
-		}
-		return (T) def;
-	}
-	public String getDefinitionID() {
-		return this.defID;
-	}
+    public boolean allowsDefaultMovement() {
+        return false;
+    }
 
-	@Override
-	public void onTick() {
-		if (getWorld().isServer && this.getTickCount() % 5 == 0) {
-			EntityRollingStockDefinition def = DefinitionManager.getDefinition(defID);
-			if (def == null) {
-				this.kill();
-			}
-		}
-	}
+    public String tryJoinWorld() {
+        if (DefinitionManager.getDefinition(this.defID) == null) {
+            String error = String.format("Missing definition %s, do you have all of the required resource packs?", this.defID);
+            ImmersiveRailroading.error(error);
+            return error;
+        }
+        return null;
+    }
 
-	/*
-	 * Player Interactions
-	 */
-	
-	@Override
-	public ClickResult onClick(Player player, Player.Hand hand) {
-		if (player.getHeldItem(hand).is(IRItems.ITEM_PAINT_BRUSH) && player.hasPermission(Permissions.PAINT_BRUSH)) {
-			ItemPaintBrush.onStockInteract(this, player, hand);
-			return ClickResult.ACCEPTED;
-		}
+    public String getDefinitionID() {
+        return this.defID;
+    }
 
-		if (player.getHeldItem(hand).is(Fuzzy.NAME_TAG) && player.hasPermission(Permissions.STOCK_ASSEMBLY)) {
-			if (getWorld().isClient) {
-				return ClickResult.ACCEPTED;
-			}
-			tag = player.getHeldItem(hand).getDisplayName();
-			player.sendMessage(PlayerMessage.direct(tag));
-			return ClickResult.ACCEPTED;
-		}
-		return ClickResult.PASS;
-	}
+    @Override
+    public void onTick() {
+        if (this.getWorld().isServer && this.getTickCount() % 5 == 0) {
+            EntityRollingStockDefinition def = DefinitionManager.getDefinition(this.defID);
+            if (def == null) {
+                this.kill();
+            }
+        }
+    }
 
-	public void setTexture(String variant) {
-		if (getDefinition().textureNames.containsKey(variant)) {
-			this.texture = variant;
-		}
-	}
+    /*
+     * Player Interactions
+     */
 
-	@Override
-	public void onDamage(DamageType type, Entity source, float amount, boolean bypassesArmor) {
-		if (getWorld().isClient) {
-			return;
-		}
+    @Override
+    public ClickResult onClick(Player player, Player.Hand hand) {
+        if (player.getHeldItem(hand).is(IRItems.ITEM_PAINT_BRUSH) && player.hasPermission(Permissions.PAINT_BRUSH)) {
+            ItemPaintBrush.onStockInteract(this, player, hand);
+            return ClickResult.ACCEPTED;
+        }
 
-		if (type == DamageType.EXPLOSION) {
-			if (source == null || !source.isMob()) {
-				if (amount > 5 && ConfigDamage.trainMobExplosionDamage) {
-					this.kill();
-				}
-			}
-		}
+        if (player.getHeldItem(hand).is(Fuzzy.NAME_TAG) && player.hasPermission(Permissions.STOCK_ASSEMBLY)) {
+            if (this.getWorld().isClient) {
+                return ClickResult.ACCEPTED;
+            }
+            this.tag = player.getHeldItem(hand).getDisplayName();
+            player.sendMessage(PlayerMessage.direct(this.tag));
+            return ClickResult.ACCEPTED;
+        }
+        return ClickResult.PASS;
+    }
 
-		if (type == DamageType.OTHER && source != null && source.isPlayer()) {
-			Player player = source.asPlayer();
-			if (player.isCrouching()) {
-				this.kill();
-			}
-		}
-	}
+    @Override
+    public void onDamage(DamageType type, Entity source, float amount, boolean bypassesArmor) {
+        if (this.getWorld().isClient) {
+            return;
+        }
 
-	@Override
-	public void onRemoved() {
+        if (type == DamageType.EXPLOSION) {
+            if (source == null || !source.isMob()) {
+                if (amount > 5 && ConfigDamage.trainMobExplosionDamage) {
+                    this.kill();
+                }
+            }
+        }
 
-	}
+        if (type == DamageType.OTHER && source != null && source.isPlayer()) {
+            Player player = source.asPlayer();
+            if (player.isCrouching()) {
+                this.kill();
+            }
+        }
+    }
 
-	protected boolean shouldDropItems(DamageType type, float amount) {
-		return type != DamageType.EXPLOSION || amount < 20;
-	}
+    @Override
+    public void onRemoved() {
 
-	public void handleKeyPress(Player source, KeyTypes key, boolean disableIndependentThrottle) {
+    }
 
-	}
+    protected boolean shouldDropItems(DamageType type, float amount) {
+        return type != DamageType.EXPLOSION || amount < 20;
+    }
 
+    public void handleKeyPress(Player source, KeyTypes key, boolean disableIndependentThrottle) {
 
-	/**
-	 * @return Stock Weight in Kg
-	 */
-	public double getWeight() {
-		return this.getDefinition().getWeight(gauge);
-	}
+    }
 
-	public double getMaxWeight() {
-		return this.getDefinition().getWeight(gauge);
-	}
+    /**
+     * @return Stock Weight in Kg
+     */
+    public double getWeight() {
+        return this.getDefinition().getWeight(this.gauge);
+    }
 
-	/*
-	 * Helpers
-	 */
+    public double getMaxWeight() {
+        return this.getDefinition().getWeight(this.gauge);
+    }
+
+    public ISound createSound(Identifier oggLocation, boolean repeats, double attenuationDistance, Supplier<Float> category) {
+        ISound snd = Audio.newSound(
+                oggLocation, SoundCategory.MASTER,
+                repeats,
+                (float) (attenuationDistance * ConfigSound.soundDistanceScale * this.gauge.scale()),
+                this.soundScale()
+        );
+        return new ISound() {
+            @Override
+            public void play(Vec3d pos) {
+                snd.play(pos);
+            }
+
+            @Override
+            public void stop() {
+                snd.stop();
+            }
+
+            @Override
+            public void setPosition(Vec3d pos) {
+                snd.setPosition(pos);
+            }
+
+            @Override
+            public void setPitch(float f) {
+                snd.setPitch(f);
+            }
+
+            @Override
+            public void setVelocity(Vec3d vel) {
+                snd.setVelocity(vel);
+            }
+
+            @Override
+            public void setVolume(float f) {
+                snd.setVolume(f * category.get());
+            }
+
+            @Override
+            public boolean isPlaying() {
+                return snd.isPlaying();
+            }
+        };
+    }
+
+    /*
+     * Helpers
+     */
 	/* TODO RENDER
 
 	@SideOnly(Side.CLIENT)
@@ -208,153 +250,125 @@ public class EntityRollingStock extends CustomEntity implements ITickable, IClic
 	}
 	*/
 
-	public float soundScale() {
-		if (this.getDefinition().shouldScalePitch()) {
-			double scale = gauge.scale() * getDefinition().internal_model_scale;
-			return (float) Math.sqrt(Math.sqrt(scale));
-		}
-		return 1;
-	}
+    public float soundScale() {
+        if (this.getDefinition().shouldScalePitch()) {
+            double scale = this.gauge.scale() * this.getDefinition().internal_model_scale;
+            return (float) Math.sqrt(Math.sqrt(scale));
+        }
+        return 1;
+    }
 
-	public ISound createSound(Identifier oggLocation, boolean repeats, double attenuationDistance, Supplier<Float> category) {
-		ISound snd = Audio.newSound(
-				oggLocation, SoundCategory.MASTER,
-				repeats,
-				(float) (attenuationDistance * ConfigSound.soundDistanceScale * gauge.scale()),
-				soundScale()
-		);
-		return new ISound() {
-			@Override
-			public void play(Vec3d pos) {
-				snd.play(pos);
-			}
+    public String getTexture() {
+        return this.texture;
+    }
 
-			@Override
-			public void stop() {
-				snd.stop();
-			}
+    public void setTexture(String variant) {
+        if (this.getDefinition().textureNames.containsKey(variant)) {
+            this.texture = variant;
+        }
+    }
 
-			@Override
-			public void setPosition(Vec3d pos) {
-				snd.setPosition(pos);
-			}
+    public EntityRollingStockDefinition getDefinition() {
+        return this.getDefinition(EntityRollingStockDefinition.class);
+    }
 
-			@Override
-			public void setPitch(float f) {
-				snd.setPitch(f);
-			}
+    public <T extends EntityRollingStockDefinition> T getDefinition(Class<T> type) {
+        EntityRollingStockDefinition def = DefinitionManager.getDefinition(this.defID);
+        if (def == null) {
+            // This should not be hit, entity should be removed handled by tryJoinWorld
+            throw new RuntimeException(String.format("Definition %s has been removed!  This stock will not function!", this.defID));
+        }
+        return (T) def;
+    }
 
-			@Override
-			public void setVelocity(Vec3d vel) {
-				snd.setVelocity(vel);
-			}
-
-			@Override
-			public void setVolume(float f) {
-				snd.setVolume(f * category.get());
-			}
-
-			@Override
-			public boolean isPlaying() {
-				return snd.isPlaying();
-			}
-		};
-	}
-
-	public String getTexture() {
-		return texture;
-	}
+    public boolean externalLightsEnabled() {
+        return this.internalLightsEnabled();
+    }
 
     public boolean internalLightsEnabled() {
-		return false;
+        return false;
     }
-    public boolean externalLightsEnabled() {
-		return internalLightsEnabled();
-	}
-	public Matrix4 getModelMatrix() {
-		return this.modelMatrix.get(getPosition()).copy();
-	}
 
-	@TagSync
-	@TagField(value="controlPositions", mapper = ControlPositionMapper.class)
-	protected Map<String, Pair<Boolean, Float>> controlPositions = new HashMap<>();
+    public Matrix4 getModelMatrix() {
+        return this.modelMatrix.get(this.getPosition()).copy();
+    }
 
-	public void onDragStart(Control<?> control) {
-		setControlPressed(control, true);
-	}
+    public void onDragStart(Control<?> control) {
+        this.setControlPressed(control, true);
+    }
 
-	public void onDrag(Control<?> control, double newValue) {
-		setControlPressed(control, true);
-		setControlPosition(control, (float)newValue);
-	}
+    public void setControlPressed(Control<?> control, boolean pressed) {
+        this.controlPositions.put(control.controlGroup, Pair.of(pressed, this.getControlPosition(control)));
+    }
 
-	public void onDragRelease(Control<?> control) {
-		setControlPressed(control, false);
+    public float getControlPosition(Control<?> control) {
+        return this.getControlData(control).getRight();
+    }
 
-		if (control.toggle) {
-			setControlPosition(control, Math.abs(getControlPosition(control) - 1));
-		}
-		if (control.press) {
-			setControlPosition(control, 0);
-		}
-	}
+    public Pair<Boolean, Float> getControlData(Control<?> control) {
+        return this.controlPositions.getOrDefault(control.controlGroup, Pair.of(false, this.defaultControlPosition(control)));
+    }
 
-	protected float defaultControlPosition(Control<?> control) {
-		return 0;
-	}
+    protected float defaultControlPosition(Control<?> control) {
+        return 0;
+    }
 
-	public Pair<Boolean, Float> getControlData(String control) {
-		return controlPositions.getOrDefault(control, Pair.of(false, 0f));
-	}
+    public void onDrag(Control<?> control, double newValue) {
+        this.setControlPressed(control, true);
+        this.setControlPosition(control, (float) newValue);
+    }
 
-	public Pair<Boolean, Float> getControlData(Control<?> control) {
-		return controlPositions.getOrDefault(control.controlGroup, Pair.of(false, defaultControlPosition(control)));
-	}
+    public void onDragRelease(Control<?> control) {
+        this.setControlPressed(control, false);
 
-	public boolean getControlPressed(Control<?> control) {
-		return getControlData(control).getLeft();
-	}
+        if (control.toggle) {
+            this.setControlPosition(control, Math.abs(this.getControlPosition(control) - 1));
+        }
+        if (control.press) {
+            this.setControlPosition(control, 0);
+        }
+    }
 
-	public void setControlPressed(Control<?> control, boolean pressed) {
-		controlPositions.put(control.controlGroup, Pair.of(pressed, getControlPosition(control)));
-	}
+    public float getControlPosition(String control) {
+        return this.getControlData(control).getRight();
+    }
 
-	public float getControlPosition(Control<?> control) {
-		return getControlData(control).getRight();
-	}
+    public Pair<Boolean, Float> getControlData(String control) {
+        return this.controlPositions.getOrDefault(control, Pair.of(false, 0f));
+    }
 
-	public float getControlPosition(String control) {
-		return getControlData(control).getRight();
-	}
+    public void setControlPositions(ModelComponentType type, float val) {
+        this.getDefinition().getModel()
+                .getControls()
+                .stream()
+                .filter(x -> x.part.type == type)
+                .forEach(c -> this.setControlPosition(c, val));
+    }
 
-	public void setControlPosition(Control<?> control, float val) {
-		val = Math.min(1, Math.max(0, val));
-		controlPositions.put(control.controlGroup, Pair.of(getControlPressed(control), val));
-	}
+    public void setControlPosition(Control<?> control, float val) {
+        val = Math.min(1, Math.max(0, val));
+        this.controlPositions.put(control.controlGroup, Pair.of(this.getControlPressed(control), val));
+    }
 
-	public void setControlPosition(String control, float val) {
-		val = Math.min(1, Math.max(0, val));
-		controlPositions.put(control, Pair.of(false, val));
-	}
+    public boolean getControlPressed(Control<?> control) {
+        return this.getControlData(control).getLeft();
+    }
 
-	public void setControlPositions(ModelComponentType type, float val) {
-		getDefinition().getModel().getControls().stream().filter(x -> x.part.type == type).forEach(c -> setControlPosition(c, val));
-	}
+    public boolean playerCanDrag(Player player, Control<?> control) {
+        return control.part.type != ModelComponentType.INDEPENDENT_BRAKE_X || player.hasPermission(Permissions.BRAKE_CONTROL);
+    }
 
-	public boolean playerCanDrag(Player player, Control<?> control) {
-		return control.part.type != ModelComponentType.INDEPENDENT_BRAKE_X || player.hasPermission(Permissions.BRAKE_CONTROL);
-	}
-
-	private static class ControlPositionMapper implements TagMapper<Map<String, Pair<Boolean, Float>>> {
-		@Override
-		public TagAccessor<Map<String, Pair<Boolean, Float>>> apply(
-				Class<Map<String, Pair<Boolean, Float>>> type,
-				String fieldName,
-				TagField tag) throws SerializationException {
-			return new TagAccessor<>(
-					(d, o) -> d.setMap(fieldName, o, Function.identity(), x -> new TagCompound().setBoolean("pressed", x.getLeft()).setFloat("pos", x.getRight())),
-					d -> d.getMap(fieldName, Function.identity(), x -> Pair.of(x.hasKey("pressed") && x.getBoolean("pressed"), x.getFloat("pos")))
-			);
-		}
-	}
+    private static class ControlPositionMapper implements TagMapper<Map<String, Pair<Boolean, Float>>> {
+        @Override
+        public TagAccessor<Map<String, Pair<Boolean, Float>>> apply(
+                Class<Map<String, Pair<Boolean, Float>>> type,
+                String fieldName,
+                TagField tag) throws SerializationException {
+            return new TagAccessor<>(
+                    (d, o) -> d.setMap(fieldName, o, Function.identity(), x -> new TagCompound().setBoolean("pressed", x.getLeft())
+                            .setFloat("pos", x.getRight())),
+                    d -> d.getMap(fieldName, Function.identity(), x -> Pair.of(x.hasKey("pressed") && x.getBoolean("pressed"), x.getFloat("pos")))
+            );
+        }
+    }
 }

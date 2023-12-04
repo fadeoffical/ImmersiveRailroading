@@ -17,6 +17,16 @@ public class DrivingAssembly {
     private final ValveGear left;
     private final ModelComponent steamChest;
 
+    public DrivingAssembly(WheelSet wheels, ValveGear right, ValveGear inner_right, ValveGear center, ValveGear inner_left, ValveGear left, ModelComponent steamChest) {
+        this.wheels = wheels;
+        this.right = right;
+        this.inner_right = inner_right;
+        this.center = center;
+        this.inner_left = inner_left;
+        this.left = left;
+        this.steamChest = steamChest;
+    }
+
     public static DrivingAssembly get(ValveGearConfig type, ComponentProvider provider, ModelState state, float angleOffset, WheelSet... backups) {
         return get(type, provider, state, null, angleOffset, backups);
     }
@@ -50,58 +60,49 @@ public class DrivingAssembly {
 
         return new DrivingAssembly(wheels, right, inner_right, center, inner_left, left, steamChest);
     }
-    public DrivingAssembly(WheelSet wheels, ValveGear right, ValveGear inner_right, ValveGear center, ValveGear inner_left, ValveGear left, ModelComponent steamChest) {
-        this.wheels = wheels;
-        this.right = right;
-        this.inner_right = inner_right;
-        this.center = center;
-        this.inner_left = inner_left;
-        this.left = left;
-        this.steamChest = steamChest;
-    }
 
     public boolean isEndStroke(EntityMoveableRollingStock stock) {
-        boolean isEndStroke = right != null && right.isEndStroke(stock);
-        isEndStroke |= inner_right != null && inner_right.isEndStroke(stock);
-        isEndStroke |= center != null && center.isEndStroke(stock);
-        isEndStroke |= inner_left != null && inner_left.isEndStroke(stock);
-        isEndStroke |= left != null && left.isEndStroke(stock);
+        boolean isEndStroke = this.right != null && this.right.isEndStroke(stock);
+        isEndStroke |= this.inner_right != null && this.inner_right.isEndStroke(stock);
+        isEndStroke |= this.center != null && this.center.isEndStroke(stock);
+        isEndStroke |= this.inner_left != null && this.inner_left.isEndStroke(stock);
+        isEndStroke |= this.left != null && this.left.isEndStroke(stock);
         return isEndStroke;
     }
 
     public void effects(EntityMoveableRollingStock stock) {
-        if (right != null) {
-            right.effects(stock);
+        if (this.right != null) {
+            this.right.effects(stock);
         }
-        if (inner_right != null) {
-            inner_right.effects(stock);
+        if (this.inner_right != null) {
+            this.inner_right.effects(stock);
         }
-        if (center != null) {
-            center.effects(stock);
+        if (this.center != null) {
+            this.center.effects(stock);
         }
-        if (inner_left != null) {
-            inner_left.effects(stock);
+        if (this.inner_left != null) {
+            this.inner_left.effects(stock);
         }
-        if (left != null) {
-            left.effects(stock);
+        if (this.left != null) {
+            this.left.effects(stock);
         }
     }
 
     public void removed(EntityMoveableRollingStock stock) {
-        if (right != null) {
-            right.removed(stock);
+        if (this.right != null) {
+            this.right.removed(stock);
         }
-        if (inner_right != null) {
-            inner_right.removed(stock);
+        if (this.inner_right != null) {
+            this.inner_right.removed(stock);
         }
-        if (center != null) {
-            center.removed(stock);
+        if (this.center != null) {
+            this.center.removed(stock);
         }
-        if (inner_left != null) {
-            inner_left.removed(stock);
+        if (this.inner_left != null) {
+            this.inner_left.removed(stock);
         }
-        if (left != null) {
-            left.removed(stock);
+        if (this.left != null) {
+            this.left.removed(stock);
         }
     }
 }

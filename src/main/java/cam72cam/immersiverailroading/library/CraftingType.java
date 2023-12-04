@@ -5,25 +5,24 @@ import cam72cam.mod.text.TextUtil;
 import java.util.Locale;
 
 public enum CraftingType {
-	CASTING,
-	CASTING_HAMMER,
-	PLATE_SMALL,
-	PLATE_MEDIUM,
-	PLATE_LARGE,
-	PLATE_BOILER,
-	;
-	
-	public boolean isCasting() {
-		return this == CASTING || this == CASTING_HAMMER;
-	}
+    CASTING,
+    CASTING_HAMMER,
+    PLATE_SMALL,
+    PLATE_MEDIUM,
+    PLATE_LARGE,
+    PLATE_BOILER,
+    ;
 
-	public boolean isPlate() {
-		return !isCasting();
-	}
+    public boolean isPlate() {
+        return !this.isCasting();
+    }
 
-	@Override
-	public String toString() {
-		return TextUtil.translate("immersiverailroading:crafting_type." + super.toString().toLowerCase(Locale.ROOT));
-	}
+    public boolean isCasting() {
+        return this == CASTING || this == CASTING_HAMMER;
+    }
+
+    @Override
+    public String toString() {
+        return TextUtil.translate("immersiverailroading:crafting_type." + super.toString().toLowerCase(Locale.ROOT));
+    }
 }
-

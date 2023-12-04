@@ -22,103 +22,103 @@ import java.util.List;
 import static cam72cam.immersiverailroading.gui.ClickListHelper.next;
 
 public class PlateRollerGUI implements IScreen {
-	private Button gaugeButton;
+    private Button gaugeButton;
 
-	private Gauge gauge;
+    private Gauge gauge;
 
-	private Button pickerButton;
+    private Button pickerButton;
 
-	private TileMultiblock tile;
-	private ItemStack currentItem;
-	
-	public PlateRollerGUI(TileMultiblock te) {
-		this.tile = te;
-		currentItem = te.getCraftItem();
-		if (currentItem == null || currentItem.isEmpty()) {
-			currentItem = new ItemStack(IRItems.ITEM_PLATE, 1);
-		}
+    private final TileMultiblock tile;
+    private ItemStack currentItem;
 
-		ItemPlate.Data data = new ItemPlate.Data(currentItem);
-		gauge = data.gauge;
-	}
-	
-	private void updatePickerButton() {
-		pickerButton.setText(
-				GuiText.SELECTOR_PLATE_TYPE.toString(currentItem != null ? currentItem.getDisplayName() : "")
-		);
-	}
+    public PlateRollerGUI(TileMultiblock te) {
+        this.tile = te;
+        this.currentItem = te.getCraftItem();
+        if (this.currentItem == null || this.currentItem.isEmpty()) {
+            this.currentItem = new ItemStack(IRItems.ITEM_PLATE, 1);
+        }
 
-	@Override
-	public void init(IScreenBuilder screen) {
-		gaugeButton = new Button(screen, 0 - 100, -24 + 0 * 30, GuiText.SELECTOR_GAUGE.toString(gauge)) {
-			@Override
-			public void onClick(Player.Hand hand) {
-				if(!currentItem.isEmpty()) {
-					EntityRollingStockDefinition def = new ItemPlate.Data(currentItem).def;
-					if (def != null && ConfigBalance.DesignGaugeLock) {
-						List<Gauge> validGauges = Collections.singletonList(Gauge.from(def.recommended_gauge.value()));
-						gauge = next(validGauges, gauge, hand);
-					} else {
-						gauge = next(Gauge.values(), gauge, hand);
-					}
-				}
-				gaugeButton.setText(GuiText.SELECTOR_GAUGE.toString(gauge));
-				sendPacket();
-			}
-		};
+        ItemPlate.Data data = new ItemPlate.Data(this.currentItem);
+        this.gauge = data.gauge;
+    }
 
-		pickerButton = new Button(screen, 0 - 100, -24 + 2 * 30, "") {
-			@Override
-			public void onClick(Player.Hand hand) {
-				CraftPicker.showCraftPicker(screen, null, CraftingType.PLATE_BOILER, (ItemStack item) -> {
-					if (item != null) {
-						if (item.is(IRItems.ITEM_ROLLING_STOCK)) {
-							ItemRollingStock.Data stock = new ItemRollingStock.Data(item);
-							item = new ItemStack(IRItems.ITEM_PLATE, 1);
-							ItemPlate.Data data = new ItemPlate.Data(item);
-							data.def = stock.def;
-							data.gauge = gauge;
-							data.type = PlateType.BOILER;
-							data.write();
-						}
+    @Override
+    public void init(IScreenBuilder screen) {
+        this.gaugeButton = new Button(screen, -100, -24, GuiText.SELECTOR_GAUGE.toString(this.gauge)) {
+            @Override
+            public void onClick(Player.Hand hand) {
+                if (!PlateRollerGUI.this.currentItem.isEmpty()) {
+                    EntityRollingStockDefinition def = new ItemPlate.Data(PlateRollerGUI.this.currentItem).def;
+                    if (def != null && ConfigBalance.DesignGaugeLock) {
+                        List<Gauge> validGauges = Collections.singletonList(Gauge.from(def.recommended_gauge.value()));
+                        PlateRollerGUI.this.gauge = next(validGauges, PlateRollerGUI.this.gauge, hand);
+                    } else {
+                        PlateRollerGUI.this.gauge = next(Gauge.values(), PlateRollerGUI.this.gauge, hand);
+                    }
+                }
+                PlateRollerGUI.this.gaugeButton.setText(GuiText.SELECTOR_GAUGE.toString(PlateRollerGUI.this.gauge));
+                PlateRollerGUI.this.sendPacket();
+            }
+        };
 
-						ItemPlate.Data data = new ItemPlate.Data(item);
-						EntityRollingStockDefinition def = data.def;
-						if (def != null && !gauge.isModel() && gauge.value() != def.recommended_gauge.value()) {
-							gauge = def.recommended_gauge;
-							gaugeButton.setText(GuiText.SELECTOR_GAUGE.toString(gauge));
-						}
-						currentItem = item;
-						updatePickerButton();
-						sendPacket();
-					}
-				});
-			}
-		};
-		updatePickerButton();
-	}
+        this.pickerButton = new Button(screen, -100, -24 + 2 * 30, "") {
+            @Override
+            public void onClick(Player.Hand hand) {
+                CraftPicker.showCraftPicker(screen, null, CraftingType.PLATE_BOILER, (ItemStack item) -> {
+                    if (item != null) {
+                        if (item.is(IRItems.ITEM_ROLLING_STOCK)) {
+                            ItemRollingStock.Data stock = new ItemRollingStock.Data(item);
+                            item = new ItemStack(IRItems.ITEM_PLATE, 1);
+                            ItemPlate.Data data = new ItemPlate.Data(item);
+                            data.def = stock.def;
+                            data.gauge = PlateRollerGUI.this.gauge;
+                            data.type = PlateType.BOILER;
+                            data.write();
+                        }
 
-	@Override
-	public void onEnterKey(IScreenBuilder builder) {
-		sendPacket();
-		builder.close();
-	}
+                        ItemPlate.Data data = new ItemPlate.Data(item);
+                        EntityRollingStockDefinition def = data.def;
+                        if (def != null && !PlateRollerGUI.this.gauge.isModel() && PlateRollerGUI.this.gauge.value() != def.recommended_gauge.value()) {
+                            PlateRollerGUI.this.gauge = def.recommended_gauge;
+                            PlateRollerGUI.this.gaugeButton.setText(GuiText.SELECTOR_GAUGE.toString(PlateRollerGUI.this.gauge));
+                        }
+                        PlateRollerGUI.this.currentItem = item;
+                        PlateRollerGUI.this.updatePickerButton();
+                        PlateRollerGUI.this.sendPacket();
+                    }
+                });
+            }
+        };
+        this.updatePickerButton();
+    }
 
-	@Override
-	public void onClose() {
-		sendPacket();
-	}
+    @Override
+    public void onEnterKey(IScreenBuilder builder) {
+        this.sendPacket();
+        builder.close();
+    }
 
-	@Override
-	public void draw(IScreenBuilder builder) {
+    @Override
+    public void onClose() {
+        this.sendPacket();
+    }
 
-	}
+    @Override
+    public void draw(IScreenBuilder builder) {
 
-	private void sendPacket() {
-		ItemPlate.Data data = new ItemPlate.Data(currentItem);
-		data.gauge = gauge;
-		data.write();
-		currentItem.setCount(Math.min(64, Math.max(1, (int) Math.floor(data.type.platesPerBlock() / gauge.scale()))));
-		tile.setCraftItem(currentItem);
+    }
+
+    private void sendPacket() {
+        ItemPlate.Data data = new ItemPlate.Data(this.currentItem);
+        data.gauge = this.gauge;
+        data.write();
+        this.currentItem.setCount(Math.min(64, Math.max(1, (int) Math.floor(data.type.platesPerBlock() / this.gauge.scale()))));
+        this.tile.setCraftItem(this.currentItem);
+    }
+
+    private void updatePickerButton() {
+        this.pickerButton.setText(
+                GuiText.SELECTOR_PLATE_TYPE.toString(this.currentItem != null ? this.currentItem.getDisplayName() : "")
+        );
     }
 }

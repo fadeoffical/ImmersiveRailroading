@@ -10,22 +10,22 @@ public class FreightContainer extends BaseContainer {
         this.stock = stock;
     }
 
-    public void draw(IContainerBuilder container){
+    public void draw(IContainerBuilder container) {
         int currY = 0;
-        currY = container.drawTopBar(0, currY, stock.getInventoryWidth());
-        currY = container.drawSlotBlock(stock.cargoItems, 0, stock.getInventoryWidth(), 0, currY);
-        currY = container.drawPlayerInventoryConnector(0, currY, stock.getInventoryWidth());
-        currY = container.drawPlayerInventory(currY, stock.getInventoryWidth());
-        drawName(container, stock);
+        currY = container.drawTopBar(0, currY, this.stock.getInventoryWidth());
+        currY = container.drawSlotBlock(this.stock.cargoItems, 0, this.stock.getInventoryWidth(), 0, currY);
+        currY = container.drawPlayerInventoryConnector(0, currY, this.stock.getInventoryWidth());
+        currY = container.drawPlayerInventory(currY, this.stock.getInventoryWidth());
+        this.drawName(container, this.stock);
     }
 
     @Override
     public int getSlotsX() {
-        return stock.getInventoryWidth();
+        return this.stock.getInventoryWidth();
     }
 
     @Override
     public int getSlotsY() {
-        return stock.getInventorySize() / stock.getInventoryWidth();
+        return this.stock.getInventorySize() / this.stock.getInventoryWidth();
     }
 }

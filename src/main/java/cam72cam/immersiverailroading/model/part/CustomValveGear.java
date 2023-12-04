@@ -20,6 +20,68 @@ public class CustomValveGear extends ValveGear {
 
     private final AnimatrixSet animation;
 
+    public CustomValveGear(ModelState state, ValveGearConfig custom, WheelSet wheels, List<ModelComponent> components, ModelComponent frontExhaust, ModelComponent rearExhaust, double internal_model_scale) {
+        super(wheels, state, 0);
+
+        try {
+            this.animation = new AnimatrixSet(custom.custom, internal_model_scale);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        state.push(settings -> settings.add((ModelState.GroupAnimator) (stock, group) -> this.animation.getMatrix(
+                group,
+                stock instanceof Locomotive ? ((Locomotive) stock).getReverser() : 0.0f,
+                this.angle(stock.distanceTraveled) / 360,
+                true
+        ))).include(components);
+
+        ModelComponent pistonRod = components.stream()
+                .filter(x -> x.type == ModelComponentType.PISTON_ROD_SIDE)
+                .findFirst()
+                .orElse(null);
+        if (pistonRod != null) {
+            float reverser = 1.0f;
+
+            //noinspection OptionalGetWithoutIsPresent
+            String pistonGroup = pistonRod.modelIDs.stream().findFirst().get();
+
+            // Detect piston extents
+            float pistonStart = 0f;
+            Vec3d initial = this.animation.getMatrix(pistonGroup, reverser, 0, true).apply(pistonRod.center);
+            Vec3d pistonStartPos = initial;
+
+            for (float i = 0; i < 1; i += 0.05) {
+                Vec3d pos = this.animation.getMatrix(pistonGroup, reverser, i, true).apply(pistonRod.center);
+                if (pos.distanceToSquared(initial) > pistonStartPos.distanceToSquared(initial)) {
+                    pistonStartPos = pos;
+                    pistonStart = i;
+                }
+            }
+
+            float pistonEnd = 0f;
+            Vec3d pistonEndPos = pistonStartPos;
+            for (float i = 0; i < 1; i += 0.05) {
+                Vec3d pos = this.animation.getMatrix(pistonGroup, reverser, i, true).apply(pistonRod.center);
+                if (pos.distanceToSquared(pistonStartPos) > pistonEndPos.distanceToSquared(pistonStartPos)) {
+                    pistonEndPos = pos;
+                    pistonEnd = i;
+                }
+            }
+
+            state.include(frontExhaust);
+            state.include(rearExhaust);
+
+            this.frontExhaust = frontExhaust != null ?
+                    new Exhaust(frontExhaust, pistonStart * 360) :
+                    new Exhaust(pistonEndPos.add(pistonStartPos.subtract(pistonEndPos)
+                            .scale(2)), pistonRod.pos, pistonStart * 360);
+            this.rearExhaust = rearExhaust != null ?
+                    new Exhaust(rearExhaust, pistonEnd * 360) :
+                    new Exhaust(pistonStartPos, pistonRod.pos, pistonEnd * 360);
+        }
+    }
+
     public static CustomValveGear get(ValveGearConfig custom, WheelSet wheels, ComponentProvider provider, ModelState state, ModelPosition pos) {
         List<ModelComponent> components = new ArrayList<>();
 
@@ -45,63 +107,5 @@ public class CustomValveGear extends ValveGear {
         ModelComponent rearExhaust = provider.parse(ModelComponentType.CYLINDER_DRAIN_SIDE, pos.and(ModelPosition.B));
 
         return !components.isEmpty() ? new CustomValveGear(state, custom, wheels, components, frontExhaust, rearExhaust, provider.internal_model_scale) : null;
-    }
-
-    public CustomValveGear(ModelState state, ValveGearConfig custom, WheelSet wheels, List<ModelComponent> components, ModelComponent frontExhaust, ModelComponent rearExhaust, double internal_model_scale) {
-        super(wheels, state, 0);
-
-        try {
-            animation = new AnimatrixSet(custom.custom, internal_model_scale);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-        state.push(settings -> settings.add((ModelState.GroupAnimator) (stock, group) -> animation.getMatrix(
-                group,
-                stock instanceof Locomotive ? ((Locomotive) stock).getReverser() : 0.0f,
-                angle(stock.distanceTraveled) / 360,
-                true
-        ))).include(components);
-
-        ModelComponent pistonRod = components.stream().filter(x -> x.type == ModelComponentType.PISTON_ROD_SIDE).findFirst().orElse(null);
-        if (pistonRod != null) {
-            float reverser = 1.0f;
-
-            //noinspection OptionalGetWithoutIsPresent
-            String pistonGroup = pistonRod.modelIDs.stream().findFirst().get();
-
-            // Detect piston extents
-            float pistonStart = 0f;
-            Vec3d initial = animation.getMatrix(pistonGroup, reverser, 0,  true).apply(pistonRod.center);
-            Vec3d pistonStartPos = initial;
-
-            for (float i = 0; i < 1; i+= 0.05) {
-                Vec3d pos = animation.getMatrix(pistonGroup, reverser, i, true).apply(pistonRod.center);
-                if (pos.distanceToSquared(initial) > pistonStartPos.distanceToSquared(initial)) {
-                    pistonStartPos = pos;
-                    pistonStart = i;
-                }
-            }
-
-            float pistonEnd = 0f;
-            Vec3d pistonEndPos = pistonStartPos;
-            for (float i = 0; i < 1; i+= 0.05) {
-                Vec3d pos = animation.getMatrix(pistonGroup, reverser, i, true).apply(pistonRod.center);
-                if (pos.distanceToSquared(pistonStartPos) > pistonEndPos.distanceToSquared(pistonStartPos)) {
-                    pistonEndPos = pos;
-                    pistonEnd = i;
-                }
-            }
-
-            state.include(frontExhaust);
-            state.include(rearExhaust);
-
-            this.frontExhaust = frontExhaust != null ?
-                    new Exhaust(frontExhaust, pistonStart * 360) :
-                    new Exhaust(pistonEndPos.add(pistonStartPos.subtract(pistonEndPos).scale(2)), pistonRod.pos, pistonStart * 360);
-            this.rearExhaust = rearExhaust != null ?
-                    new Exhaust(rearExhaust, pistonEnd * 360) :
-                    new Exhaust(pistonStartPos, pistonRod.pos, pistonEnd * 360);
-        }
     }
 }

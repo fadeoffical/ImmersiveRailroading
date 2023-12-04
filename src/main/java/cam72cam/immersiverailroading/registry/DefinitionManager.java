@@ -2,10 +2,10 @@ package cam72cam.immersiverailroading.registry;
 
 import cam72cam.immersiverailroading.Config.ConfigPerformance;
 import cam72cam.immersiverailroading.ImmersiveRailroading;
-import cam72cam.immersiverailroading.util.CAML;
-import cam72cam.immersiverailroading.util.DataBlock;
 import cam72cam.immersiverailroading.library.Gauge;
 import cam72cam.immersiverailroading.model.TrackModel;
+import cam72cam.immersiverailroading.util.CAML;
+import cam72cam.immersiverailroading.util.DataBlock;
 import cam72cam.immersiverailroading.util.JSON;
 import cam72cam.mod.gui.Progress;
 import cam72cam.mod.resource.Identifier;
@@ -22,9 +22,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class DefinitionManager {
+    private static final Map<String, StockLoader> stockLoaders;
     private static Map<String, EntityRollingStockDefinition> definitions;
     private static Map<String, TrackDefinition> tracks;
-    private static final Map<String, StockLoader> stockLoaders;
 
     static {
         stockLoaders = new LinkedHashMap<>();
@@ -46,6 +46,78 @@ public class DefinitionManager {
         stockLoaders.put("freight", CarFreightDefinition::new);
         stockLoaders.put("tank", CarTankDefinition::new);
         stockLoaders.put("hand_car", HandCarDefinition::new);
+    }
+
+    public static void initDefinitions() {
+        if (definitions != null) {
+            for (EntityRollingStockDefinition def : definitions.values()) {
+                if (def.model != null) {
+                    def.model.free();
+                }
+            }
+        }
+
+        if (tracks != null) {
+            for (TrackDefinition def : tracks.values()) {
+                for (TrackModel model : def.models) {
+                    model.free();
+                }
+            }
+        }
+
+
+        try {
+            initGauges();
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to load gauges, do you have a broken pack?", e);
+        }
+
+        // Parallel streams use numCPUs-1 threads for stream workloads.
+        Runtime runtime = Runtime.getRuntime();
+        int processors = runtime.availableProcessors();
+
+        // Manual garbage collection so we get an accurate quantity of free memory.
+        runtime.gc();
+
+        long maxMemory = runtime.maxMemory();
+        if (maxMemory == Long.MAX_VALUE) {
+            maxMemory = runtime.totalMemory();
+        }
+        ImmersiveRailroading.info("Detected %sMB of memory free", maxMemory / 1024 / 1024);
+        try {
+            com.sun.management.OperatingSystemMXBean os = (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+            maxMemory = Math.min(os.getFreePhysicalMemorySize() + runtime.totalMemory(), maxMemory);
+            ImmersiveRailroading.info("Adjusted to %sMB of memory free", maxMemory / 1024 / 1024);
+        } catch (UnsatisfiedLinkError | Exception ex) {
+            ImmersiveRailroading.catching(ex);
+        }
+
+        int loadingThreads = Math.max(1, Math.min(processors, (int) (maxMemory / (ConfigPerformance.megabytesReservedPerStockLoadingThread * 1024L * 1024L))));
+        ImmersiveRailroading.info("Using %s threads to load Immersive Railroading (%sMB per thread)", loadingThreads, ConfigPerformance.megabytesReservedPerStockLoadingThread);
+        ForkJoinPool stockLoadingPool = new ForkJoinPool(loadingThreads, pool -> {
+            final ForkJoinWorkerThread worker = ForkJoinPool.defaultForkJoinWorkerThreadFactory.newThread(pool);
+            worker.setName("ImmersiveRailroading-" + worker.getPoolIndex());
+            return worker;
+        }, null, false);
+        try {
+            stockLoadingPool.submit(() -> {
+                try {
+                    initModels();
+                } catch (IOException e) {
+                    throw new RuntimeException("Unable to load rolling stock, do you have a broken pack?", e);
+                }
+            }).get();
+        } catch (InterruptedException | ExecutionException e) {
+            // the pool broke in unexpected ways or was killed
+            throw new RuntimeException(e);
+        } finally {
+            stockLoadingPool.shutdown();
+        }
+        try {
+            initTracks();
+        } catch (Exception e) {
+            throw new RuntimeException("Unable to load tracks, do you have a broken pack?", e);
+        }
     }
 
     private static void initGauges() throws IOException {
@@ -84,78 +156,6 @@ public class DefinitionManager {
 
         for (double gauge : toRemove) {
             Gauge.remove(gauge);
-        }
-    }
-
-    public static void initDefinitions() {
-        if (definitions != null) {
-            for (EntityRollingStockDefinition def : definitions.values()) {
-                if (def.model != null) {
-                    def.model.free();
-                }
-            }
-        }
-
-        if (tracks != null) {
-            for (TrackDefinition def : tracks.values()) {
-                for (TrackModel model : def.models) {
-                    model.free();
-                }
-            }
-        }
-
-
-        try {
-            initGauges();
-        } catch (Exception e) {
-            throw new RuntimeException("Unable to load gauges, do you have a broken pack?", e);
-        }
-
-        // Parallel streams use numCPUs-1 threads for stream workloads.
-        Runtime runtime = Runtime.getRuntime();
-        int processors = runtime.availableProcessors();
-
-        // Manual garbage collection so we get an accurate quantity of free memory.
-        runtime.gc();
-
-        long maxMemory = runtime.maxMemory();
-        if (maxMemory == Long.MAX_VALUE) {
-            maxMemory = runtime.totalMemory();
-        }
-        ImmersiveRailroading.info("Detected %sMB of memory free", maxMemory/1024/1024);
-        try {
-            com.sun.management.OperatingSystemMXBean os = (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
-            maxMemory = Math.min(os.getFreePhysicalMemorySize() + runtime.totalMemory(), maxMemory);
-            ImmersiveRailroading.info("Adjusted to %sMB of memory free", maxMemory/1024/1024);
-        } catch (UnsatisfiedLinkError | Exception ex) {
-            ImmersiveRailroading.catching(ex);
-        }
-
-        int loadingThreads = Math.max(1, Math.min(processors, (int) (maxMemory / (ConfigPerformance.megabytesReservedPerStockLoadingThread * 1024L * 1024L))));
-        ImmersiveRailroading.info("Using %s threads to load Immersive Railroading (%sMB per thread)", loadingThreads, ConfigPerformance.megabytesReservedPerStockLoadingThread);
-        ForkJoinPool stockLoadingPool = new ForkJoinPool(loadingThreads, pool -> {
-            final ForkJoinWorkerThread worker = ForkJoinPool.defaultForkJoinWorkerThreadFactory.newThread(pool);
-            worker.setName("ImmersiveRailroading-" + worker.getPoolIndex());
-            return worker;
-        }, null, false);
-        try {
-            stockLoadingPool.submit(() -> {
-                try {
-                    initModels();
-                } catch (IOException e) {
-                    throw new RuntimeException("Unable to load rolling stock, do you have a broken pack?", e);
-                }
-            }).get();
-        } catch (InterruptedException | ExecutionException e) {
-            // the pool broke in unexpected ways or was killed
-            throw new RuntimeException(e);
-        } finally {
-            stockLoadingPool.shutdown();
-        }
-        try {
-            initTracks();
-        } catch (Exception e) {
-            throw new RuntimeException("Unable to load tracks, do you have a broken pack?", e);
         }
     }
 
@@ -260,35 +260,6 @@ public class DefinitionManager {
         Progress.pop(bar);
     }
 
-    private static List<String> getModelBlacklist(Set<String> defTypes) throws IOException {
-        List<String> blacklist = new ArrayList<>();
-
-        List<DataBlock> blocks = new ArrayList<>();
-
-        Identifier blacklist_json = new Identifier(ImmersiveRailroading.MODID, "rolling_stock/blacklist.json");
-        List<InputStream> inputs = blacklist_json.getResourceStreamAll();
-        for (InputStream input : inputs) {
-            blocks.add(JSON.parse(input));
-        }
-
-        Identifier blacklist_caml = new Identifier(ImmersiveRailroading.MODID, "rolling_stock/blacklist.caml");
-        inputs = blacklist_caml.getResourceStreamAll();
-        for (InputStream input : inputs) {
-            blocks.add(CAML.parse(input));
-        }
-
-        for (DataBlock block : blocks) {
-            for (String defType : defTypes) {
-                List<DataBlock.Value> found = block.getValues(defType);
-                if (found != null) {
-                    blacklist.addAll(found.stream().map(DataBlock.Value::asString).collect(Collectors.toList()));
-                }
-            }
-        }
-
-        return blacklist;
-    }
-
     private static void initTracks() throws IOException {
         tracks = new LinkedHashMap<>();
 
@@ -310,7 +281,10 @@ public class DefinitionManager {
 
 
         for (DataBlock track : blocks) {
-            List<String> types = track.getValues("types").stream().map(DataBlock.Value::asString).collect(Collectors.toList());
+            List<String> types = track.getValues("types")
+                    .stream()
+                    .map(DataBlock.Value::asString)
+                    .collect(Collectors.toList());
             Progress.Bar bar = Progress.push("Loading Tracks", types.size());
 
             for (String def : types) {
@@ -346,11 +320,40 @@ public class DefinitionManager {
         }
     }
 
+    private static List<String> getModelBlacklist(Set<String> defTypes) throws IOException {
+        List<String> blacklist = new ArrayList<>();
+
+        List<DataBlock> blocks = new ArrayList<>();
+
+        Identifier blacklist_json = new Identifier(ImmersiveRailroading.MODID, "rolling_stock/blacklist.json");
+        List<InputStream> inputs = blacklist_json.getResourceStreamAll();
+        for (InputStream input : inputs) {
+            blocks.add(JSON.parse(input));
+        }
+
+        Identifier blacklist_caml = new Identifier(ImmersiveRailroading.MODID, "rolling_stock/blacklist.caml");
+        inputs = blacklist_caml.getResourceStreamAll();
+        for (InputStream input : inputs) {
+            blocks.add(CAML.parse(input));
+        }
+
+        for (DataBlock block : blocks) {
+            for (String defType : defTypes) {
+                List<DataBlock.Value> found = block.getValues(defType);
+                if (found != null) {
+                    blacklist.addAll(found.stream().map(DataBlock.Value::asString).collect(Collectors.toList()));
+                }
+            }
+        }
+
+        return blacklist;
+    }
+
     /**
      * Get a stream for a collection that is used to load stocks in a singlethreaded or a multithreaded way.
      *
      * @param collection Collection of items.
-     * @param <E> Type of item.
+     * @param <E>        Type of item.
      * @return Singlethreaded or multithreaded stream.
      */
     private static <E> Stream<E> getStockLoadingStream(Collection<E> collection) {

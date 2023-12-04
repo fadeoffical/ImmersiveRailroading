@@ -19,30 +19,29 @@ import java.util.*;
 
 public class CargoItems {
     private final Map<UUID, StandardModel> cache = new HashMap<>();
-    private Map<UUID, Long> lastUpdate = new HashMap<>();
-
     private final List<ModelComponent> components;
+    private final Map<UUID, Long> lastUpdate = new HashMap<>();
+
+    public CargoItems(List<ModelComponent> components) {
+        this.components = components;
+    }
 
     public static CargoItems get(ComponentProvider provider) {
         List<ModelComponent> found = provider.parseAll(ModelComponentType.CARGO_ITEMS_X);
         return found.isEmpty() ? null : new CargoItems(found);
     }
 
-    public CargoItems(List<ModelComponent> components) {
-        this.components = components;
-    }
-
     public <T extends Freight> void postRender(T stock, RenderState state) {
-        if (stock.getWorld().getTicks() > lastUpdate.getOrDefault(stock.getUUID(), 0L) + 40) {
-            cache.clear();
-            lastUpdate.put(stock.getUUID(), stock.getWorld().getTicks());
+        if (stock.getWorld().getTicks() > this.lastUpdate.getOrDefault(stock.getUUID(), 0L) + 40) {
+            this.cache.clear();
+            this.lastUpdate.put(stock.getUUID(), stock.getWorld().getTicks());
         }
 
-        StandardModel model = cache.get(stock.getUUID());
+        StandardModel model = this.cache.get(stock.getUUID());
         if (model == null) {
             model = new StandardModel();
 
-            double totalVolume = components.stream().mapToDouble(a -> a.length() * a.width() * a.height()).sum();
+            double totalVolume = this.components.stream().mapToDouble(a -> a.length() * a.width() * a.height()).sum();
             int slotOffset = 0;
 
             Double minY = null;
@@ -66,13 +65,13 @@ public class CargoItems {
             double componentOffset = minY == null ? 0 : minY;
 
 
-            for (ModelComponent comp : components) {
+            for (ModelComponent comp : this.components) {
                 double xSize = comp.length();
                 double ySize = comp.height();
                 double zSize = comp.width();
 
                 double modelVolume = xSize * ySize * zSize;
-                int cargoSlots = (int) Math.ceil(stock.cargoItems.getSlotCount() * modelVolume/totalVolume);
+                int cargoSlots = (int) Math.ceil(stock.cargoItems.getSlotCount() * modelVolume / totalVolume);
 
                 // Goal: We want the biggest cubes to fill in the space
                 // Define fitment: How close each of the dimensions are to their reference given a specific scale
@@ -85,9 +84,9 @@ public class CargoItems {
                 double zItemsIdeal = ratio * zSize;
 
                 double bestFit = Double.MAX_VALUE;
-                int xItems = (int)Math.round(xItemsIdeal);
-                int yItems = (int)Math.round(yItemsIdeal);
-                int zItems = (int)Math.round(zItemsIdeal);
+                int xItems = (int) Math.round(xItemsIdeal);
+                int yItems = (int) Math.round(yItemsIdeal);
+                int zItems = (int) Math.round(zItemsIdeal);
 
                 for (int x = 1; x < cargoSlots; x++) {
                     for (int y = 1; y < cargoSlots; y++) {
@@ -118,10 +117,10 @@ public class CargoItems {
                 }
 
                 // Center X, Z
-                Vec3d offset = comp.min.add((xSize - xItems * xScale)/2,0,(zSize - zItems * zScale)/2);
+                Vec3d offset = comp.min.add((xSize - xItems * xScale) / 2, 0, (zSize - zItems * zScale) / 2);
 
                 int renderSlot = 0;
-                for (int i = slotOffset; i < Math.min(slotOffset+ cargoSlots, stock.cargoItems.getSlotCount()); i++) {
+                for (int i = slotOffset; i < Math.min(slotOffset + cargoSlots, stock.cargoItems.getSlotCount()); i++) {
                     ItemStack stack = stock.cargoItems.get(i);
                     if (stack.isEmpty()) {
                         continue;
@@ -135,7 +134,10 @@ public class CargoItems {
                             model.addCustom((s, pt) -> {
                                 s.translate(pos);
                                 s.scale(data.gauge.scale(), data.gauge.scale(), data.gauge.scale());
-                                try (OBJRender.Binding binder = data.def.getModel().binder().texture(data.texture).bind(s)) {
+                                try (OBJRender.Binding binder = data.def.getModel()
+                                        .binder()
+                                        .texture(data.texture)
+                                        .bind(s)) {
                                     binder.draw(data.def.itemGroups);
                                 }
                             });
@@ -160,7 +162,10 @@ public class CargoItems {
                                 s.translate(pos);
                                 s.scale(data.gauge.scale(), data.gauge.scale(), data.gauge.scale());
                                 s.translate(0, -componentOffset, 0);
-                                try (OBJRender.Binding binder = data.def.getModel().binder().texture(data.texture).bind(s)) {
+                                try (OBJRender.Binding binder = data.def.getModel()
+                                        .binder()
+                                        .texture(data.texture)
+                                        .bind(s)) {
                                     binder.draw(groups);
                                 }
                             });
@@ -173,8 +178,8 @@ public class CargoItems {
                     int y = (renderSlot / zItems / xItems) % yItems;
 
                     // Fill from center Z and X
-                    z = zItems/2 + ((z % 2 == 0) ? z/2 : -(z+1)/2);
-                    x = xItems/2 + ((x % 2 == 0) ? x/2 : -(x+1)/2);
+                    z = zItems / 2 + ((z % 2 == 0) ? z / 2 : -(z + 1) / 2);
+                    x = xItems / 2 + ((x % 2 == 0) ? x / 2 : -(x + 1) / 2);
 
                     Matrix4 matrix = new Matrix4()
                             //.scale(stock.gauge.scale(), stock.gauge.scale(), stock.gauge.scale())
@@ -194,7 +199,7 @@ public class CargoItems {
                 }
                 slotOffset += cargoSlots;
             }
-            cache.put(stock.getUUID(), model);
+            this.cache.put(stock.getUUID(), model);
         }
         model.render(state);
     }

@@ -10,6 +10,22 @@ import java.util.Map;
 
 public class ClientChronoState implements ChronoState {
     private final static Map<World, ClientChronoState> states = new HashMap<>();
+    private static long lastWorldTickId = -1;
+
+    static {
+        ClientEvents.TICK.subscribe(() -> {
+            if (MinecraftClient.isReady()) {
+                long currWorldTickId = MinecraftClient.getPlayer().getWorld().getTicks();
+                if (currWorldTickId != lastWorldTickId) { // Handles paused singleplayer vs multiplayer
+                    lastWorldTickId = currWorldTickId;
+                    ClientChronoState state = getState(MinecraftClient.getPlayer().getWorld());
+                    if (state != null) {
+                        state.tick();
+                    }
+                }
+            }
+        });
+    }
 
     protected World world;
     private double tickID;
@@ -19,24 +35,6 @@ public class ClientChronoState implements ChronoState {
         this.world = server.world;
         this.tickID = server.tickID;
         this.tickSkew = server.ticksPerSecond / 20;
-    }
-
-    private void tick() {
-        tickID += tickSkew;
-    }
-
-    @Override
-    public double getTickID() {
-        return tickID;
-    }
-
-    @Override
-    public double getTickSkew() {
-        return tickSkew;
-    }
-
-    public static ClientChronoState getState(World world) {
-        return states.get(world);
     }
 
     public static void updated(ServerChronoState server) {
@@ -59,7 +57,7 @@ public class ClientChronoState implements ChronoState {
 
         if (Math.abs(delta) > 25) {
             // We default to server time and assume something strange has happened
-            ImmersiveRailroading.warn("Server/Client desync, skipping from %s to %s",  client.tickID, server.tickID);
+            ImmersiveRailroading.warn("Server/Client desync, skipping from %s to %s", client.tickID, server.tickID);
             client.tickID = server.tickID;
         } else {
             // Standard skew assumption
@@ -67,19 +65,21 @@ public class ClientChronoState implements ChronoState {
         }
     }
 
-    private static long lastWorldTickId = -1;
-    static {
-        ClientEvents.TICK.subscribe(() -> {
-            if (MinecraftClient.isReady()) {
-                long currWorldTickId = MinecraftClient.getPlayer().getWorld().getTicks();
-                if (currWorldTickId != lastWorldTickId) { // Handles paused singleplayer vs multiplayer
-                    lastWorldTickId = currWorldTickId;
-                    ClientChronoState state = getState(MinecraftClient.getPlayer().getWorld());
-                    if (state != null) {
-                        state.tick();
-                    }
-                }
-            }
-        });
+    public static ClientChronoState getState(World world) {
+        return states.get(world);
+    }
+
+    private void tick() {
+        this.tickID += this.tickSkew;
+    }
+
+    @Override
+    public double getTickID() {
+        return this.tickID;
+    }
+
+    @Override
+    public double getTickSkew() {
+        return this.tickSkew;
     }
 }

@@ -14,11 +14,23 @@ public class FlangeSound {
     private final Identifier def;
     private final boolean canLoop;
     private final float attenuationDistance;
+    private final Map<UUID, Sound> sounds = new HashMap<>();
 
     public FlangeSound(Identifier def, boolean canLoop, float attenuationDistance) {
         this.def = def;
         this.canLoop = canLoop;
         this.attenuationDistance = attenuationDistance;
+    }
+
+    public void effects(EntityMoveableRollingStock stock) {
+        this.sounds.computeIfAbsent(stock.getUUID(), uuid -> new Sound(stock)).effects();
+    }
+
+    public void removed(EntityMoveableRollingStock stock) {
+        Sound sound = this.sounds.remove(stock.getUUID());
+        if (sound != null) {
+            sound.removed();
+        }
     }
 
     private class Sound {
@@ -28,62 +40,51 @@ public class FlangeSound {
         private float lastFlangeVolume;
 
         Sound(EntityMoveableRollingStock stock) {
-            lastFlangeVolume = 0;
-            sound = stock.createSound(def, canLoop, attenuationDistance, ConfigSound.SoundCategories.RollingStock::flange);
+            this.lastFlangeVolume = 0;
+            this.sound = stock.createSound(FlangeSound.this.def, FlangeSound.this.canLoop, FlangeSound.this.attenuationDistance, ConfigSound.SoundCategories.RollingStock::flange);
             this.stock = stock;
             this.sndRand = (float) Math.random() / 10;
         }
 
         void effects() {
-            double yawDelta = DegreeFuncs.delta(stock.getFrontYaw(), stock.getRearYaw()) /
-                    Math.abs(stock.getDefinition().getBogeyFront(stock.gauge) - stock.getDefinition().getBogeyRear(stock.gauge));
+            double yawDelta = DegreeFuncs.delta(this.stock.getFrontYaw(), this.stock.getRearYaw()) /
+                    Math.abs(this.stock.getDefinition().getBogeyFront(this.stock.gauge) - this.stock.getDefinition()
+                            .getBogeyRear(this.stock.gauge));
             double startingFlangeSpeed = 5;
-            double kmh = Math.abs(stock.getCurrentSpeed().metric());
-            double flangeMinYaw = stock.getDefinition().flange_min_yaw;
+            double kmh = Math.abs(this.stock.getCurrentSpeed().metric());
+            double flangeMinYaw = this.stock.getDefinition().flange_min_yaw;
             // https://en.wikipedia.org/wiki/Minimum_railway_curve_radius#Speed_and_cant implies squared speed
             flangeMinYaw = flangeMinYaw / Math.sqrt(kmh) * Math.sqrt(startingFlangeSpeed);
             if (yawDelta > flangeMinYaw && kmh > 5) {
-                if (!sound.isPlaying()) {
-                    lastFlangeVolume = 0.1f;
-                    sound.setVolume(lastFlangeVolume);
-                    sound.play(stock.getPosition());
+                if (!this.sound.isPlaying()) {
+                    this.lastFlangeVolume = 0.1f;
+                    this.sound.setVolume(this.lastFlangeVolume);
+                    this.sound.play(this.stock.getPosition());
                 }
-                sound.setPitch(0.9f + Math.abs((float)stock.getCurrentSpeed().metric())/600 + sndRand);
-                float oscillation = (float)Math.sin((stock.getTickCount()/40f * sndRand * 40));
+                this.sound.setPitch(0.9f + Math.abs((float) this.stock.getCurrentSpeed().metric()) / 600 + this.sndRand);
+                float oscillation = (float) Math.sin((this.stock.getTickCount() / 40f * this.sndRand * 40));
                 double flangeFactor = (yawDelta - flangeMinYaw) / (90 - flangeMinYaw);
-                float desiredVolume = (float)flangeFactor/2 * oscillation/4 + 0.25f;
-                lastFlangeVolume = (lastFlangeVolume*4 + desiredVolume) / 5;
-                sound.setVolume(lastFlangeVolume);
-                sound.setPosition(stock.getPosition());
-                sound.setVelocity(stock.getVelocity());
+                float desiredVolume = (float) flangeFactor / 2 * oscillation / 4 + 0.25f;
+                this.lastFlangeVolume = (this.lastFlangeVolume * 4 + desiredVolume) / 5;
+                this.sound.setVolume(this.lastFlangeVolume);
+                this.sound.setPosition(this.stock.getPosition());
+                this.sound.setVelocity(this.stock.getVelocity());
             } else {
-                if (sound.isPlaying()) {
-                    if (lastFlangeVolume > 0.1) {
-                        lastFlangeVolume = (lastFlangeVolume*4 + 0) / 5;
-                        sound.setVolume(lastFlangeVolume);
-                        sound.setPosition(stock.getPosition());
-                        sound.setVelocity(stock.getVelocity());
+                if (this.sound.isPlaying()) {
+                    if (this.lastFlangeVolume > 0.1) {
+                        this.lastFlangeVolume = (this.lastFlangeVolume * 4 + 0) / 5;
+                        this.sound.setVolume(this.lastFlangeVolume);
+                        this.sound.setPosition(this.stock.getPosition());
+                        this.sound.setVelocity(this.stock.getVelocity());
                     } else {
-                        sound.stop();
+                        this.sound.stop();
                     }
                 }
             }
         }
 
         public void removed() {
-            sound.stop();
-        }
-    }
-    private final Map<UUID, Sound> sounds = new HashMap<>();
-
-    public void effects(EntityMoveableRollingStock stock) {
-        sounds.computeIfAbsent(stock.getUUID(), uuid -> new Sound(stock)).effects();
-    }
-
-    public void removed(EntityMoveableRollingStock stock) {
-        Sound sound = sounds.remove(stock.getUUID());
-        if (sound != null) {
-            sound.removed();
+            this.sound.stop();
         }
     }
 }

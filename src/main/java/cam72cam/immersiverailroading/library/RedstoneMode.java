@@ -6,8 +6,7 @@ public enum RedstoneMode {
     ENABLED,
     REQUIRED,
     INVERTED,
-    DISABLED
-    ;
+    DISABLED;
 
     @Override
     public String toString() {

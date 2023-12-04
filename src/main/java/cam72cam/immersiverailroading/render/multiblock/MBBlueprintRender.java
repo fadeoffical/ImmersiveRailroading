@@ -22,14 +22,15 @@ public class MBBlueprintRender {
             return;
         }
 
-        state.blend(new BlendMode(BlendMode.GL_CONSTANT_ALPHA, BlendMode.GL_ONE).constantColor(1, 1, 1, 0.3f)).lightmap(1, 1);
+        state.blend(new BlendMode(BlendMode.GL_CONSTANT_ALPHA, BlendMode.GL_ONE).constantColor(1, 1, 1, 0.3f))
+                .lightmap(1, 1);
         Vec3d cameraPos = GlobalRender.getCameraPos(partialTicks);
         Vec3d playerPos = player.getPosition();
         Vec3d lastPos = player.getLastTickPos();
         Vec3d offset = new Vec3d(pos).add(0.5, 0.5, 0.5).subtract(cameraPos);
         state.translate(offset);
 
-        state.rotate(-(int)(((player.getRotationYawHead()%360+360)%360+45) / 90) * 90, 0, 1, 0);
+        state.rotate(-(int) (((player.getRotationYawHead() % 360 + 360) % 360 + 45) / 90) * 90, 0, 1, 0);
 
         float scale = 0.8f;
         Map<Vec3i, ItemStack> bp = mb.blueprint();
@@ -42,7 +43,7 @@ public class MBBlueprintRender {
             }
 
             Vec3i rPos = bpos.subtract(mb.placementPos());
-            model.addItem(renderstack, new Matrix4().translate(rPos.x, rPos.y, rPos.z).scale(scale,scale,scale));
+            model.addItem(renderstack, new Matrix4().translate(rPos.x, rPos.y, rPos.z).scale(scale, scale, scale));
         }
         model.render(state);
     }

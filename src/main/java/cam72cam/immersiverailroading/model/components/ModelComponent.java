@@ -31,32 +31,10 @@ public class ModelComponent {
         this.modelIDs = modelIDs;
         this.key = String.join(" ", modelIDs);
         this.model = model;
-        min = model.minOfGroup(this.modelIDs);
-        max = model.maxOfGroup(this.modelIDs);
-        center = new Vec3d((min.x + max.x)/2, (min.y + max.y)/2, (min.z + max.z)/2);
-        wooden = modelIDs.stream().anyMatch(g -> g.contains("WOOD"));
-    }
-
-    public double length() {
-        return max.x - min.x;
-    }
-    public double height() {
-        return max.y - min.y;
-    }
-    public double width() {
-        return max.z - min.z;
-    }
-
-    public Vec3d min(EntityRollingStock stock) {
-        return worldPosition(min, stock);
-    }
-
-    public Vec3d center(EntityRollingStock stock) {
-        return worldPosition(center, stock);
-    }
-
-    public Vec3d max(EntityRollingStock stock) {
-        return worldPosition(max, stock);
+        this.min = model.minOfGroup(this.modelIDs);
+        this.max = model.maxOfGroup(this.modelIDs);
+        this.center = new Vec3d((this.min.x + this.max.x) / 2, (this.min.y + this.max.y) / 2, (this.min.z + this.max.z) / 2);
+        this.wooden = modelIDs.stream().anyMatch(g -> g.contains("WOOD"));
     }
 
     public static Vec3d center(List<ModelComponent> components) {
@@ -75,14 +53,38 @@ public class ModelComponent {
             maxY = Math.max(maxY, rc.max.y);
             maxZ = Math.max(maxZ, rc.max.z);
         }
-        return new Vec3d((minX + maxX)/2, (minY + maxY)/2, (minZ + maxZ)/2);
+        return new Vec3d((minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2);
+    }
+
+    public double length() {
+        return this.max.x - this.min.x;
+    }
+
+    public double height() {
+        return this.max.y - this.min.y;
+    }
+
+    public double width() {
+        return this.max.z - this.min.z;
+    }
+
+    public Vec3d min(EntityRollingStock stock) {
+        return worldPosition(this.min, stock);
     }
 
     public static Vec3d worldPosition(Vec3d pos, EntityRollingStock stock) {
         return stock.getModelMatrix().apply(pos);
     }
 
+    public Vec3d center(EntityRollingStock stock) {
+        return worldPosition(this.center, stock);
+    }
+
+    public Vec3d max(EntityRollingStock stock) {
+        return worldPosition(this.max, stock);
+    }
+
     public List<OBJGroup> groups() {
-        return modelIDs.stream().map(model.groups::get).collect(Collectors.toList());
+        return this.modelIDs.stream().map(this.model.groups::get).collect(Collectors.toList());
     }
 }

@@ -21,15 +21,14 @@ public class ItemRadioCtrlCard extends CustomItem {
     }
 
     @Override
-    public int getStackSize() {
-        return 1;
-    }
-
-    @Override
     public List<CreativeTab> getCreativeTabs() {
         return Collections.singletonList(ItemTabs.MAIN_TAB);
     }
 
+    @Override
+    public int getStackSize() {
+        return 1;
+    }
 
     @Override
     public List<String> getTooltip(ItemStack stack) {

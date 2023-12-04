@@ -18,56 +18,56 @@ import java.util.List;
 
 public abstract class BaseItemRollingStock extends CustomItem {
 
-	public BaseItemRollingStock(String modID, String name) {
-		super(modID, name);
-	}
+    public BaseItemRollingStock(String modID, String name) {
+        super(modID, name);
+    }
 
-	@Override
-	public String getCustomName(ItemStack stack) {
-		EntityRollingStockDefinition def = new Data(stack).def;
+    public static ClickResult tryPlaceStock(Player player, World worldIn, Vec3i pos, Player.Hand hand, List<ItemComponentType> parts) {
+        if (!player.hasPermission(Permissions.STOCK_ASSEMBLY)) {
+            return ClickResult.REJECTED;
+        }
+
+        ItemStack stack = player.getHeldItem(hand);
+
+        EntityRollingStockDefinition def = new Data(stack).def;
+        if (def == null) {
+            player.sendMessage(ChatText.STOCK_INVALID.getMessage());
+            return ClickResult.REJECTED;
+        }
+
+        if (parts == null) {
+            parts = def.getItemComponents();
+        }
+
+        return SpawnUtil.placeStock(player, hand, worldIn, pos, def, parts);
+    }
+
+    @Override
+    public String getCustomName(ItemStack stack) {
+        EntityRollingStockDefinition def = new Data(stack).def;
         return def == null ? null : def.name();
-	}
+    }
 
-	public static ClickResult tryPlaceStock(Player player, World worldIn, Vec3i pos, Player.Hand hand, List<ItemComponentType> parts) {
-		if (!player.hasPermission(Permissions.STOCK_ASSEMBLY)) {
-			return ClickResult.REJECTED;
-		}
+    protected static class Data extends ItemDataSerializer {
+        @TagField(value = "defID")
+        public EntityRollingStockDefinition def;
 
-		ItemStack stack = player.getHeldItem(hand);
-		
-		EntityRollingStockDefinition def = new Data(stack).def;
-		if (def == null) {
-			player.sendMessage(ChatText.STOCK_INVALID.getMessage());
-			return ClickResult.REJECTED;
-		}
+        @TagField(value = "gauge")
+        public Gauge gauge;
 
-		if (parts == null) {
-			parts = def.getItemComponents();
-		}
+        @TagField(value = "texture_variant")
+        public String texture;
 
-		return SpawnUtil.placeStock(player, hand, worldIn, pos, def, parts);
-	}
+        protected Data(ItemStack stack) {
+            super(stack);
 
-	protected static class Data extends ItemDataSerializer {
-		@TagField(value = "defID")
-		public EntityRollingStockDefinition def;
+            if (this.gauge == null) {
+                this.gauge = this.def != null ? this.def.recommended_gauge : Gauge.from(Gauge.STANDARD);
+            }
 
-		@TagField(value = "gauge")
-		public Gauge gauge;
-
-		@TagField(value = "texture_variant")
-		public String texture;
-
-		protected Data(ItemStack stack) {
-			super(stack);
-
-			if (gauge == null) {
-				gauge = def != null ? def.recommended_gauge : Gauge.from(Gauge.STANDARD);
-			}
-
-			if (def != null && !def.textureNames.containsKey(texture)) {
-				texture = null;
-			}
-		}
-	}
+            if (this.def != null && !this.def.textureNames.containsKey(this.texture)) {
+                this.texture = null;
+            }
+        }
+    }
 }

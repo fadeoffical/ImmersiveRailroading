@@ -8,20 +8,23 @@ import org.apache.commons.lang3.tuple.Pair;
 import util.Matrix4;
 
 import java.util.*;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class ModelState {
+    // TODO Lighting rework...
+    public static final Pattern lcgPattern = Pattern.compile("_LCG_([^_]+)");
+    private static final Map<String, String> lcgCache = new HashMap<>();
+    private static final Map<String, Boolean> linvertCache = new HashMap<>();
+    private static final Map<String, Boolean> interiorCache = new HashMap<>();
+    private static final Map<String, Boolean> fullbrightCache = new HashMap<>();
     private final Animator animator;
     private final GroupAnimator groupAnimator;
     private final GroupVisibility groupVisibility;
     private final Lighter lighter;
     private final List<ModelComponent> components;
-
     private final List<ModelState> children = new ArrayList<>();
 
     private ModelState(
@@ -37,21 +40,23 @@ public class ModelState {
         this.lighter = lighter;
     }
 
+    public static ModelState construct(Consumer<Builder> settings) {
+        Builder builder = new Builder();
+        settings.accept(builder);
+        return builder.build();
+    }
 
     public ModelState push(Consumer<Builder> fn) {
         Builder builder = new Builder(this);
         fn.accept(builder);
         ModelState created = builder.build();
-        children.add(created);
+        this.children.add(created);
         return created;
     }
 
-    public Matrix4 getMatrix(EntityMoveableRollingStock stock) {
-        return animator != null ? animator.getMatrix(stock) : null;
-    }
     public Matrix4 getGroupMatrix(EntityMoveableRollingStock stock, String group) {
-        Matrix4 groupMatrix = groupAnimator != null ? groupAnimator.getMatrix(stock, group) : null;
-        Matrix4 baseMatrix = getMatrix(stock);
+        Matrix4 groupMatrix = this.groupAnimator != null ? this.groupAnimator.getMatrix(stock, group) : null;
+        Matrix4 baseMatrix = this.getMatrix(stock);
         if (groupMatrix == null) {
             return baseMatrix;
         }
@@ -59,6 +64,10 @@ public class ModelState {
             return groupMatrix;
         }
         return baseMatrix.copy().multiply(groupMatrix);
+    }
+
+    public Matrix4 getMatrix(EntityMoveableRollingStock stock) {
+        return this.animator != null ? this.animator.getMatrix(stock) : null;
     }
 
     public void include(ModelComponent component) {
@@ -71,153 +80,6 @@ public class ModelState {
         this.components.addAll(components);
     }
 
-    @FunctionalInterface
-    public interface Animator {
-        Matrix4 getMatrix(EntityMoveableRollingStock stock);
-        default Animator merge(Animator other) {
-            return (EntityMoveableRollingStock stock) -> {
-                Matrix4 ourMatrix = this.getMatrix(stock);
-                Matrix4 newMatrix = other.getMatrix(stock);
-                if (ourMatrix == null) {
-                    return newMatrix;
-                }
-                if (newMatrix == null) {
-                    return ourMatrix;
-                }
-                return ourMatrix.copy().multiply(newMatrix);
-            };
-        }
-    }
-    @FunctionalInterface
-    public interface GroupAnimator {
-        Matrix4 getMatrix(EntityMoveableRollingStock stock, String group);
-        default GroupAnimator merge(GroupAnimator other) {
-            return (stock, g) -> {
-                Matrix4 ourMatrix = this.getMatrix(stock, g);
-                Matrix4 newMatrix = other.getMatrix(stock, g);
-                if (ourMatrix == null) {
-                    return newMatrix;
-                }
-                if (newMatrix == null) {
-                    return ourMatrix;
-                }
-                return ourMatrix.copy().multiply(newMatrix);
-            };
-        }
-    }
-
-    @FunctionalInterface
-    public interface GroupVisibility {
-        Boolean visible(EntityMoveableRollingStock stock, String group);
-
-        default GroupVisibility merge(GroupVisibility other) {
-            return (stock, group) -> {
-                Boolean ourVisible = this.visible(stock, group);
-                Boolean otherVisible = other.visible(stock, group);
-                if (ourVisible == null) {
-                    return otherVisible;
-                }
-                if (otherVisible == null) {
-                    return ourVisible;
-                }
-                return ourVisible && otherVisible;// TODO || or && ??
-            };
-        }
-    }
-
-    @FunctionalInterface
-    public interface Lighter {
-        LightState get(EntityMoveableRollingStock stock);
-        default Lighter merge(Lighter lighter) {
-            return stock -> this.get(stock).merge(lighter.get(stock));
-        }
-    }
-
-    public static class LightState {
-        public static final LightState FULLBRIGHT = new LightState(null, null, true, null);
-        private final Float interiorLight;
-        private final Float skyLight;
-        private final Boolean fullBright;
-        private final Boolean hasInterior;
-
-        public LightState(Float interiorLight, Float skyLight, Boolean fullBright, Boolean hasInterior) {
-            this.interiorLight = interiorLight;
-            this.skyLight = skyLight;
-            this.fullBright = fullBright;
-            this.hasInterior = hasInterior;
-        }
-
-        public LightState merge(LightState other) {
-            return new LightState(
-                    other.interiorLight != null ? other.interiorLight : this.interiorLight,
-                    other.skyLight != null ? other.skyLight : this.skyLight,
-                    other.fullBright != null ? other.fullBright : this.fullBright,
-                    other.hasInterior != null ? other.hasInterior : this.hasInterior
-            );
-        }
-    }
-
-    public static ModelState construct(Consumer<Builder> settings) {
-        Builder builder = new Builder();
-        settings.accept(builder);
-        return builder.build();
-    }
-
-
-    public static class Builder {
-        public static Consumer<Builder> FULLBRIGHT = builder -> builder.add((Lighter) stock -> LightState.FULLBRIGHT);
-        private Animator animator;
-        private GroupAnimator groupAnimator;
-        private GroupVisibility groupVisibility;
-        private Lighter lighter;
-
-        private Builder() {
-            this.animator = null;
-            this.groupAnimator = null;
-            this.groupVisibility = null;
-            this.lighter = null;
-        }
-
-        private Builder(ModelState parent) {
-            this.animator = parent.animator;
-            this.groupAnimator = parent.groupAnimator;
-            this.groupVisibility = parent.groupVisibility;
-            this.lighter = parent.lighter;
-        }
-
-        public Builder add(Animator animator) {
-            this.animator = this.animator != null ? this.animator.merge(animator) : animator;
-            return this;
-        }
-        public Builder add(GroupAnimator groupAnimator) {
-            this.groupAnimator = this.groupAnimator != null ? this.groupAnimator.merge(groupAnimator) : groupAnimator;
-            return this;
-        }
-        public Builder add(GroupVisibility groupVisibility) {
-            this.groupVisibility = this.groupVisibility != null ? this.groupVisibility.merge(groupVisibility) : groupVisibility;
-            return this;
-        }
-        public Builder add(Lighter lighter) {
-            this.lighter = this.lighter != null ? this.lighter.merge(lighter) : lighter;
-            return this;
-        }
-
-        private ModelState build() {
-            return new ModelState(
-                    animator,
-                    groupAnimator,
-                    groupVisibility,
-                    lighter
-            );
-        }
-   }
-
-    // TODO Lighting rework...
-    public static final Pattern lcgPattern = Pattern.compile("_LCG_([^_]+)");
-    private static final Map<String, String> lcgCache = new HashMap<>();
-    private static final Map<String, Boolean> linvertCache = new HashMap<>();
-    private static final Map<String, Boolean> interiorCache = new HashMap<>();
-    private static final Map<String, Boolean> fullbrightCache = new HashMap<>();
     private boolean hasGroupFlag(String group, String filter) {
         for (String x : group.split("_")) {
             if (x.equals(filter)) {
@@ -231,7 +93,7 @@ public class ModelState {
     public void render(OBJRender.Binding vbo, EntityMoveableRollingStock stock, List<ModelComponentType> available) {
         // Get all groups that we can render from components that are available
         List<String> groups = new ArrayList<>();
-        for (ModelComponent component : components) {
+        for (ModelComponent component : this.components) {
             if (available == null) {
                 groups.addAll(component.modelIDs);
             } else if (available.contains(component.type)) {
@@ -241,19 +103,19 @@ public class ModelState {
         }
 
         // Filter out groups that aren't currently visible
-        if (groupVisibility != null) {
+        if (this.groupVisibility != null) {
             groups = groups.stream().filter(group -> {
-                Boolean visible = groupVisibility.visible(stock, group);
+                Boolean visible = this.groupVisibility.visible(stock, group);
                 return visible == null || visible;
             }).collect(Collectors.toList());
         }
 
-        Matrix4 matrix = animator != null ? animator.getMatrix(stock) : null;
+        Matrix4 matrix = this.animator != null ? this.animator.getMatrix(stock) : null;
 
         Map<String, Matrix4> animatedGroups = new HashMap<>();
-        if (groupAnimator != null) {
+        if (this.groupAnimator != null) {
             for (String group : groups) {
-                Matrix4 m = groupAnimator.getMatrix(stock, group);
+                Matrix4 m = this.groupAnimator.getMatrix(stock, group);
                 if (m != null) {
                     animatedGroups.put(group, m);
                 }
@@ -261,7 +123,7 @@ public class ModelState {
         }
 
         // Required, TODO upstream checking or optional
-        LightState lighting = lighter.get(stock);
+        LightState lighting = this.lighter.get(stock);
         boolean fullBright = lighting.fullBright != null && lighting.fullBright;
         boolean hasInterior = lighting.hasInterior != null && lighting.hasInterior;
 
@@ -274,9 +136,9 @@ public class ModelState {
             }
             String lcg = lcgCache.get(group);
 
-            boolean invertGroup = linvertCache.computeIfAbsent(group, g -> hasGroupFlag(g, "LINVERT"));
-            boolean interiorGroup = interiorCache.computeIfAbsent(group, g -> hasGroupFlag(g, "INTERIOR"));
-            boolean fullbrightGroup = fullbrightCache.computeIfAbsent(group, g -> hasGroupFlag(g, "FULLBRIGHT"));
+            boolean invertGroup = linvertCache.computeIfAbsent(group, g -> this.hasGroupFlag(g, "LINVERT"));
+            boolean interiorGroup = interiorCache.computeIfAbsent(group, g -> this.hasGroupFlag(g, "INTERIOR"));
+            boolean fullbrightGroup = fullbrightCache.computeIfAbsent(group, g -> this.hasGroupFlag(g, "FULLBRIGHT"));
 
             Float lcgValue = lcg != null ? stock.getControlPosition(lcg) : null;
             lcgValue = lcgValue == null ? null : invertGroup ? 1 - lcgValue : lcgValue;
@@ -331,8 +193,145 @@ public class ModelState {
             }
         });
 
-        for (ModelState child : children) {
+        for (ModelState child : this.children) {
             child.render(vbo, stock, available);
+        }
+    }
+    @FunctionalInterface
+    public interface Animator {
+        default Animator merge(Animator other) {
+            return (EntityMoveableRollingStock stock) -> {
+                Matrix4 ourMatrix = this.getMatrix(stock);
+                Matrix4 newMatrix = other.getMatrix(stock);
+                if (ourMatrix == null) {
+                    return newMatrix;
+                }
+                if (newMatrix == null) {
+                    return ourMatrix;
+                }
+                return ourMatrix.copy().multiply(newMatrix);
+            };
+        }
+
+        Matrix4 getMatrix(EntityMoveableRollingStock stock);
+    }
+    @FunctionalInterface
+    public interface GroupAnimator {
+        default GroupAnimator merge(GroupAnimator other) {
+            return (stock, g) -> {
+                Matrix4 ourMatrix = this.getMatrix(stock, g);
+                Matrix4 newMatrix = other.getMatrix(stock, g);
+                if (ourMatrix == null) {
+                    return newMatrix;
+                }
+                if (newMatrix == null) {
+                    return ourMatrix;
+                }
+                return ourMatrix.copy().multiply(newMatrix);
+            };
+        }
+
+        Matrix4 getMatrix(EntityMoveableRollingStock stock, String group);
+    }
+    @FunctionalInterface
+    public interface GroupVisibility {
+        default GroupVisibility merge(GroupVisibility other) {
+            return (stock, group) -> {
+                Boolean ourVisible = this.visible(stock, group);
+                Boolean otherVisible = other.visible(stock, group);
+                if (ourVisible == null) {
+                    return otherVisible;
+                }
+                if (otherVisible == null) {
+                    return ourVisible;
+                }
+                return ourVisible && otherVisible;// TODO || or && ??
+            };
+        }
+
+        Boolean visible(EntityMoveableRollingStock stock, String group);
+    }
+    @FunctionalInterface
+    public interface Lighter {
+        default Lighter merge(Lighter lighter) {
+            return stock -> this.get(stock).merge(lighter.get(stock));
+        }
+
+        LightState get(EntityMoveableRollingStock stock);
+    }
+
+    public static class LightState {
+        public static final LightState FULLBRIGHT = new LightState(null, null, true, null);
+        private final Float interiorLight;
+        private final Float skyLight;
+        private final Boolean fullBright;
+        private final Boolean hasInterior;
+
+        public LightState(Float interiorLight, Float skyLight, Boolean fullBright, Boolean hasInterior) {
+            this.interiorLight = interiorLight;
+            this.skyLight = skyLight;
+            this.fullBright = fullBright;
+            this.hasInterior = hasInterior;
+        }
+
+        public LightState merge(LightState other) {
+            return new LightState(
+                    other.interiorLight != null ? other.interiorLight : this.interiorLight,
+                    other.skyLight != null ? other.skyLight : this.skyLight,
+                    other.fullBright != null ? other.fullBright : this.fullBright,
+                    other.hasInterior != null ? other.hasInterior : this.hasInterior
+            );
+        }
+    }
+
+    public static class Builder {
+        public static Consumer<Builder> FULLBRIGHT = builder -> builder.add((Lighter) stock -> LightState.FULLBRIGHT);
+        private Animator animator;
+        private GroupAnimator groupAnimator;
+        private GroupVisibility groupVisibility;
+        private Lighter lighter;
+
+        private Builder() {
+            this.animator = null;
+            this.groupAnimator = null;
+            this.groupVisibility = null;
+            this.lighter = null;
+        }
+
+        private Builder(ModelState parent) {
+            this.animator = parent.animator;
+            this.groupAnimator = parent.groupAnimator;
+            this.groupVisibility = parent.groupVisibility;
+            this.lighter = parent.lighter;
+        }
+
+        public Builder add(Animator animator) {
+            this.animator = this.animator != null ? this.animator.merge(animator) : animator;
+            return this;
+        }
+
+        public Builder add(GroupAnimator groupAnimator) {
+            this.groupAnimator = this.groupAnimator != null ? this.groupAnimator.merge(groupAnimator) : groupAnimator;
+            return this;
+        }
+
+        public Builder add(GroupVisibility groupVisibility) {
+            this.groupVisibility = this.groupVisibility != null ? this.groupVisibility.merge(groupVisibility) : groupVisibility;
+            return this;
+        }
+
+        public Builder add(Lighter lighter) {
+            this.lighter = this.lighter != null ? this.lighter.merge(lighter) : lighter;
+            return this;
+        }
+
+        private ModelState build() {
+            return new ModelState(
+                    this.animator,
+                    this.groupAnimator,
+                    this.groupVisibility,
+                    this.lighter
+            );
         }
     }
 }

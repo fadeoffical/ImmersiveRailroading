@@ -39,16 +39,6 @@ public class RailSettings {
         this.curvosity = curvosity;
     }
 
-    public void write(ItemStack stack) {
-        TagCompound data = new TagCompound();
-        try {
-            TagSerializer.serialize(data, mutable());
-        } catch (SerializationException e) {
-            ImmersiveRailroading.catching(e);
-        }
-        stack.setTagCompound(data);
-    }
-
     public static RailSettings from(ItemStack stack) {
         try {
             return new Mutable(stack.getTagCompound()).immutable();
@@ -57,12 +47,22 @@ public class RailSettings {
         }
     }
 
+    public void write(ItemStack stack) {
+        TagCompound data = new TagCompound();
+        try {
+            TagSerializer.serialize(data, this.mutable());
+        } catch (SerializationException e) {
+            ImmersiveRailroading.catching(e);
+        }
+        stack.setTagCompound(data);
+    }
+
     public Mutable mutable() {
         return new Mutable(this);
     }
 
     public RailSettings with(Consumer<Mutable> mod) {
-        Mutable mutable = mutable();
+        Mutable mutable = this.mutable();
         mod.accept(mutable);
         return mutable.immutable();
     }
@@ -73,7 +73,7 @@ public class RailSettings {
             return new TagAccessor<Float>(
                     (d, o) -> d.setFloat(fieldName, o),
                     d -> d.hasKey(fieldName) ? d.getFloat(fieldName) :
-                            d.hasKey("quarters") ? d.getInteger("quarters") /4F * 90 : 90
+                            d.hasKey("quarters") ? d.getInteger("quarters") / 4F * 90 : 90
             ) {
                 @Override
                 public boolean applyIfMissing() {
@@ -150,38 +150,38 @@ public class RailSettings {
 
         private Mutable(TagCompound data) throws SerializationException {
             // Defaults
-            gauge = Gauge.from(Gauge.STANDARD);
-            type = TrackItems.STRAIGHT;
-            track = "default";
-            length = 10;
-            degrees = 90;
-            posType = TrackPositionType.FIXED;
-            smoothing = TrackSmoothing.BOTH;
-            direction = TrackDirection.NONE;
-            railBed = ItemStack.EMPTY;
-            railBedFill = ItemStack.EMPTY;
-            isPreview = false;
-            isGradeCrossing = false;
-            curvosity = 1;
+            this.gauge = Gauge.from(Gauge.STANDARD);
+            this.type = TrackItems.STRAIGHT;
+            this.track = "default";
+            this.length = 10;
+            this.degrees = 90;
+            this.posType = TrackPositionType.FIXED;
+            this.smoothing = TrackSmoothing.BOTH;
+            this.direction = TrackDirection.NONE;
+            this.railBed = ItemStack.EMPTY;
+            this.railBedFill = ItemStack.EMPTY;
+            this.isPreview = false;
+            this.isGradeCrossing = false;
+            this.curvosity = 1;
 
             TagSerializer.deserialize(data, this);
         }
 
         public RailSettings immutable() {
             return new RailSettings(
-                    gauge,
-                    track,
-                    type,
-                    length,
-                    degrees,
-                    curvosity,
-                    posType,
-                    smoothing,
-                    direction,
-                    railBed,
-                    railBedFill,
-                    isPreview,
-                    isGradeCrossing
+                    this.gauge,
+                    this.track,
+                    this.type,
+                    this.length,
+                    this.degrees,
+                    this.curvosity,
+                    this.posType,
+                    this.smoothing,
+                    this.direction,
+                    this.railBed,
+                    this.railBedFill,
+                    this.isPreview,
+                    this.isGradeCrossing
             );
         }
     }

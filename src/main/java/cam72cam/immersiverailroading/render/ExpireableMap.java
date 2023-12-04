@@ -2,92 +2,93 @@ package cam72cam.immersiverailroading.render;
 
 import java.util.*;
 
-public class ExpireableMap<K,V> {
-	
-	public int lifespan() {
-		return 10;
-	}
-	public boolean sliding() {
-		return true;
-	}
-	
-	public void onRemove(K key, V value) {
-		
-	}
-	
-	private static long timeS() {
-		return System.currentTimeMillis() / 1000L;
-	}
-	
-	private Map<K, V> map = new HashMap<K, V>();
-	private Map<K, Long> mapUsage = new HashMap<K, Long>();
-	private long lastTime = timeS();
-	
-	public V get(K key) {
-		synchronized(this) {
-			if (lastTime + lifespan() < timeS()) {
-				// clear unused
-				Set<K> ks = new HashSet<K>();
-				ks.addAll(map.keySet());
-				for (K dk : ks) {
-					if (dk != key && mapUsage.get(dk) + lifespan() < timeS()) {
-						onRemove(dk, map.get(dk));
-						map.remove(dk);
-						mapUsage.remove(dk);
-					}
-				}
-				lastTime = timeS();
-			}
-			
-			
-			if (map.containsKey(key)) {
-				if (sliding()) {
-					mapUsage.put(key, timeS());
-				}
-				return map.get(key);
-			}
-			return null;
-		}
-	}
+public class ExpireableMap<K, V> {
 
-	public void put(K key, V displayList) {
-		synchronized(this) {
-			if (displayList == null) {
-				remove(key);
-			} else {
-				mapUsage.put(key, timeS());
-				map.put(key, displayList);
-			}
-		}
-	}
+    private final Map<K, V> map = new HashMap<K, V>();
+    private final Map<K, Long> mapUsage = new HashMap<K, Long>();
+    private long lastTime = timeS();
 
-	public void remove(K key) {
-		synchronized(this) {
-			if(map.containsKey(key)) {
-				onRemove(key, map.get(key));
-				map.remove(key);
-				mapUsage.remove(key);
-			}
-		}
-	}
+    public V get(K key) {
+        synchronized (this) {
+            if (this.lastTime + this.lifespan() < timeS()) {
+                // clear unused
+                Set<K> ks = new HashSet<K>();
+                ks.addAll(this.map.keySet());
+                for (K dk : ks) {
+                    if (dk != key && this.mapUsage.get(dk) + this.lifespan() < timeS()) {
+                        this.onRemove(dk, this.map.get(dk));
+                        this.map.remove(dk);
+                        this.mapUsage.remove(dk);
+                    }
+                }
+                this.lastTime = timeS();
+            }
 
-	public Collection<V> values() {
-		synchronized(this) {
-			if (lastTime + lifespan() < timeS()) {
-				// clear unused
-				Set<K> ks = new HashSet<K>();
-				ks.addAll(map.keySet());
-				for (K dk : ks) {
-					if (mapUsage.get(dk) + lifespan() < timeS()) {
-						onRemove(dk, map.get(dk));
-						map.remove(dk);
-						mapUsage.remove(dk);
-					}
-				}
-				lastTime = timeS();
-			}
 
-			return map.values();
-		}
-	}
+            if (this.map.containsKey(key)) {
+                if (this.sliding()) {
+                    this.mapUsage.put(key, timeS());
+                }
+                return this.map.get(key);
+            }
+            return null;
+        }
+    }
+
+    public int lifespan() {
+        return 10;
+    }
+
+    private static long timeS() {
+        return System.currentTimeMillis() / 1000L;
+    }
+
+    public void onRemove(K key, V value) {
+
+    }
+
+    public boolean sliding() {
+        return true;
+    }
+
+    public void put(K key, V displayList) {
+        synchronized (this) {
+            if (displayList == null) {
+                this.remove(key);
+            } else {
+                this.mapUsage.put(key, timeS());
+                this.map.put(key, displayList);
+            }
+        }
+    }
+
+    public void remove(K key) {
+        synchronized (this) {
+            if (this.map.containsKey(key)) {
+                this.onRemove(key, this.map.get(key));
+                this.map.remove(key);
+                this.mapUsage.remove(key);
+            }
+        }
+    }
+
+    public Collection<V> values() {
+        synchronized (this) {
+            if (this.lastTime + this.lifespan() < timeS()) {
+                // clear unused
+                Set<K> ks = new HashSet<K>();
+                ks.addAll(this.map.keySet());
+                for (K dk : ks) {
+                    if (this.mapUsage.get(dk) + this.lifespan() < timeS()) {
+                        this.onRemove(dk, this.map.get(dk));
+                        this.map.remove(dk);
+                        this.mapUsage.remove(dk);
+                    }
+                }
+                this.lastTime = timeS();
+            }
+
+            return this.map.values();
+        }
+    }
 }

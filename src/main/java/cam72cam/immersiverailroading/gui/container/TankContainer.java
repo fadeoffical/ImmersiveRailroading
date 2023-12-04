@@ -14,7 +14,7 @@ public class TankContainer extends BaseContainer {
         this.template = Fuzzy.BUCKET.example();
     }
 
-    public void draw(IContainerBuilder container){
+    public void draw(IContainerBuilder container) {
         int currY = 0;
         int horizSlots = 10;
         int inventoryRows = 4;
@@ -30,18 +30,19 @@ public class TankContainer extends BaseContainer {
             }
         }
 
-        container.drawTankBlock(0, tankY, horizSlots, inventoryRows, stock.getLiquid(), stock.getLiquidAmount() / (float) stock.getTankCapacity().MilliBuckets());
+        container.drawTankBlock(0, tankY, horizSlots, inventoryRows, this.stock.getLiquid(), this.stock.getLiquidAmount() / (float) this.stock.getTankCapacity()
+                .MilliBuckets());
 
-        container.drawSlotOverlay(template, 1, slotY);
-        container.drawSlot(stock.cargoItems, 0, 1, slotY);
-        container.drawSlot(stock.cargoItems, 1,  1 + horizSlots * 16, slotY);
+        container.drawSlotOverlay(this.template, 1, slotY);
+        container.drawSlot(this.stock.cargoItems, 0, 1, slotY);
+        container.drawSlot(this.stock.cargoItems, 1, 1 + horizSlots * 16, slotY);
 
-        String quantityStr = String.format("%s/%s", stock.getLiquidAmount(), stock.getTankCapacity().MilliBuckets());
+        String quantityStr = String.format("%s/%s", this.stock.getLiquidAmount(), this.stock.getTankCapacity().MilliBuckets());
         container.drawCenteredString(quantityStr, 0, slotY);
 
         currY = container.drawPlayerInventoryConnector(0, currY, horizSlots);
         currY = container.drawPlayerInventory(currY, horizSlots);
-        drawName(container, stock);
+        this.drawName(container, this.stock);
     }
 
     @Override

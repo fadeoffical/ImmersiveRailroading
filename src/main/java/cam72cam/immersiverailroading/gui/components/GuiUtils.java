@@ -6,6 +6,6 @@ public class GuiUtils {
             return s;
         }
         len -= 3;
-        return s.substring(0, len/2) + "..." + s.substring(s.length() - len/2);
+        return s.substring(0, len / 2) + "..." + s.substring(s.length() - len / 2);
     }
 }

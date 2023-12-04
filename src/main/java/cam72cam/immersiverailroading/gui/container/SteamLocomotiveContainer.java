@@ -16,10 +16,10 @@ public class SteamLocomotiveContainer extends BaseContainer {
         this.template = Fuzzy.BUCKET.example();
     }
 
-    public void draw(IContainerBuilder container){
+    public void draw(IContainerBuilder container) {
         int currY = 0;
-        int horizSlots = stock.getInventoryWidth();
-        int inventoryRows = (int) Math.ceil(((double)stock.getInventorySize()-2) / horizSlots);
+        int horizSlots = this.stock.getInventoryWidth();
+        int inventoryRows = (int) Math.ceil(((double) this.stock.getInventorySize() - 2) / horizSlots);
         int slotY = 0;
 
         currY = container.drawTopBar(0, currY, horizSlots * 2);
@@ -32,46 +32,47 @@ public class SteamLocomotiveContainer extends BaseContainer {
             }
         }
 
-        container.drawTankBlock(0, tankY, horizSlots * 2, inventoryRows, stock.getLiquid(), stock.getLiquidAmount() / (float)stock.getTankCapacity().MilliBuckets());
+        container.drawTankBlock(0, tankY, horizSlots * 2, inventoryRows, this.stock.getLiquid(), this.stock.getLiquidAmount() / (float) this.stock.getTankCapacity()
+                .MilliBuckets());
 
-        currY = container.drawBottomBar(0, currY, horizSlots*2);
+        currY = container.drawBottomBar(0, currY, horizSlots * 2);
 
         int containerY = currY;
-        currY = container.drawSlotBlock(stock.cargoItems, 2, stock.getInventoryWidth(), 0, currY);
-        Map<Integer, Integer> burnTime = stock.getBurnTime();
-        Map<Integer, Integer> burnMax = stock.getBurnMax();
+        currY = container.drawSlotBlock(this.stock.cargoItems, 2, this.stock.getInventoryWidth(), 0, currY);
+        Map<Integer, Integer> burnTime = this.stock.getBurnTime();
+        Map<Integer, Integer> burnMax = this.stock.getBurnMax();
         for (int slot : burnTime.keySet()) {
-            int time = stock.getBurnTime().get(slot);
+            int time = this.stock.getBurnTime().get(slot);
             if (time != 0) {
-                float perc = Math.min(1f, (float)time / burnMax.get(slot));
+                float perc = Math.min(1f, (float) time / burnMax.get(slot));
 
-                int xSlot = (slot-2) % horizSlots;
-                int ySlot = (slot-2) / horizSlots;
+                int xSlot = (slot - 2) % horizSlots;
+                int ySlot = (slot - 2) / horizSlots;
 
 
                 container.drawSlotOverlay("minecraft:blocks/fire_layer_1", xSlot * 18 + ((horizSlots) * 9), containerY + ySlot * 18, perc, 0x77c64306);
             }
         }
 
-        container.drawSlotOverlay(template, 1, slotY);
-        container.drawSlot(stock.cargoItems, 0, 1, slotY);
-        container.drawSlot(stock.cargoItems, 1, (horizSlots * 2 - 1) * 18 -1, slotY);
+        container.drawSlotOverlay(this.template, 1, slotY);
+        container.drawSlot(this.stock.cargoItems, 0, 1, slotY);
+        container.drawSlot(this.stock.cargoItems, 1, (horizSlots * 2 - 1) * 18 - 1, slotY);
 
-        String quantityStr = String.format("%s/%s", stock.getLiquidAmount(), stock.getTankCapacity().MilliBuckets());
+        String quantityStr = String.format("%s/%s", this.stock.getLiquidAmount(), this.stock.getTankCapacity().MilliBuckets());
         container.drawCenteredString(quantityStr, 0, slotY);
 
         currY = container.drawPlayerInventoryConnector(0, currY, horizSlots);
-        currY = container.drawPlayerInventory(currY, horizSlots*2);
-        drawName(container, stock);
+        currY = container.drawPlayerInventory(currY, horizSlots * 2);
+        this.drawName(container, this.stock);
     }
 
     @Override
     public int getSlotsX() {
-        return stock.getInventoryWidth() * 2;
+        return this.stock.getInventoryWidth() * 2;
     }
 
     @Override
     public int getSlotsY() {
-        return stock.getInventorySize() / stock.getInventoryWidth();
+        return this.stock.getInventorySize() / this.stock.getInventoryWidth();
     }
 }

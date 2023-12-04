@@ -13,21 +13,21 @@ public class Quilling {
     Quilling(List<DataBlock> quilling) {
         for (DataBlock quill : quilling) {
             Chime chime = new Chime(quill);
-            chimes.add(chime);
-            maxPull = Math.max(maxPull, chime.pull_end);
+            this.chimes.add(chime);
+            this.maxPull = Math.max(this.maxPull, chime.pull_end);
         }
     }
 
     Quilling(Identifier sample) {
         double pitchUp = 0.14;
-        chimes.add(new Chime(0.15, 0.45, 0.75 + pitchUp, 0.85 + pitchUp, sample));
-        chimes.add(new Chime(0.4, 0.55, 0.95 + pitchUp, 1 + pitchUp, sample));
-        maxPull = 0.55;
+        this.chimes.add(new Chime(0.15, 0.45, 0.75 + pitchUp, 0.85 + pitchUp, sample));
+        this.chimes.add(new Chime(0.4, 0.55, 0.95 + pitchUp, 1 + pitchUp, sample));
+        this.maxPull = 0.55;
     }
 
     public boolean canLoad() {
-        for(Chime chime : chimes) {
-            if(!chime.sample.canLoad()) return false;
+        for (Chime chime : this.chimes) {
+            if (!chime.sample.canLoad()) return false;
         }
         return true;
     }
@@ -40,11 +40,11 @@ public class Quilling {
         public final Identifier sample;
 
         Chime(DataBlock data) {
-            pull_start = data.getValue("pull_start").asDouble();
-            pull_end = data.getValue("pull_end").asDouble();
-            pitch_start = data.getValue("pitch_start").asDouble();
-            pitch_end = data.getValue("pitch_end").asDouble();
-            sample = data.getValue("sample").asIdentifier();
+            this.pull_start = data.getValue("pull_start").asDouble();
+            this.pull_end = data.getValue("pull_end").asDouble();
+            this.pitch_start = data.getValue("pitch_start").asDouble();
+            this.pitch_end = data.getValue("pitch_end").asDouble();
+            this.sample = data.getValue("sample").asIdentifier();
         }
 
         Chime(double pull_start, double pull_end, double pitch_start, double pitch_end, Identifier sample) {

@@ -17,10 +17,11 @@ public class RailPreviewRender {
             // Still loading...
             return null;
         }
-		StandardModel model = new StandardModel();
+        StandardModel model = new StandardModel();
         model.addCustom((state, pt) -> {
             MinecraftClient.startProfiler("tile_rail_preview");
-            state.blend(new BlendMode(BlendMode.GL_CONSTANT_ALPHA, BlendMode.GL_ONE).constantColor(1, 1, 1, 0.7f)).lightmap(1, 1);
+            state.blend(new BlendMode(BlendMode.GL_CONSTANT_ALPHA, BlendMode.GL_ONE).constantColor(1, 1, 1, 0.7f))
+                    .lightmap(1, 1);
             if (te.isAboveRails()) {
                 state.translate(0, -1, 0);
             }
@@ -28,13 +29,15 @@ public class RailPreviewRender {
             Vec3d placementPosition = info.placementInfo.placementPosition;
             state.translate(placementPosition.x, placementPosition.y, placementPosition.z);
             if (!te.isMulti()) {
-                RailRender.render(info, te.getWorld(), te.isAboveRails() ? te.getPos().down() : te.getPos(), true, state);
+                RailRender.render(info, te.getWorld(), te.isAboveRails() ? te.getPos()
+                        .down() : te.getPos(), true, state);
             }
             MinecraftClient.endProfiler();
-		});
+        });
 
-        model.addItem(new ItemStack(IRItems.ITEM_GOLDEN_SPIKE, 1), new Matrix4().translate(0.5, 0.5, 0.5).scale(1, 1, 1));
+        model.addItem(new ItemStack(IRItems.ITEM_GOLDEN_SPIKE, 1), new Matrix4().translate(0.5, 0.5, 0.5)
+                .scale(1, 1, 1));
 
-    	return model;
-	}
+        return model;
+    }
 }

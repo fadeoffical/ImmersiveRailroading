@@ -1,6 +1,5 @@
 package cam72cam.immersiverailroading.gui.components;
 
-import cam72cam.immersiverailroading.gui.TrackGui;
 import cam72cam.mod.entity.Player;
 import cam72cam.mod.gui.helpers.GUIHelpers;
 import cam72cam.mod.gui.screen.Button;
@@ -33,48 +32,48 @@ public abstract class ListSelector<T> {
         this.width = width;
         this.rawOptions = rawOptions;
         this.currentValue = currentValue;
-        visible = false;
+        this.visible = false;
 
         int xtop = -GUIHelpers.getScreenWidth() / 2 + xOff;
         int ytop = -GUIHelpers.getScreenHeight() / 4;
 
-        search = new TextField(screen, xtop, ytop, width - 1, height);
+        this.search = new TextField(screen, xtop, ytop, width - 1, height);
 
-        pagination = new Button(screen, xtop, ytop + height, width + 1, height, "Page") {
+        this.pagination = new Button(screen, xtop, ytop + height, width + 1, height, "Page") {
             @Override
             public void onClick(Player.Hand hand) {
-                page += hand == Player.Hand.PRIMARY ? 1 : -1;
-                updateSearch(search.getText());
+                ListSelector.this.page += hand == Player.Hand.PRIMARY ? 1 : -1;
+                ListSelector.this.updateSearch(ListSelector.this.search.getText());
             }
         };
-        page = 0;
+        this.page = 0;
 
-        pageSize = Math.max(1, GUIHelpers.getScreenHeight() / height - 2);
+        this.pageSize = Math.max(1, GUIHelpers.getScreenHeight() / height - 2);
 
         // Hack
-        if (rawOptions.size() < pageSize) {
+        if (rawOptions.size() < this.pageSize) {
             ytop -= height;
         }
 
-        options = new ArrayList<>();
-        buttonsX = new HashMap<>();
-        buttonsY = new HashMap<>();
-        for (int i = 0; i < pageSize; i++) {
+        this.options = new ArrayList<>();
+        this.buttonsX = new HashMap<>();
+        this.buttonsY = new HashMap<>();
+        for (int i = 0; i < this.pageSize; i++) {
             Button btn = new Button(screen, xtop, ytop + height * 2 + i * height, width + 1, height, "") {
                 @Override
                 public void onClick(Player.Hand hand) {
-                    ListSelector.this.currentValue = usableButtons.get(this);
+                    ListSelector.this.currentValue = ListSelector.this.usableButtons.get(this);
                     ListSelector.this.onClick(ListSelector.this.currentValue);
-                    ListSelector.this.updateSearch(search.getText());
+                    ListSelector.this.updateSearch(ListSelector.this.search.getText());
                 }
             };
-            buttonsX.put(btn, xtop);
-            buttonsY.put(btn, ytop + height * 2 + i * height);
-            options.add(btn);
+            this.buttonsX.put(btn, xtop);
+            this.buttonsY.put(btn, ytop + height * 2 + i * height);
+            this.options.add(btn);
         }
 
-        search.setValidator(s -> {
-            page = 0;
+        this.search.setValidator(s -> {
+            this.page = 0;
             this.updateSearch(s);
             return true;
         });
@@ -83,68 +82,68 @@ public abstract class ListSelector<T> {
         this.setVisible(false);
     }
 
-    public void setVisible(boolean visible) {
-        this.visible = visible;
-        search.setVisible(visible && rawOptions.size() > pageSize);
-        pagination.setVisible(visible && rawOptions.size() > pageSize);
-        options.forEach(b -> b.setVisible(visible && !b.getText().isEmpty()));
-    }
-
-    public boolean isVisible() {
-        return visible;
-    }
-
-    public abstract void onClick(T option);
-
     void updateSearch(String search) {
-        Collection<String> names = search.isEmpty() ? rawOptions.keySet() : rawOptions.keySet().stream()
+        Collection<String> names = search.isEmpty() ? this.rawOptions.keySet() : this.rawOptions.keySet().stream()
                 .filter(v -> v.toLowerCase(Locale.ROOT).contains(search.toLowerCase(Locale.ROOT)))
                 .collect(Collectors.toList());
 
-        int nPages = pageSize > 0 ? (int) Math.ceil(names.size() / (float) pageSize) : 0;
-        if (page >= nPages) {
-            page = 0;
+        int nPages = this.pageSize > 0 ? (int) Math.ceil(names.size() / (float) this.pageSize) : 0;
+        if (this.page >= nPages) {
+            this.page = 0;
         }
-        if (page < 0) {
-            page = nPages - 1;
+        if (this.page < 0) {
+            this.page = nPages - 1;
         }
 
-        pagination.setText(String.format("Page %s of %s", page + 1, Math.max(1, nPages)));
+        this.pagination.setText(String.format("Page %s of %s", this.page + 1, Math.max(1, nPages)));
 
-        options.forEach(b -> {
+        this.options.forEach(b -> {
             b.setText("");
             b.setVisible(false);
             b.setEnabled(false);
         });
 
-        usableButtons = new HashMap<>();
+        this.usableButtons = new HashMap<>();
         int bid = 0;
-        for (Map.Entry<String, T> entry : rawOptions.entrySet().stream()
+        for (Map.Entry<String, T> entry : this.rawOptions.entrySet().stream()
                 .filter(e -> names.contains(e.getKey()))
-                .skip((long) page * pageSize).limit(pageSize)
+                .skip((long) this.page * this.pageSize).limit(this.pageSize)
                 .collect(Collectors.toList())) {
-            Button button = options.get(bid);
+            Button button = this.options.get(bid);
             button.setEnabled(true);
             button.setVisible(true);
-            String text = fitString(entry.getKey(), (int) Math.floor(width/6.0));
-            if (entry.getValue() == currentValue) {
+            String text = fitString(entry.getKey(), (int) Math.floor(this.width / 6.0));
+            if (entry.getValue() == this.currentValue) {
                 text = TextColor.YELLOW.wrap(text);
             }
             button.setText(text);
-            usableButtons.put(button, entry.getValue());
+            this.usableButtons.put(button, entry.getValue());
 
             bid++;
         }
     }
 
+    public abstract void onClick(T option);
+
     public void render(ButtonRenderer<T> renderer) {
-        if (!isVisible()) {
+        if (!this.isVisible()) {
             return;
         }
 
-        for (Map.Entry<Button, T> entry : usableButtons.entrySet()) {
-            renderer.render(entry.getKey(), GUIHelpers.getScreenWidth()/2 + buttonsX.get(entry.getKey()), GUIHelpers.getScreenHeight()/4 + buttonsY.get(entry.getKey()), entry.getValue());
+        for (Map.Entry<Button, T> entry : this.usableButtons.entrySet()) {
+            renderer.render(entry.getKey(), GUIHelpers.getScreenWidth() / 2 + this.buttonsX.get(entry.getKey()), GUIHelpers.getScreenHeight() / 4 + this.buttonsY.get(entry.getKey()), entry.getValue());
         }
+    }
+
+    public boolean isVisible() {
+        return this.visible;
+    }
+
+    public void setVisible(boolean visible) {
+        this.visible = visible;
+        this.search.setVisible(visible && this.rawOptions.size() > this.pageSize);
+        this.pagination.setVisible(visible && this.rawOptions.size() > this.pageSize);
+        this.options.forEach(b -> b.setVisible(visible && !b.getText().isEmpty()));
     }
 
     @FunctionalInterface

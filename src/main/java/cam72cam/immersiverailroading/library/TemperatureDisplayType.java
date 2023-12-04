@@ -3,7 +3,8 @@ package cam72cam.immersiverailroading.library;
 public enum TemperatureDisplayType {
     celcius,
     farenheit,
-    kelvin,;
+    kelvin,
+    ;
 
     public float convertFromCelcius(float value) {
         switch (this) {
@@ -11,7 +12,7 @@ public enum TemperatureDisplayType {
             case celcius:
                 return value;
             case farenheit:
-                return (value * 9f/5f) + 32f;
+                return (value * 9f / 5f) + 32f;
             case kelvin:
                 return value + 270f;
         }

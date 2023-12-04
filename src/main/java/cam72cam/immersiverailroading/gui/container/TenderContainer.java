@@ -16,8 +16,8 @@ public class TenderContainer extends BaseContainer {
 
     public void draw(IContainerBuilder container) {
         int currY = 0;
-        int horizSlots = stock.getInventoryWidth();
-        int inventoryRows = (int) Math.ceil(((double)stock.getInventorySize()-2) / horizSlots);
+        int horizSlots = this.stock.getInventoryWidth();
+        int inventoryRows = (int) Math.ceil(((double) this.stock.getInventorySize() - 2) / horizSlots);
         int slotY = 0;
 
         currY = container.drawTopBar(0, currY, horizSlots);
@@ -30,29 +30,30 @@ public class TenderContainer extends BaseContainer {
             }
         }
 
-        container.drawTankBlock(0, tankY, horizSlots, inventoryRows, stock.getLiquid(), stock.getLiquidAmount() / (float) stock.getTankCapacity().MilliBuckets());
+        container.drawTankBlock(0, tankY, horizSlots, inventoryRows, this.stock.getLiquid(), this.stock.getLiquidAmount() / (float) this.stock.getTankCapacity()
+                .MilliBuckets());
 
-        currY = container.drawSlotBlock(stock.cargoItems, 2, stock.getInventoryWidth(), 0, currY);
+        currY = container.drawSlotBlock(this.stock.cargoItems, 2, this.stock.getInventoryWidth(), 0, currY);
 
-        container.drawSlotOverlay(template, 1, slotY);
-        container.drawSlot(stock.cargoItems, 0, 1, slotY);
-        container.drawSlot(stock.cargoItems, 1,  1 + horizSlots * 16, slotY);
+        container.drawSlotOverlay(this.template, 1, slotY);
+        container.drawSlot(this.stock.cargoItems, 0, 1, slotY);
+        container.drawSlot(this.stock.cargoItems, 1, 1 + horizSlots * 16, slotY);
 
-        String quantityStr = String.format("%s/%s", stock.getLiquidAmount(), stock.getTankCapacity().MilliBuckets());
+        String quantityStr = String.format("%s/%s", this.stock.getLiquidAmount(), this.stock.getTankCapacity().MilliBuckets());
         container.drawCenteredString(quantityStr, 0, slotY);
 
         currY = container.drawPlayerInventoryConnector(0, currY, horizSlots);
         currY = container.drawPlayerInventory(currY, horizSlots);
-        drawName(container, stock);
+        this.drawName(container, this.stock);
     }
 
     @Override
     public int getSlotsX() {
-        return stock.getInventoryWidth();
+        return this.stock.getInventoryWidth();
     }
 
     @Override
     public int getSlotsY() {
-        return stock.getInventorySize() / stock.getInventoryWidth();
+        return this.stock.getInventorySize() / this.stock.getInventoryWidth();
     }
 }

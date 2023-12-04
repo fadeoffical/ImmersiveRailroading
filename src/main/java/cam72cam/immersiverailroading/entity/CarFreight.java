@@ -1,22 +1,21 @@
 package cam72cam.immersiverailroading.entity;
 
 import cam72cam.immersiverailroading.registry.CarFreightDefinition;
-import cam72cam.mod.entity.ModdedEntity;
 
 public class CarFreight extends Freight {
-	@Override
-	public CarFreightDefinition getDefinition() {
-		return super.getDefinition(CarFreightDefinition.class);
-	}
+    public int getInventoryWidth() {
+        return this.getDefinition().getInventoryWidth(this.gauge);
+    }
 
-	@Override
-	public int getInventorySize() {
-		return this.getDefinition().getInventorySize(gauge);
-	}
-	
-	public int getInventoryWidth() {
-		return this.getDefinition().getInventoryWidth(gauge);
-	}
+    @Override
+    public int getInventorySize() {
+        return this.getDefinition().getInventorySize(this.gauge);
+    }
 
-	//TODO filter inventory
+    @Override
+    public CarFreightDefinition getDefinition() {
+        return super.getDefinition(CarFreightDefinition.class);
+    }
+
+    //TODO filter inventory
 }

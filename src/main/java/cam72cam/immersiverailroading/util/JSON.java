@@ -13,7 +13,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Helper class to turn JSON into DataBlocks */
+/**
+ * Helper class to turn JSON into DataBlocks
+ */
 public class JSON {
     public static DataBlock parse(InputStream stream) throws IOException {
         try {
@@ -40,10 +42,12 @@ public class JSON {
             if (entry.getValue().isJsonArray()) {
                 for (JsonElement element : entry.getValue().getAsJsonArray()) {
                     if (element.isJsonPrimitive()) {
-                        primitiveSets.computeIfAbsent(entry.getKey(), key -> new ArrayList<>()).add(wrapValue(element.getAsJsonPrimitive()));
+                        primitiveSets.computeIfAbsent(entry.getKey(), key -> new ArrayList<>())
+                                .add(wrapValue(element.getAsJsonPrimitive()));
                     }
                     if (element.isJsonObject()) {
-                        blockSets.computeIfAbsent(entry.getKey(), key -> new ArrayList<>()).add(wrapObject(element.getAsJsonObject()));
+                        blockSets.computeIfAbsent(entry.getKey(), key -> new ArrayList<>())
+                                .add(wrapObject(element.getAsJsonObject()));
                     }
                     // TODO Nested Arrays are Ignored for now
                 }

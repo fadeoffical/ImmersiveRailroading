@@ -7,17 +7,17 @@ import cam72cam.mod.math.Vec3i;
 
 public class TrackRail extends TrackBase {
 
-	public TrackRail(BuilderBase builder, Vec3i rel) {
-		super(builder, rel, IRBlocks.BLOCK_RAIL);
-	}
+    public TrackRail(BuilderBase builder, Vec3i rel) {
+        super(builder, rel, IRBlocks.BLOCK_RAIL);
+    }
 
-	@Override
-	public TileRailBase placeTrack(boolean actuallyPlace) {
-		TileRail tileRail = (TileRail) super.placeTrack(actuallyPlace);
+    @Override
+    public TileRailBase placeTrack(boolean actuallyPlace) {
+        TileRail tileRail = (TileRail) super.placeTrack(actuallyPlace);
 
-		tileRail.info = builder.info.offset(builder.pos.subtract(tileRail.getPos()));
-		tileRail.setDrops(builder.drops);
+        tileRail.info = this.builder.info.offset(this.builder.pos.subtract(tileRail.getPos()));
+        tileRail.setDrops(this.builder.drops);
 
-		return tileRail;
-	}
+        return tileRail;
+    }
 }

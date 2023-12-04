@@ -6,7 +6,10 @@ import org.apache.commons.lang3.StringUtils;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -36,6 +39,7 @@ import java.util.stream.Collectors;
  * */
 public class CAML {
     private static final Pattern base = Pattern.compile("(\\s*)([^=^:]+)\\s*([=:])\\s?(\"[^\"]*\"|[^#]*)(#.*)?");
+
     public static DataBlock parse(InputStream stream) throws IOException {
         List<String> lines = IOUtils.readLines(stream, StandardCharsets.UTF_8).stream()
                 .filter(s -> !StringUtils.isWhitespace(s.replaceFirst("#.*", "")))
@@ -144,7 +148,7 @@ public class CAML {
             @Override
             public Value getValue(String key) {
                 Value value = DataBlock.super.getValue(key);
-                if (value.asString() == null && getValuesMap().containsKey(key)) {
+                if (value.asString() == null && this.getValuesMap().containsKey(key)) {
                     throw new FormatException("Error in CAML file: expected single value '=' but found multiple ':' for key %s '%s'", context, key);
                 }
                 return value;
@@ -153,7 +157,7 @@ public class CAML {
             @Override
             public List<Value> getValues(String key) {
                 List<Value> values = DataBlock.super.getValues(key);
-                if (values == null && getValueMap().containsKey(key)) {
+                if (values == null && this.getValueMap().containsKey(key)) {
                     throw new FormatException("Error in CAML file: multiple values ':' but found single value '=' for key %s '%s'", context, key);
                 }
                 return values;
@@ -162,7 +166,7 @@ public class CAML {
             @Override
             public DataBlock getBlock(String key) {
                 DataBlock block = DataBlock.super.getBlock(key);
-                if (block == null && getBlocksMap().containsKey(key)) {
+                if (block == null && this.getBlocksMap().containsKey(key)) {
                     throw new FormatException("Error in CAML file: expected single block '=' but found multiple ':' for key %s '%s'", context, key);
                 }
                 return block;
@@ -171,12 +175,44 @@ public class CAML {
             @Override
             public List<DataBlock> getBlocks(String key) {
                 List<DataBlock> blocks = DataBlock.super.getBlocks(key);
-                if (blocks == null && getBlockMap().containsKey(key)) {
+                if (blocks == null && this.getBlockMap().containsKey(key)) {
                     throw new FormatException("Error in CAML file: multiple blocks ':' but found single value '=' for key %s '%s'", context, key);
                 }
                 return blocks;
             }
 
+        };
+    }
+
+    private static DataBlock.Value createValue(String value) {
+        if (value == null || value.equalsIgnoreCase("null")) {
+            return DataBlock.Value.NULL;
+        }
+        return new DataBlock.Value() {
+            @Override
+            public Boolean asBoolean() {
+                return Boolean.parseBoolean(value);
+            }
+
+            @Override
+            public Integer asInteger() {
+                return Integer.parseInt(value);
+            }
+
+            @Override
+            public Float asFloat() {
+                return Float.parseFloat(value);
+            }
+
+            @Override
+            public Double asDouble() {
+                return Double.parseDouble(value);
+            }
+
+            @Override
+            public String asString() {
+                return value;
+            }
         };
     }
 
@@ -190,37 +226,5 @@ public class CAML {
         public FormatException(String text, Object... params) {
             super(String.format(text, params));
         }
-    }
-
-    private static DataBlock.Value createValue(String value) {
-        if (value == null || value.equalsIgnoreCase("null")) {
-            return DataBlock.Value.NULL;
-        }
-        return new DataBlock.Value() {
-            @Override
-            public Boolean asBoolean() {
-                                     return Boolean.parseBoolean(value);
-                                                                                               }
-
-            @Override
-            public Integer asInteger() {
-                                     return Integer.parseInt(value);
-                                                                                           }
-
-            @Override
-            public Float asFloat() {
-                                 return Float.parseFloat(value);
-                                                                                       }
-
-            @Override
-            public Double asDouble() {
-                                   return Double.parseDouble(value);
-                                                                                           }
-
-            @Override
-            public String asString() {
-                return value;
-            }
-        };
     }
 }

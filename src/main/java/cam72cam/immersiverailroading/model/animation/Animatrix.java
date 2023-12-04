@@ -14,7 +14,7 @@ public class Animatrix {
 
     public Animatrix(InputStream in, double internal_model_scale) throws IOException {
         Matrix4 scale = new Matrix4();
-        scale.m33 = 1/internal_model_scale;
+        scale.m33 = 1 / internal_model_scale;
         Matrix4 inv = scale.copy();
         inv.m33 = internal_model_scale;
 
@@ -26,7 +26,7 @@ public class Animatrix {
             while ((line = reader.readLine()) != null) {
                 if (line.startsWith("O ")) {
                     for (String name : names) {
-                        map.put(name, frames);
+                        this.map.put(name, frames);
                     }
 
                     names = new ArrayList<>();
@@ -61,27 +61,27 @@ public class Animatrix {
 
             if (!frames.isEmpty()) {
                 for (String name : names) {
-                    map.put(name, frames);
+                    this.map.put(name, frames);
                 }
             }
         }
-        this.frameCount = map.values().stream().mapToInt(List::size).max().getAsInt();
+        this.frameCount = this.map.values().stream().mapToInt(List::size).max().getAsInt();
     }
 
     public Set<String> groups() {
-        return map.keySet();
+        return this.map.keySet();
     }
 
     public Matrix4 getMatrix(String group, float percent, boolean looping) {
-        List<Matrix4> frames = map.get(group);
+        List<Matrix4> frames = this.map.get(group);
         if (frames == null) {
             return null;
         }
         if (!looping) {
-            if (percent >= (frames.size()-1f)/frames.size()) {
-                return frames.get(frames.size()-1).copy();
+            if (percent >= (frames.size() - 1f) / frames.size()) {
+                return frames.get(frames.size() - 1).copy();
             }
-            if (percent <= 0){
+            if (percent <= 0) {
                 return frames.get(0).copy();
             }
         }
@@ -96,6 +96,6 @@ public class Animatrix {
     }
 
     public int frameCount() {
-        return frameCount;
+        return this.frameCount;
     }
 }

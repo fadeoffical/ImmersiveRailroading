@@ -1,6 +1,5 @@
 package cam72cam.immersiverailroading.track;
 
-import cam72cam.immersiverailroading.ImmersiveRailroading;
 import cam72cam.immersiverailroading.util.RailInfo;
 import cam72cam.mod.math.Vec3d;
 import cam72cam.mod.math.Vec3i;
@@ -8,8 +7,6 @@ import cam72cam.mod.math.Vec3i;
 import java.util.List;
 
 public interface IIterableTrack {
-    List<PosStep> getPath(double stepSize);
-
     List<BuilderBase> getSubBuilders();
 
     default double offsetFromTrack(RailInfo info, Vec3i pos, Vec3d position) {
@@ -18,7 +15,7 @@ public interface IIterableTrack {
         Vec3d relative = position.subtract(info.placementInfo.placementPosition).subtract(pos);
         relative = relative.add(0, -(relative.y % 1), 0);
 
-        List<PosStep> positions = getPath(info.settings.gauge.scale() / 8);
+        List<PosStep> positions = this.getPath(info.settings.gauge.scale() / 8);
 
         /*double distSquared = 100 * 100;
         for (Vec3d gagPos : positions) {
@@ -51,4 +48,6 @@ public interface IIterableTrack {
 
         return Math.sqrt(resultSquared);
     }
+
+    List<PosStep> getPath(double stepSize);
 }

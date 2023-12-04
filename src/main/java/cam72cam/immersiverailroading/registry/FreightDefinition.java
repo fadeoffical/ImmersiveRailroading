@@ -1,9 +1,9 @@
 package cam72cam.immersiverailroading.registry;
 
 import cam72cam.immersiverailroading.entity.EntityRollingStock;
-import cam72cam.immersiverailroading.util.DataBlock;
 import cam72cam.immersiverailroading.model.FreightModel;
 import cam72cam.immersiverailroading.model.StockModel;
+import cam72cam.immersiverailroading.util.DataBlock;
 
 public abstract class FreightDefinition extends EntityRollingStockDefinition {
 

@@ -13,6 +13,16 @@ public class WheelSet {
     protected final List<Wheel> wheels;
     private final float angleOffset;
 
+    public WheelSet(ModelState state, List<ModelComponent> wheels, float angleOffset) {
+        this.wheels = wheels.stream().map(wheel ->
+                new Wheel(wheel, state, stock -> this.angle(stock.distanceTraveled))).collect(Collectors.toList());
+        this.angleOffset = angleOffset;
+    }
+
+    public float angle(double distance) {
+        return this.wheels.get(0).angle(distance) + this.angleOffset;
+    }
+
     public static WheelSet get(ComponentProvider provider, ModelState state, ModelComponentType type, float angleOffset) {
         return get(provider, state, type, null, angleOffset);
     }
@@ -24,15 +34,5 @@ public class WheelSet {
         );
 
         return wheels.isEmpty() ? null : new WheelSet(state, wheels, angleOffset);
-    }
-
-    public WheelSet(ModelState state, List<ModelComponent> wheels, float angleOffset) {
-        this.wheels = wheels.stream().map(wheel ->
-                new Wheel(wheel, state, stock -> angle(stock.distanceTraveled))).collect(Collectors.toList());
-        this.angleOffset = angleOffset;
-    }
-
-    public float angle(double distance) {
-        return wheels.get(0).angle(distance) + angleOffset;
     }
 }

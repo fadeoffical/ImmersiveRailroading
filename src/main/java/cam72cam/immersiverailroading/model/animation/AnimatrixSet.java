@@ -11,18 +11,19 @@ public class AnimatrixSet {
     private final float min;
     private final float max;
     Map<Float, Animatrix> steps;
+
     public AnimatrixSet(Map<Float, Identifier> input, double internal_model_scale) throws IOException {
-        steps = new HashMap<>();
+        this.steps = new HashMap<>();
         for (Map.Entry<Float, Identifier> entry : input.entrySet()) {
-            steps.put(entry.getKey(), new Animatrix(entry.getValue().getResourceStream(), internal_model_scale));
+            this.steps.put(entry.getKey(), new Animatrix(entry.getValue().getResourceStream(), internal_model_scale));
         }
 
-        if (steps.isEmpty()) {
+        if (this.steps.isEmpty()) {
             throw new RuntimeException("Invalid Animatrix Configuration (empty)");
         }
 
-        min = (float)steps.keySet().stream().mapToDouble(x -> x).min().getAsDouble();
-        max = (float)steps.keySet().stream().mapToDouble(x -> x).max().getAsDouble();
+        this.min = (float) this.steps.keySet().stream().mapToDouble(x -> x).min().getAsDouble();
+        this.max = (float) this.steps.keySet().stream().mapToDouble(x -> x).max().getAsDouble();
     }
 
 
@@ -30,7 +31,7 @@ public class AnimatrixSet {
         float min = this.min;
         float max = this.max;
 
-        for (Float step : steps.keySet()) {
+        for (Float step : this.steps.keySet()) {
             if (step < index && step > min) {
                 min = step;
             }
@@ -40,11 +41,11 @@ public class AnimatrixSet {
         }
 
         if (min == max) {
-            return steps.get(min).getMatrix(group, percent, looping);
+            return this.steps.get(min).getMatrix(group, percent, looping);
         }
 
-        Matrix4 ms = steps.get(min).getMatrix(group, percent, looping);
-        Matrix4 me = steps.get(max).getMatrix(group, percent, looping);
+        Matrix4 ms = this.steps.get(min).getMatrix(group, percent, looping);
+        Matrix4 me = this.steps.get(max).getMatrix(group, percent, looping);
         if (ms == null) {
             return me;
         }

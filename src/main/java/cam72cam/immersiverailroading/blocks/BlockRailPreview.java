@@ -7,32 +7,32 @@ import cam72cam.mod.block.BlockTypeEntity;
 import cam72cam.mod.block.Material;
 
 public class BlockRailPreview extends BlockTypeEntity {
-	public BlockRailPreview() {
-		super(ImmersiveRailroading.MODID, "block_rail_preview");
-	}
+    public BlockRailPreview() {
+        super(ImmersiveRailroading.MODID, "block_rail_preview");
+    }
 
-	@Override
-	public Material getMaterial() {
-		return Material.WOOL;
-	}
+    @Override
+    public Material getMaterial() {
+        return Material.WOOL;
+    }
 
-	@Override
-	public float getHardness() {
-		return 0.2f;
-	}
+    @Override
+    public float getHardness() {
+        return 0.2f;
+    }
 
-	@Override
-	public float getExplosionResistance() {
-		return 2000;
-	}
+    @Override
+    public float getExplosionResistance() {
+        return 2000;
+    }
 
-	@Override
-	public boolean isConnectable() {
-		return super.isConnectable();
-	}
+    @Override
+    public boolean isConnectable() {
+        return super.isConnectable();
+    }
 
-	@Override
-	public BlockEntity constructBlockEntity() {
-		return new TileRailPreview();
-	}
+    @Override
+    public BlockEntity constructBlockEntity() {
+        return new TileRailPreview();
+    }
 }

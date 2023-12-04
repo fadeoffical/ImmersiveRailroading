@@ -23,14 +23,6 @@ public class Readout<T extends EntityMoveableRollingStock> extends Control<T> {
     private final float rangeMin;
     private final float rangeMax;
 
-    public static <T extends EntityMoveableRollingStock> List<Readout<T>> getReadouts(ComponentProvider provider, ModelState state, ModelComponentType type, Readouts value) {
-        return provider.parseAll(type).stream().map(p -> new Readout<T>(p, value::getValue, state, provider.internal_model_scale)).collect(Collectors.toList());
-    }
-
-    public static <T extends EntityMoveableRollingStock> List<Readout<T>> getReadouts(ComponentProvider provider, ModelState state, ModelComponentType type, ModelPosition pos, Readouts value) {
-        return provider.parseAll(type, pos).stream().map(p -> new Readout<T>(p, value::getValue, state, provider.internal_model_scale)).collect(Collectors.toList());
-    }
-
     public Readout(ModelComponent part, Function<T, Float> position, ModelState state, double internal_model_scale) {
         super(part, state, internal_model_scale);
         this.position = position;
@@ -45,21 +37,35 @@ public class Readout<T extends EntityMoveableRollingStock> extends Control<T> {
                 max = Float.parseFloat(matcher.group(2));
             }
         }
-        rangeMin = min;
-        rangeMax = max;
+        this.rangeMin = min;
+        this.rangeMax = max;
+    }
+
+    public static <T extends EntityMoveableRollingStock> List<Readout<T>> getReadouts(ComponentProvider provider, ModelState state, ModelComponentType type, Readouts value) {
+        return provider.parseAll(type)
+                .stream()
+                .map(p -> new Readout<T>(p, value::getValue, state, provider.internal_model_scale))
+                .collect(Collectors.toList());
+    }
+
+    public static <T extends EntityMoveableRollingStock> List<Readout<T>> getReadouts(ComponentProvider provider, ModelState state, ModelComponentType type, ModelPosition pos, Readouts value) {
+        return provider.parseAll(type, pos)
+                .stream()
+                .map(p -> new Readout<T>(p, value::getValue, state, provider.internal_model_scale))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public float getValue(EntityMoveableRollingStock stock) {
+        float pos = this.positions.getOrDefault(stock.getUUID(), 0f);
+        pos = Math.min(1, Math.max(0, (pos - this.rangeMin) / (this.rangeMax - this.rangeMin)));
+        pos += this.offset;
+        return this.invert ? 1 - pos : pos;
     }
 
     @Override
     public void effects(T stock) {
         super.effects(stock);
-        positions.put(stock.getUUID(), position.apply((T) stock));
-    }
-
-    @Override
-    public float getValue(EntityMoveableRollingStock stock) {
-        float pos = positions.getOrDefault(stock.getUUID(), 0f);
-        pos = Math.min(1, Math.max(0, (pos - rangeMin) / (rangeMax - rangeMin)));
-        pos = pos + offset;
-        return invert ? 1 - pos : pos;
+        this.positions.put(stock.getUUID(), this.position.apply(stock));
     }
 }

@@ -12,7 +12,7 @@ public class SteamHammerContainer implements IContainer {
         this.tile = tile;
     }
 
-    public void draw(IContainerBuilder container){
+    public void draw(IContainerBuilder container) {
         int currY = 0;
         int horizSlots = 10;
         int inventoryRows = 4;
@@ -28,10 +28,10 @@ public class SteamHammerContainer implements IContainer {
             }
         }
 
-        container.drawTankBlock(0, tankY, horizSlots, inventoryRows, Fluid.LAVA, this.tile.getCraftProgress()/100f);
+        container.drawTankBlock(0, tankY, horizSlots, inventoryRows, Fluid.LAVA, this.tile.getCraftProgress() / 100f);
 
-        container.drawSlot(tile.getContainer(), 0, 0, slotY);
-        container.drawSlot(tile.getContainer(),1, 16 * horizSlots, slotY);
+        container.drawSlot(this.tile.getContainer(), 0, 0, slotY);
+        container.drawSlot(this.tile.getContainer(), 1, 16 * horizSlots, slotY);
 
         currY = container.drawPlayerInventoryConnector(0, currY, horizSlots);
         currY = container.drawPlayerInventory(currY, horizSlots);

@@ -15,13 +15,13 @@ public class Interactable<T extends EntityMoveableRollingStock> {
     }
 
     public Vec3d center(EntityRollingStock stock) {
-        return stock.getModelMatrix().apply(part.center);
+        return stock.getModelMatrix().apply(this.part.center);
     }
 
     public IBoundingBox getBoundingBox(EntityRollingStock stock) {
         return IBoundingBox.from(
-                stock.getModelMatrix().apply(part.min),
-                stock.getModelMatrix().apply(part.max)
+                stock.getModelMatrix().apply(this.part.min),
+                stock.getModelMatrix().apply(this.part.max)
         );
     }
 }

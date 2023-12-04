@@ -26,12 +26,13 @@ public class Wheel {
         ).include(wheel);
     }
 
-    public double diameter() {
-        return wheel.height();
-    }
     public float angle(double distance) {
-        double circumference = diameter() * (float) Math.PI;
+        double circumference = this.diameter() * (float) Math.PI;
         double relDist = distance % circumference;
         return (float) (360 * relDist / circumference);
+    }
+
+    public double diameter() {
+        return this.wheel.height();
     }
 }

@@ -11,6 +11,15 @@ import java.util.Map;
 public class ServerChronoState extends Packet implements ChronoState {
     private final static Map<World, ServerChronoState> states = new HashMap<>();
 
+    static {
+        World.onTick(w -> {
+            ServerChronoState state = getState(w);
+            if (state != null) {
+                state.tick();
+            }
+        });
+    }
+
     @TagField
     protected World world;
     // int -> two years of ticks, good enough
@@ -19,8 +28,8 @@ public class ServerChronoState extends Packet implements ChronoState {
     @TagField
     protected double ticksPerSecond;
 
-    private ServerChronoState() {
-        // only used by networking layer
+    public static ServerChronoState getState(World world) {
+        return states.computeIfAbsent(world, ServerChronoState::new);
     }
 
     private ServerChronoState(World world) {
@@ -29,11 +38,19 @@ public class ServerChronoState extends Packet implements ChronoState {
         this.ticksPerSecond = 20;
     }
 
+    public static void register() {
+        register(ServerChronoState::new, PacketDirection.ServerToClient);
+    }
+
+    private ServerChronoState() {
+        // only used by networking layer
+    }
+
     private void tick() {
-        tickID += 1;
-        ticksPerSecond = world.getTPS(20);
-        if (tickID % 5 == 0) {
-            sendToAll();
+        this.tickID += 1;
+        this.ticksPerSecond = this.world.getTPS(20);
+        if (this.tickID % 5 == 0) {
+            this.sendToAll();
         }
     }
 
@@ -44,7 +61,7 @@ public class ServerChronoState extends Packet implements ChronoState {
 
     @Override
     public double getTickID() {
-        return tickID;
+        return this.tickID;
     }
 
     @Override
@@ -53,23 +70,6 @@ public class ServerChronoState extends Packet implements ChronoState {
     }
 
     public int getServerTickID() {
-        return tickID;
-    }
-
-    public static ServerChronoState getState(World world) {
-        return states.computeIfAbsent(world, ServerChronoState::new);
-    }
-
-    static {
-        World.onTick(w -> {
-            ServerChronoState state = getState(w);
-            if (state != null) {
-                state.tick();
-            }
-        });
-    }
-
-    public static void register() {
-        register(ServerChronoState::new, PacketDirection.ServerToClient);
+        return this.tickID;
     }
 }

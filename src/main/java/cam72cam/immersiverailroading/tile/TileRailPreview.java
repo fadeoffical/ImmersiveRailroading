@@ -19,165 +19,168 @@ import cam72cam.mod.serialization.TagField;
 import cam72cam.mod.util.Facing;
 
 public class TileRailPreview extends BlockEntityTickable {
-	private int ticksAlive;
-	private RailInfo info;
+    private int ticksAlive;
+    private RailInfo info;
 
-	@TagField
-	private ItemStack item;
-	@TagField
-	private PlacementInfo placementInfo;
-	@TagField
-	private PlacementInfo customInfo;
-	@TagField
-	private boolean isAboveRails = false;
+    @TagField
+    private ItemStack item;
+    @TagField
+    private PlacementInfo placementInfo;
+    @TagField
+    private PlacementInfo customInfo;
+    @TagField
+    private boolean isAboveRails = false;
 
-	public ItemStack getItem() {
-		return this.item;
-	}
-	
-	public void setup(ItemStack stack, PlacementInfo info) {
-		this.item = stack.copy();
-		this.placementInfo = info;
-		this.isAboveRails = BlockUtil.isIRRail(getWorld(), getPos().down()) && getWorld().getBlockEntity(getPos().down(), TileRailBase.class).getRailHeight() < 0.5;
-		this.markDirty();
-	}
+    public void setup(ItemStack stack, PlacementInfo info) {
+        this.item = stack.copy();
+        this.placementInfo = info;
+        this.isAboveRails = BlockUtil.isIRRail(this.getWorld(), this.getPos().down()) && this.getWorld().getBlockEntity(this.getPos().down(), TileRailBase.class)
+                .getRailHeight() < 0.5;
+        this.markDirty();
+    }
 
-	public void setItem(ItemStack stack, Player player) {
-		this.item = stack.copy();
-		RailSettings settings = RailSettings.from(item);
+    public boolean isMulti() {
+        if (this.getRailRenderInfo().getBuilder(this.getWorld()) instanceof IIterableTrack) {
+            return ((IIterableTrack) this.getRailRenderInfo().getBuilder(this.getWorld())).getSubBuilders() != null;
+        }
+        return false;
+    }
 
-		if (settings.direction != TrackDirection.NONE) {
-			this.placementInfo = this.placementInfo.withDirection(settings.direction);
-		}
+    public RailInfo getRailRenderInfo() {
+        if (this.getWorld() != null && this.item != null && (this.info == null || this.info.settings == null)) {
+            this.info = new RailInfo(this.item, this.placementInfo, this.customInfo);
+        }
+        return this.info;
+    }
 
-		if (!settings.isPreview) {
-			if (this.getRailRenderInfo() != null && this.getRailRenderInfo().build(player, isAboveRails() ? getPos().down() : getPos())) {
-				new PreviewRenderPacket(this.getWorld(), this.getPos()).sendToAll();
-				if (isAboveRails()) {
-					getWorld().breakBlock(this.getPos());
-				}
-				return;
-			}
-		}
-		this.markDirty();
-	}
+    public void setItem(ItemStack stack, Player player) {
+        this.item = stack.copy();
+        RailSettings settings = RailSettings.from(this.item);
 
-	@Override
-	public void load(TagCompound nbt) {
-		info = null;
-	}
+        if (settings.direction != TrackDirection.NONE) {
+            this.placementInfo = this.placementInfo.withDirection(settings.direction);
+        }
 
-	public void setCustomInfo(PlacementInfo info) {
-		this.customInfo = info;
-		if (customInfo != null) {
-			RailSettings settings = RailSettings.from(item);
-			double lx = Math.abs(customInfo.placementPosition.x - placementInfo.placementPosition.x);
-			double lz = Math.abs(customInfo.placementPosition.z - placementInfo.placementPosition.z);
-			switch (settings.type) {
-				case TURN:
-					settings = settings.with(b -> {
-						double length = (lx + lz )/2+1;
-						length *= 90/b.degrees;
-						b.length = (int) Math.round(length);
-					});
-					break;
-				case STRAIGHT:
-				case SLOPE:
-					settings = settings.with(b -> b.length = (int) Math.round(Math.max(lx, lz) + 1));
-			}
+        if (!settings.isPreview) {
+            if (this.getRailRenderInfo() != null && this.getRailRenderInfo()
+                    .build(player, this.isAboveRails() ? this.getPos().down() : this.getPos())) {
+                new PreviewRenderPacket(this.getWorld(), this.getPos()).sendToAll();
+                if (this.isAboveRails()) {
+                    this.getWorld().breakBlock(this.getPos());
+                }
+                return;
+            }
+        }
+        this.markDirty();
+    }
 
-			settings.write(item);
-		}
-		this.markDirty();
-	}
-	
-	public void setPlacementInfo(PlacementInfo info) {
-		this.placementInfo = info;
-		this.markDirty();
-	}
-	
-	@Override
-	public boolean onClick(Player player, Player.Hand hand, Facing facing, Vec3d hit) {
-		if (player.isCrouching()) {
-			if (getWorld().isServer) {
-				this.setPlacementInfo(new PlacementInfo(this.getItem(), player.getYawHead(), hit));
-			}
-			return false;
-		} else if (!player.getHeldItem(hand).is(IRItems.ITEM_GOLDEN_SPIKE)) {
-			GuiTypes.RAIL_PREVIEW.open(player, getPos());
-			return true;
-		}
-		return false;
-	}
+    public boolean isAboveRails() {
+        return this.isAboveRails;
+    }
 
-	@Override
-	public ItemStack onPick() {
-		if (item == null) {
-			return ItemStack.EMPTY;
-		}
-		return item;
-	}
+    @Override
+    public void load(TagCompound nbt) {
+        this.info = null;
+    }
 
-	@Override
-	public IBoundingBox getBoundingBox() {
-		// Won't be a lot of these in world, extra allocations are fine
-		return IBoundingBox.ORIGIN.expand(new Vec3d(1, 0.125, 1));
-	}
+    @Override
+    public boolean onClick(Player player, Player.Hand hand, Facing facing, Vec3d hit) {
+        if (player.isCrouching()) {
+            if (this.getWorld().isServer) {
+                this.setPlacementInfo(new PlacementInfo(this.getItem(), player.getYawHead(), hit));
+            }
+            return false;
+        } else if (!player.getHeldItem(hand).is(IRItems.ITEM_GOLDEN_SPIKE)) {
+            GuiTypes.RAIL_PREVIEW.open(player, this.getPos());
+            return true;
+        }
+        return false;
+    }
 
-	@Override
-	public IBoundingBox getRenderBoundingBox() {
-		return IBoundingBox.INFINITE;
-	}
+    public void setPlacementInfo(PlacementInfo info) {
+        this.placementInfo = info;
+        this.markDirty();
+    }
 
-	public RailInfo getRailRenderInfo() {
-		if (getWorld() != null && item != null && (info == null || info.settings == null)) {
-			info = new RailInfo(item, placementInfo, customInfo);
-		}
-		return info;
-	}
+    public ItemStack getItem() {
+        return this.item;
+    }
 
-	@Override
-	public void markDirty() {
-		super.markDirty();
-        info = new RailInfo(item, placementInfo, customInfo);
-        if (isMulti() && getWorld().isServer) {
-			new PreviewRenderPacket(this).sendToAll();
-		}
-	}
+    @Override
+    public ItemStack onPick() {
+        if (this.item == null) {
+            return ItemStack.EMPTY;
+        }
+        return this.item;
+    }
 
-	public boolean isMulti() {
-		if (getRailRenderInfo().getBuilder(getWorld()) instanceof IIterableTrack) {
-			return ((IIterableTrack)getRailRenderInfo().getBuilder(getWorld())).getSubBuilders() != null;
-		}
-		return false;
-	}
+    @Override
+    public void markDirty() {
+        super.markDirty();
+        this.info = new RailInfo(this.item, this.placementInfo, this.customInfo);
+        if (this.isMulti() && this.getWorld().isServer) {
+            new PreviewRenderPacket(this).sendToAll();
+        }
+    }
 
-	@Override
-	public void update() {
-		if (getWorld().isServer && isMulti()) {
-			getWorld().keepLoaded(getPos());
+    @Override
+    public boolean tryBreak(Player entityPlayer) {
+        if (entityPlayer != null && entityPlayer.isCrouching()) {
+            if (this.getRailRenderInfo() != null && this.getRailRenderInfo()
+                    .build(entityPlayer, this.isAboveRails() ? this.getPos().down() : this.getPos())) {
+                new PreviewRenderPacket(this.getWorld(), this.getPos()).sendToAll();
+                return this.isAboveRails();
+            }
+            return false;
+        }
+        new PreviewRenderPacket(this.getWorld(), this.getPos()).sendToAll();
+        return true;
+    }
 
-			if (this.ticksAlive % 20 == 0) {
-				new PreviewRenderPacket(this).sendToAll();
-			}
-			this.ticksAlive ++;
-		}
-	}
+    @Override
+    public IBoundingBox getBoundingBox() {
+        // Won't be a lot of these in world, extra allocations are fine
+        return IBoundingBox.ORIGIN.expand(new Vec3d(1, 0.125, 1));
+    }
 
-	@Override
-	public boolean tryBreak(Player entityPlayer) {
-		if (entityPlayer != null && entityPlayer.isCrouching()) {
-			if (this.getRailRenderInfo() != null && this.getRailRenderInfo().build(entityPlayer, isAboveRails() ? getPos().down() : getPos())) {
-				new PreviewRenderPacket(this.getWorld(), this.getPos()).sendToAll();
-				return isAboveRails();
-			}
-			return false;
-		}
-		new PreviewRenderPacket(this.getWorld(), this.getPos()).sendToAll();
-		return true;
-	}
+    @Override
+    public IBoundingBox getRenderBoundingBox() {
+        return IBoundingBox.INFINITE;
+    }
 
-	public boolean isAboveRails() {
-		return isAboveRails;
-	}
+    public void setCustomInfo(PlacementInfo info) {
+        this.customInfo = info;
+        if (this.customInfo != null) {
+            RailSettings settings = RailSettings.from(this.item);
+            double lx = Math.abs(this.customInfo.placementPosition.x - this.placementInfo.placementPosition.x);
+            double lz = Math.abs(this.customInfo.placementPosition.z - this.placementInfo.placementPosition.z);
+            switch (settings.type) {
+                case TURN:
+                    settings = settings.with(b -> {
+                        double length = (lx + lz) / 2 + 1;
+                        length *= 90 / b.degrees;
+                        b.length = (int) Math.round(length);
+                    });
+                    break;
+                case STRAIGHT:
+                case SLOPE:
+                    settings = settings.with(b -> b.length = (int) Math.round(Math.max(lx, lz) + 1));
+            }
+
+            settings.write(this.item);
+        }
+        this.markDirty();
+    }
+
+    @Override
+    public void update() {
+        if (this.getWorld().isServer && this.isMulti()) {
+            this.getWorld().keepLoaded(this.getPos());
+
+            if (this.ticksAlive % 20 == 0) {
+                new PreviewRenderPacket(this).sendToAll();
+            }
+            this.ticksAlive++;
+        }
+    }
 }

@@ -8,33 +8,35 @@ import cam72cam.mod.serialization.TagField;
 import cam72cam.mod.world.World;
 
 public class PreviewRenderPacket extends Packet {
-	@TagField
-	private TileRailPreview preview;
-	@TagField
-	private World world;
-	@TagField
-	private Vec3i removed;
+    @TagField
+    private TileRailPreview preview;
+    @TagField
+    private World world;
+    @TagField
+    private Vec3i removed;
 
-	public PreviewRenderPacket() { }
-	public PreviewRenderPacket(TileRailPreview preview) {
-		this.preview = preview;
-	}
-	public PreviewRenderPacket(World world, Vec3i removed) {
-		this.world = world;
-		this.removed = removed;
-	}
+    public PreviewRenderPacket() {}
 
-	@Override
-	public void handle() {
-		if (removed != null) {
-			MultiPreviewRender.remove(world, removed);
-			return;
-		}
+    public PreviewRenderPacket(TileRailPreview preview) {
+        this.preview = preview;
+    }
 
-		if (preview == null || preview.getWorld() != getPlayer().getWorld()) {
-			return;
-		}
+    public PreviewRenderPacket(World world, Vec3i removed) {
+        this.world = world;
+        this.removed = removed;
+    }
 
-		MultiPreviewRender.add(preview);
-	}
+    @Override
+    public void handle() {
+        if (this.removed != null) {
+            MultiPreviewRender.remove(this.world, this.removed);
+            return;
+        }
+
+        if (this.preview == null || this.preview.getWorld() != this.getPlayer().getWorld()) {
+            return;
+        }
+
+        MultiPreviewRender.add(this.preview);
+    }
 }

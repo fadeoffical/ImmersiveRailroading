@@ -26,22 +26,20 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 
 public class GuiBuilder {
+    private static GuiBuilder target = null;
     private final float x;
     private final float y;
     private final Horizontal screen_x;
     private final Vertical screen_y;
-
     private final Identifier image;
     private final int width;
     private final int height;
-
     private final String text;
     private final float textHeight;
-
     private final Readouts readout;
     private final String control;
     private final String setting;
@@ -59,67 +57,10 @@ public class GuiBuilder {
     private final float rotoff;
     private final Float scalex;
     private final Float scaley;
-
     private final Map<Float, Integer> colors = new HashMap<>();
     private final EntityRollingStockDefinition.ControlSoundsDefinition sound;
-
     private final List<GuiBuilder> elements;
-
     private float temporary_value = 0.5f;
-
-    private enum Horizontal {
-        LEFT,
-        RIGHT,
-        MIDDLE,
-        ;
-
-        public static Horizontal from(String pos_x) {
-            if (pos_x == null) {
-                return LEFT;
-            }
-            pos_x = pos_x.toUpperCase(Locale.ROOT);
-            if (pos_x.equals("CENTER")) {
-                return MIDDLE;
-            }
-            return valueOf(pos_x);
-        }
-    }
-    private enum Vertical {
-        TOP,
-        MIDDLE,
-        BOTTOM,
-        ;
-        public static Vertical from(String pos_y) {
-            if (pos_y == null) {
-                return TOP;
-            }
-            pos_y = pos_y.toUpperCase(Locale.ROOT);
-            if (pos_y.equals("CENTER")) {
-                return MIDDLE;
-            }
-
-            return valueOf(pos_y);
-        }
-    }
-
-    private static DataBlock processImports(DataBlock data) throws IOException {
-        // This is kinda weird as it appends the import to the current block instead of inserting it in the current
-        // element list.  It's definitely a bit of a footgun.  The "correct" way to do this would be to make import part
-        // of parsing in CAML, which is it's own sort of weirdness due to JSON interop.
-        List<DataBlock.Value> direct = data.getValues("import");
-        if (direct != null) {
-            for (DataBlock.Value imp : direct) {
-                data = new MergedBlocks(data, processImports(DataBlock.load(imp.asIdentifier())));
-            }
-        }
-        List<DataBlock> imports = data.getBlocks("import");
-        if (imports != null) {
-            for (DataBlock imp : imports) {
-                data = new MergedBlocks(data, processImports(DataBlock.load(imp.getValue("source").asIdentifier(), imp.getBlock("replace"))));
-            }
-        }
-        return data;
-    }
 
     protected GuiBuilder(DataBlock data) throws IOException {
         data = processImports(data);
@@ -133,25 +74,25 @@ public class GuiBuilder {
         // Text stuff
         DataBlock txt = data.getBlock("text");
         if (txt != null) {
-            text = txt.getValue("value").asString();
-            textHeight = txt.getValue("height").asFloat(0f);
+            this.text = txt.getValue("value").asString();
+            this.textHeight = txt.getValue("height").asFloat(0f);
         } else {
-            text = null;
-            textHeight = 0;
+            this.text = null;
+            this.textHeight = 0;
         }
 
         // Image stuff
         this.image = data.getValue("image").asIdentifier(null);
-        if (image != null) {
+        if (this.image != null) {
             BufferedImage tmp = ImageIO.read(this.image.getResourceStream());
-            width = tmp.getWidth();
-            height = tmp.getHeight();
-        } else if (text != null) {
-            width = (int) (textHeight/4 * text.length()); // Guesstimate
-            height = (int) textHeight;
+            this.width = tmp.getWidth();
+            this.height = tmp.getHeight();
+        } else if (this.text != null) {
+            this.width = (int) (this.textHeight / 4 * this.text.length()); // Guesstimate
+            this.height = (int) this.textHeight;
         } else {
-            width = 0;
-            height = 0;
+            this.width = 0;
+            this.height = 0;
         }
 
         // Controls
@@ -173,7 +114,7 @@ public class GuiBuilder {
             this.tlx = tl.getValue("x").asFloat(0);
             this.tly = tl.getValue("y").asFloat(0);
         } else {
-            tlx = tly = 0;
+            this.tlx = this.tly = 0;
         }
 
         DataBlock rot = data.getBlock("rotate");
@@ -206,11 +147,11 @@ public class GuiBuilder {
                     hex = hex.replace("0x", "0xFF");
                     hex = hex.replace("0X", "0XFF");
                 }
-                colors.put(Float.parseFloat(key), (int)(long)Long.decode(hex));
+                this.colors.put(Float.parseFloat(key), (int) (long) Long.decode(hex));
             });
         }
 
-        elements = new ArrayList<>();
+        this.elements = new ArrayList<>();
 
         // Children
         List<DataBlock> elem = data.getBlocks("elements");
@@ -219,35 +160,93 @@ public class GuiBuilder {
         }
         if (elem != null) {
             for (DataBlock element : elem) {
-                elements.add(new GuiBuilder(element));
+                this.elements.add(new GuiBuilder(element));
             }
         }
+    }
+
+    private static DataBlock processImports(DataBlock data) throws IOException {
+        // This is kinda weird as it appends the import to the current block instead of inserting it in the current
+        // element list.  It's definitely a bit of a footgun.  The "correct" way to do this would be to make import part
+        // of parsing in CAML, which is it's own sort of weirdness due to JSON interop.
+        List<DataBlock.Value> direct = data.getValues("import");
+        if (direct != null) {
+            for (DataBlock.Value imp : direct) {
+                data = new MergedBlocks(data, processImports(DataBlock.load(imp.asIdentifier())));
+            }
+        }
+        List<DataBlock> imports = data.getBlocks("import");
+        if (imports != null) {
+            for (DataBlock imp : imports) {
+                data = new MergedBlocks(data, processImports(DataBlock.load(imp.getValue("source")
+                        .asIdentifier(), imp.getBlock("replace"))));
+            }
+        }
+        return data;
     }
 
     public static GuiBuilder parse(Identifier overlay) throws IOException {
         return new GuiBuilder(DataBlock.load(overlay));
     }
 
+    public static void onClientTick() {
+        if (target != null && (target.readout == Readouts.TRAIN_BRAKE_LEVER)) {
+            if (!MinecraftClient.isReady()) {
+                return;
+            }
+            Entity riding = MinecraftClient.getPlayer().getRiding();
+            if (!(riding instanceof EntityRollingStock)) {
+                return;
+            }
+            EntityRollingStock stock = (EntityRollingStock) riding;
+            float value = target.invert ? target.getValue(stock) : 1 - target.getValue(stock);
+            new ControlChangePacket(stock, target.readout, target.control, target.global, target.texture_variant, value).sendToServer();
+        }
+    }
+
+    private float getValue(EntityRollingStock stock) {
+        float value = 0;
+        if (this.readout != null) {
+            value = this.readout.getValue(stock, this.temporary_value);
+        } else if (this.control != null) {
+            value = stock.getControlPosition(this.control);
+        } else if (this.setting != null) {
+            if (!ConfigGraphics.settings.containsKey(this.setting) && this.setting_default != null) {
+                ConfigGraphics.settings.put(this.setting, this.setting_default);
+            }
+
+            value = ConfigGraphics.settings.getOrDefault(this.setting, 0f);
+        } else if (this.texture_variant != null) {
+            value = this.texture_variant.equals(stock.getTexture()) ? 1 : 0;
+        }
+
+        if (this.invert) {
+            value = 1 - value;
+        }
+
+        return value;
+    }
+
     private void applyPosition(Matrix4 matrix, int maxx, int maxy) {
         matrix.translate(this.x, this.y, 0);
 
-        switch (screen_x) {
+        switch (this.screen_x) {
             case LEFT:
                 // NOP
                 break;
             case MIDDLE:
-                matrix.translate(maxx/2f, 0, 0);
+                matrix.translate(maxx / 2f, 0, 0);
                 break;
             case RIGHT:
                 matrix.translate(maxx, 0, 0);
                 break;
         }
-        switch (screen_y) {
+        switch (this.screen_y) {
             case TOP:
                 // NOP
                 break;
             case MIDDLE:
-                matrix.translate(0, maxy/2f, 0);
+                matrix.translate(0, maxy / 2f, 0);
                 break;
             case BOTTOM:
                 matrix.translate(0, maxy, 0);
@@ -255,94 +254,72 @@ public class GuiBuilder {
         }
     }
 
-    private float getValue(EntityRollingStock stock) {
-        float value = 0;
-        if (readout != null) {
-            value = readout.getValue(stock, temporary_value);
-        } else if (control != null) {
-            value = stock.getControlPosition(control);
-        } else if (setting != null) {
-            if (!ConfigGraphics.settings.containsKey(setting) && setting_default != null) {
-                ConfigGraphics.settings.put(setting, setting_default);
-            }
-
-            value = ConfigGraphics.settings.getOrDefault(setting, 0f);
-        } else if (texture_variant != null) {
-            value = texture_variant.equals(stock.getTexture()) ? 1 : 0;
-        }
-
-        if (invert) {
-            value = 1 - value;
-        }
-
-        return value;
-    }
-
     private void applyValue(Matrix4 matrix, float value) {
-        if (tlx != 0 || tly != 0) {
-            matrix.translate(tlx * value, tly * value, 0);
+        if (this.tlx != 0 || this.tly != 0) {
+            matrix.translate(this.tlx * value, this.tly * value, 0);
         }
-        if (rotdeg != 0) {
-            matrix.translate(rotx, roty, 0);
-            matrix.rotate(Math.toRadians(rotdeg * value + rotoff), 0, 0, 1);
-            matrix.translate(-rotx, -roty, 0);
+        if (this.rotdeg != 0) {
+            matrix.translate(this.rotx, this.roty, 0);
+            matrix.rotate(Math.toRadians(this.rotdeg * value + this.rotoff), 0, 0, 1);
+            matrix.translate(-this.rotx, -this.roty, 0);
         }
-        if (scalex != null || scaley != null) {
-            matrix.scale(scalex != null ? scalex * value : 1, scaley != null ? scaley * value : 1, 1);
+        if (this.scalex != null || this.scaley != null) {
+            matrix.scale(this.scalex != null ? this.scalex * value : 1, this.scaley != null ? this.scaley * value : 1, 1);
         }
     }
 
     public void render(RenderState state, EntityRollingStock stock) {
-        render(stock, state.clone().color(1, 1, 1, 1), GUIHelpers.getScreenWidth(), GUIHelpers.getScreenHeight(), 0xFFFFFFFF);
+        this.render(stock, state.clone()
+                .color(1, 1, 1, 1), GUIHelpers.getScreenWidth(), GUIHelpers.getScreenHeight(), 0xFFFFFFFF);
     }
 
     private void render(EntityRollingStock stock, RenderState state, int maxx, int maxy, int baseColor) {
-        float value = getValue(stock);
-        if (translucent) {
+        float value = this.getValue(stock);
+        if (this.translucent) {
             if (value == 0) {
                 return;
             }
             float alpha = (baseColor >> 24 & 255) / 255f * value;
-            baseColor = baseColor & 0x00FFFFFF | ((int)(alpha * 255f) << 24);
+            baseColor = baseColor & 0x00FFFFFF | ((int) (alpha * 255f) << 24);
         }
 
         state = state.clone(); // TODO mem opt?
-        applyPosition(state.model_view(), maxx, maxy);
-        applyValue(state.model_view(), value);
+        this.applyPosition(state.model_view(), maxx, maxy);
+        this.applyValue(state.model_view(), value);
 
         Float colorKey = null;
-        for (float key : colors.keySet()) {
+        for (float key : this.colors.keySet()) {
             if (key <= value && (colorKey == null || key > colorKey)) {
                 colorKey = key;
             }
         }
 
-        if (colorKey != null && colors.containsKey(colorKey)) {
+        if (colorKey != null && this.colors.containsKey(colorKey)) {
             float oldAlpha = (baseColor >> 24 & 255) / 255f;
 
-            int newColor = colors.get(colorKey);
+            int newColor = this.colors.get(colorKey);
             float newAlpha = (newColor >> 24 & 255) / 255f;
-            baseColor = newColor & 0x00FFFFFF | ((int)(newAlpha * oldAlpha * 255f) << 24);
+            baseColor = newColor & 0x00FFFFFF | ((int) (newAlpha * oldAlpha * 255f) << 24);
         }
 
-        if (colorKey != null || translucent) {
+        if (colorKey != null || this.translucent) {
             state.color((baseColor >> 16 & 255) / 255.0f, (baseColor >> 8 & 255) / 255.0f, (baseColor & 255) / 255.0f, (baseColor >> 24 & 255) / 255.0f);
         }
 
-        if (image != null) {
+        if (this.image != null) {
             DirectDraw draw = new DirectDraw();
             draw.vertex(0, 0, 0).uv(0, 0);
-            draw.vertex(0, height, 0).uv(0, 1);
-            draw.vertex(width, height, 0).uv(1, 1);
-            draw.vertex(width, 0, 0).uv(1, 0);
+            draw.vertex(0, this.height, 0).uv(0, 1);
+            draw.vertex(this.width, this.height, 0).uv(1, 1);
+            draw.vertex(this.width, 0, 0).uv(1, 0);
             draw.draw(state.clone()
-                    .texture(Texture.wrap(image))
+                    .texture(Texture.wrap(this.image))
                     .alpha_test(false)
                     .blend(new BlendMode(BlendMode.GL_SRC_ALPHA, BlendMode.GL_ONE_MINUS_SRC_ALPHA))
             );
         }
-        if (text != null) {
-            String out = text;
+        if (this.text != null) {
+            String out = this.text;
             for (Stat stat : Stat.values()) {
                 if (out.contains(stat.toString())) {
                     out = out.replace(stat.toString(), stat.getValue(stock));
@@ -352,37 +329,37 @@ public class GuiBuilder {
                 out = out.replace(label.getValue(), label.toString());
             }
             // Text is 8px tall
-            float scale = textHeight / 8f;
+            float scale = this.textHeight / 8f;
             Matrix4 mat = state.model_view().copy();
             mat.scale(scale, scale, scale);
             GUIHelpers.drawCenteredString(out, 0, 0, baseColor, mat);
         }
-        for (GuiBuilder element : elements) {
+        for (GuiBuilder element : this.elements) {
             element.render(stock, state, maxx, maxy, baseColor);
         }
     }
 
     private GuiBuilder find(EntityRollingStock stock, Matrix4 matrix, int maxx, int maxy, int x, int y) {
-        float value = getValue(stock);
-        if (translucent && value == 0) {
+        float value = this.getValue(stock);
+        if (this.translucent && value == 0) {
             return null;
         }
         matrix = matrix.copy(); // TODO mem opt?
-        applyPosition(matrix, maxx, maxy);
-        applyValue(matrix, value);
-        for (GuiBuilder element : elements) {
+        this.applyPosition(matrix, maxx, maxy);
+        this.applyValue(matrix, value);
+        for (GuiBuilder element : this.elements) {
             GuiBuilder found = element.find(stock, matrix, maxx, maxy, x, y);
             if (found != null) {
                 return found;
             }
         }
 
-        if (interactable() && (image != null || text != null)) {
-            if (control == null && setting == null && texture_variant == null) {
-                if (readout == null) {
+        if (this.interactable() && (this.image != null || this.text != null)) {
+            if (this.control == null && this.setting == null && this.texture_variant == null) {
+                if (this.readout == null) {
                     return null;
                 }
-                switch (readout) {
+                switch (this.readout) {
                     case THROTTLE:
                     case REVERSER:
                     case TRAIN_BRAKE:
@@ -400,10 +377,10 @@ public class GuiBuilder {
                 }
             }
             int border = 2;
-            Vec3d cornerA = matrix.apply(new Vec3d((image == null ? -width : 0)-border, -border, 0));
-            Vec3d cornerB = matrix.apply(new Vec3d((image == null ? -width : 0)-border, height + border, 0));
-            Vec3d cornerC = matrix.apply(new Vec3d(width + border, -border, 0));
-            Vec3d cornerD = matrix.apply(new Vec3d(width + border, height + border, 0));
+            Vec3d cornerA = matrix.apply(new Vec3d((this.image == null ? -this.width : 0) - border, -border, 0));
+            Vec3d cornerB = matrix.apply(new Vec3d((this.image == null ? -this.width : 0) - border, this.height + border, 0));
+            Vec3d cornerC = matrix.apply(new Vec3d(this.width + border, -border, 0));
+            Vec3d cornerD = matrix.apply(new Vec3d(this.width + border, this.height + border, 0));
 
             Polygon poly = new Polygon(
                     new int[]{(int) cornerA.x, (int) cornerB.x, (int) cornerC.x, (int) cornerD.x},
@@ -418,26 +395,26 @@ public class GuiBuilder {
     }
 
     private boolean interactable() {
-        return tlx != 0 || tly != 0 || rotdeg != 0 || scalex != null || scaley != null || toggle;
+        return this.tlx != 0 || this.tly != 0 || this.rotdeg != 0 || this.scalex != null || this.scaley != null || this.toggle;
     }
 
     private void onMouseClick(EntityRollingStock stock) {
-        if (sound != null) {
-            sound.effects(stock, true, getValue(stock), MinecraftClient.getPlayer().getPosition());
+        if (this.sound != null) {
+            this.sound.effects(stock, true, this.getValue(stock), MinecraftClient.getPlayer().getPosition());
         }
     }
 
     private void onMouseMove(EntityRollingStock stock, Matrix4 matrix, GuiBuilder target, int maxx, int maxy, int x, int y) {
-        float value = getValue(stock);
+        float value = this.getValue(stock);
         matrix = matrix.copy(); // TODO mem opt?
-        applyPosition(matrix, maxx, maxy);
+        this.applyPosition(matrix, maxx, maxy);
         Matrix4 preApply = matrix.copy();
-        applyValue(matrix, value);
+        this.applyValue(matrix, value);
 
         if (target == this) {
             // 0 0 imageHeight imageWidth
 
-            if (toggle) {
+            if (this.toggle) {
                 return;
             }
 
@@ -446,19 +423,19 @@ public class GuiBuilder {
 
             for (float checkValue = 0; checkValue <= 1; checkValue += 0.01) {
                 Matrix4 temp = preApply.copy();
-                if (tlx != 0 || tly != 0) {
-                    temp.translate(tlx * checkValue, tly * checkValue, 0);
+                if (this.tlx != 0 || this.tly != 0) {
+                    temp.translate(this.tlx * checkValue, this.tly * checkValue, 0);
                 }
-                if (rotdeg != 0) {
-                    temp.translate(rotx, roty, 0);
-                    temp.rotate(Math.toRadians(rotdeg * checkValue + rotoff), 0, 0, 1);
-                    temp.translate(-rotx, -roty, 0);
+                if (this.rotdeg != 0) {
+                    temp.translate(this.rotx, this.roty, 0);
+                    temp.rotate(Math.toRadians(this.rotdeg * checkValue + this.rotoff), 0, 0, 1);
+                    temp.translate(-this.rotx, -this.roty, 0);
                 }
-                if (scalex != null || scaley != null) {
-                    temp.scale(scalex != null ? scalex * checkValue : 1, scaley != null ? scaley * checkValue : 1, 1);
+                if (this.scalex != null || this.scaley != null) {
+                    temp.scale(this.scalex != null ? this.scalex * checkValue : 1, this.scaley != null ? this.scaley * checkValue : 1, 1);
                 }
 
-                Vec3d checkMiddle = temp.apply(new Vec3d(width /2f, height /2f, 0));
+                Vec3d checkMiddle = temp.apply(new Vec3d(this.width / 2f, this.height / 2f, 0));
                 double delta = checkMiddle.distanceTo(new Vec3d(x, y, 0));
                 if (delta < closestDelta) {
                     closestDelta = delta;
@@ -467,14 +444,14 @@ public class GuiBuilder {
             }
 
             if (closestValue != value) {
-                float val = invert ? 1 - closestValue : closestValue;
-                temporary_value = val;
-                if (setting != null) {
-                    ConfigGraphics.settings.put(setting, val);
+                float val = this.invert ? 1 - closestValue : closestValue;
+                this.temporary_value = val;
+                if (this.setting != null) {
+                    ConfigGraphics.settings.put(this.setting, val);
                     ConfigFile.write(ConfigGraphics.class);
                 } else {
-                    if (readout != Readouts.TRAIN_BRAKE_LEVER) {
-                        new ControlChangePacket(stock, readout, control, global, texture_variant, val).sendToServer();
+                    if (this.readout != Readouts.TRAIN_BRAKE_LEVER) {
+                        new ControlChangePacket(stock, this.readout, this.control, this.global, this.texture_variant, val).sendToServer();
                     }
                 }
             }
@@ -483,14 +460,14 @@ public class GuiBuilder {
                 target.sound.effects(stock, true, target.getValue(stock), MinecraftClient.getPlayer().getPosition());
             }
         } else {
-            for (GuiBuilder element : elements) {
+            for (GuiBuilder element : this.elements) {
                 element.onMouseMove(stock, matrix, target, maxx, maxy, x, y);
             }
         }
     }
 
     public boolean onMouseScroll(double scroll, EntityRollingStock stock, int maxx, int maxy, int x, int y) {
-        GuiBuilder target = find(stock, new Matrix4(), maxx, maxy, x, y);
+        GuiBuilder target = this.find(stock, new Matrix4(), maxx, maxy, x, y);
         if (target != null && !target.toggle) {
             target.onMouseClick(stock);
 
@@ -514,35 +491,32 @@ public class GuiBuilder {
     }
 
     public void onMouseRelease(EntityRollingStock stock) {
-        float value = getValue(stock);
+        float value = this.getValue(stock);
 
-        if (sound != null) {
-            sound.effects(stock, false, value, MinecraftClient.getPlayer().getPosition());
+        if (this.sound != null) {
+            this.sound.effects(stock, false, value, MinecraftClient.getPlayer().getPosition());
         }
 
-        if (toggle) {
+        if (this.toggle) {
             value = 1 - value;
-            if (invert) {
+            if (this.invert) {
                 value = 1 - value;
             }
         }
 
-        if (readout == Readouts.HORN || readout == Readouts.WHISTLE) {
+        if (this.readout == Readouts.HORN || this.readout == Readouts.WHISTLE) {
             value = 0;
         }
 
-        if (setting != null) {
-            ConfigGraphics.settings.put(setting, value);
+        if (this.setting != null) {
+            ConfigGraphics.settings.put(this.setting, value);
             ConfigFile.write(ConfigGraphics.class);
         } else {
-            new ControlChangePacket(stock, readout, control, global, texture_variant, value).sendToServer();
+            new ControlChangePacket(stock, this.readout, this.control, this.global, this.texture_variant, value).sendToServer();
         }
 
-        temporary_value = 0.5f;
+        this.temporary_value = 0.5f;
     }
-
-
-    private static GuiBuilder target = null;
 
     public boolean click(ClientEvents.MouseGuiEvent event, EntityRollingStock stock) {
         switch (event.action) {
@@ -551,7 +525,7 @@ public class GuiBuilder {
                     // Weird hack for when mouse goes out of the window
                     target.onMouseRelease(stock);
                 }
-                target = find(stock, new Matrix4(), GUIHelpers.getScreenWidth(), GUIHelpers.getScreenHeight(), event.x, event.y);
+                target = this.find(stock, new Matrix4(), GUIHelpers.getScreenWidth(), GUIHelpers.getScreenHeight(), event.x, event.y);
                 if (target != null) {
                     target.onMouseClick(stock);
                 }
@@ -575,18 +549,40 @@ public class GuiBuilder {
         return true;
     }
 
-    public static void onClientTick() {
-        if (target != null && (target.readout == Readouts.TRAIN_BRAKE_LEVER)) {
-            if (!MinecraftClient.isReady()) {
-                return ;
+    private enum Horizontal {
+        LEFT,
+        RIGHT,
+        MIDDLE,
+        ;
+
+        public static Horizontal from(String pos_x) {
+            if (pos_x == null) {
+                return LEFT;
             }
-            Entity riding = MinecraftClient.getPlayer().getRiding();
-            if (!(riding instanceof EntityRollingStock)) {
-                return ;
+            pos_x = pos_x.toUpperCase(Locale.ROOT);
+            if (pos_x.equals("CENTER")) {
+                return MIDDLE;
             }
-            EntityRollingStock stock = (EntityRollingStock) riding;
-            float value = target.invert ? target.getValue(stock) : 1 - target.getValue(stock);
-            new ControlChangePacket(stock, target.readout, target.control, target.global, target.texture_variant, value).sendToServer();
+            return valueOf(pos_x);
+        }
+    }
+
+    private enum Vertical {
+        TOP,
+        MIDDLE,
+        BOTTOM,
+        ;
+
+        public static Vertical from(String pos_y) {
+            if (pos_y == null) {
+                return TOP;
+            }
+            pos_y = pos_y.toUpperCase(Locale.ROOT);
+            if (pos_y.equals("CENTER")) {
+                return MIDDLE;
+            }
+
+            return valueOf(pos_y);
         }
     }
 
@@ -604,6 +600,7 @@ public class GuiBuilder {
 
         @TagField
         private String texture_variant;
+
         public ControlChangePacket() {
             super(); // Reflection
         }
@@ -616,54 +613,55 @@ public class GuiBuilder {
             this.texture_variant = texture_variant;
             this.value = value;
             // Update the UI, server will resync once the update actually happens
-            update(stock);
+            this.update(stock);
         }
 
-        @Override
-        protected void handle() {
-            EntityRollingStock stock = getWorld().getEntity(stockUUID, EntityRollingStock.class);
-            if (stock != null) {
-                update(stock);
-            }
-        }
         public void update(EntityRollingStock stock) {
             // TODO permissions!
-            if (controlGroup != null) {
-                switch (controlGroup) {
+            if (this.controlGroup != null) {
+                switch (this.controlGroup) {
                     case "REVERSERFORWARD":
-                        readout = Readouts.REVERSER;
-                        value = 1;
+                        this.readout = Readouts.REVERSER;
+                        this.value = 1;
                         break;
                     case "REVERSERNEUTRAL":
-                        readout = Readouts.REVERSER;
-                        value = 0.5f;
+                        this.readout = Readouts.REVERSER;
+                        this.value = 0.5f;
                         break;
                     case "REVERSERBACKWARD":
-                        readout = Readouts.REVERSER;
-                        value = 0;
+                        this.readout = Readouts.REVERSER;
+                        this.value = 0;
                         break;
                     default:
-                        if (global) {
-                            ((EntityCoupleableRollingStock)stock).mapTrain((EntityCoupleableRollingStock) stock, false, target -> {
-                                target.setControlPosition(controlGroup, value);
+                        if (this.global) {
+                            ((EntityCoupleableRollingStock) stock).mapTrain((EntityCoupleableRollingStock) stock, false, target -> {
+                                target.setControlPosition(this.controlGroup, this.value);
                             });
                         } else {
-                            stock.setControlPosition(controlGroup, value);
+                            stock.setControlPosition(this.controlGroup, this.value);
                         }
                         return;
                 }
             }
-            if (readout != null) {
-                if (global) {
-                    ((EntityCoupleableRollingStock)stock).mapTrain((EntityCoupleableRollingStock) stock, false, target -> {
-                        readout.setValue(target, value);
+            if (this.readout != null) {
+                if (this.global) {
+                    ((EntityCoupleableRollingStock) stock).mapTrain((EntityCoupleableRollingStock) stock, false, target -> {
+                        this.readout.setValue(target, this.value);
                     });
                 } else {
-                    readout.setValue(stock, value);
+                    this.readout.setValue(stock, this.value);
                 }
             }
-            if (texture_variant != null && value == 1) {
-                stock.setTexture(texture_variant);
+            if (this.texture_variant != null && this.value == 1) {
+                stock.setTexture(this.texture_variant);
+            }
+        }
+
+        @Override
+        protected void handle() {
+            EntityRollingStock stock = this.getWorld().getEntity(this.stockUUID, EntityRollingStock.class);
+            if (stock != null) {
+                this.update(stock);
             }
         }
     }

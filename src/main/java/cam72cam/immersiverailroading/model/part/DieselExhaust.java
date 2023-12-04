@@ -15,12 +15,12 @@ import java.util.List;
 public class DieselExhaust {
     private final List<ModelComponent> components;
 
-    public static DieselExhaust get(ComponentProvider provider) {
-        return new DieselExhaust(provider.parseAll(ModelComponentType.DIESEL_EXHAUST_X));
-    }
-
     public DieselExhaust(List<ModelComponent> components) {
         this.components = components;
+    }
+
+    public static DieselExhaust get(ComponentProvider provider) {
+        return new DieselExhaust(provider.parseAll(ModelComponentType.DIESEL_EXHAUST_X));
     }
 
     public void effects(LocomotiveDiesel stock) {
@@ -28,12 +28,14 @@ public class DieselExhaust {
             if (stock.isRunning()) {
                 float throttle = Math.abs(stock.getThrottle()) + 0.05f;
                 Vec3d fakeMotion = stock.getVelocity();
-                for (ModelComponent exhaust : components) {
-                    Vec3d particlePos = stock.getPosition().add(VecUtil.rotateWrongYaw(exhaust.center.scale(stock.gauge.scale()), stock.getRotationYaw() + 180));
+                for (ModelComponent exhaust : this.components) {
+                    Vec3d particlePos = stock.getPosition()
+                            .add(VecUtil.rotateWrongYaw(exhaust.center.scale(stock.gauge.scale()), stock.getRotationYaw() + 180));
                     particlePos = particlePos.subtract(fakeMotion);
 
-                    double smokeMod = (1 + Math.min(1, Math.max(0.2, Math.abs(stock.getCurrentSpeed().minecraft())*2)))/2;
-                    Particles.SMOKE.accept(new SmokeParticle.SmokeParticleData(stock.getWorld(), particlePos, new Vec3d(fakeMotion.x, fakeMotion.y + 0.4 * stock.gauge.scale(), fakeMotion.z), (int) (40 * (1+throttle) * smokeMod), throttle, throttle, exhaust.width() * stock.gauge.scale(), stock.getDefinition().smokeParticleTexture));
+                    double smokeMod = (1 + Math.min(1, Math.max(0.2, Math.abs(stock.getCurrentSpeed()
+                            .minecraft()) * 2))) / 2;
+                    Particles.SMOKE.accept(new SmokeParticle.SmokeParticleData(stock.getWorld(), particlePos, new Vec3d(fakeMotion.x, fakeMotion.y + 0.4 * stock.gauge.scale(), fakeMotion.z), (int) (40 * (1 + throttle) * smokeMod), throttle, throttle, exhaust.width() * stock.gauge.scale(), stock.getDefinition().smokeParticleTexture));
                 }
             }
         }

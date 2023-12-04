@@ -23,204 +23,203 @@ import java.util.Collections;
 import java.util.List;
 
 public class ItemSwitchKey extends CustomItem {
-	public static final long CLICK_COOLDOWN_MILLIS = 250L;
-	public static final String LAST_USED_ON_KEY = "lastUsedOn";
-	public static final String FORCED_INTO_STATE_KEY = "forcedIntoState";
-	public static final String LAST_USED_AT_KEY = "lastUsedAt";
+    public static final long CLICK_COOLDOWN_MILLIS = 250L;
+    public static final String LAST_USED_ON_KEY = "lastUsedOn";
+    public static final String FORCED_INTO_STATE_KEY = "forcedIntoState";
+    public static final String LAST_USED_AT_KEY = "lastUsedAt";
 
-	public ItemSwitchKey() {
-		super(ImmersiveRailroading.MODID, "item_switch_key");
+    public ItemSwitchKey() {
+        super(ImmersiveRailroading.MODID, "item_switch_key");
 
-		Fuzzy steel = Fuzzy.STEEL_INGOT;
-		IRFuzzy.registerSteelRecipe(this, 2,
-				null, steel,
-				null, steel,
-				steel, steel);
-	}
+        Fuzzy steel = Fuzzy.STEEL_INGOT;
+        IRFuzzy.registerSteelRecipe(this, 2,
+                null, steel,
+                null, steel,
+                steel, steel);
+    }
 
-	@Override
-	public int getStackSize() {
-		return 1;
-	}
+    @Override
+    public List<CreativeTab> getCreativeTabs() {
+        return Collections.singletonList(ItemTabs.MAIN_TAB);
+    }
 
-	@Override
-	public List<CreativeTab> getCreativeTabs() {
-		return Collections.singletonList(ItemTabs.MAIN_TAB);
-	}
+    @Override
+    public int getStackSize() {
+        return 1;
+    }
 
-	@Override
-	public List<String> getTooltip(ItemStack stack)
-	{
-		Data data = new Data(stack);
-		if (data.isEmpty()) {
-			return Collections.singletonList(GuiText.SWITCH_KEY_TOOLTIP.toString());
-		} else {
-			return Arrays.asList(
-					GuiText.SWITCH_KEY_TOOLTIP.toString(),
-					GuiText.SWITCH_KEY_DATA_TOOLTIP.toString(
-							data.lastUsedOn.toString(),
-							data.forcedIntoState.toString())
-			);
-		}
-	}
+    @Override
+    public List<String> getTooltip(ItemStack stack) {
+        Data data = new Data(stack);
+        if (data.isEmpty()) {
+            return Collections.singletonList(GuiText.SWITCH_KEY_TOOLTIP.toString());
+        } else {
+            return Arrays.asList(
+                    GuiText.SWITCH_KEY_TOOLTIP.toString(),
+                    GuiText.SWITCH_KEY_DATA_TOOLTIP.toString(
+                            data.lastUsedOn.toString(),
+                            data.forcedIntoState.toString())
+            );
+        }
+    }
 
-	@Override
-	public void onClickAir(Player player, World world, Player.Hand hand) {
-		resetSwitchFromNbt(player, world, hand);
-	}
+    @Override
+    public ClickResult onClickBlock(Player player, World world, Vec3i pos, Player.Hand hand, Facing facing, Vec3d inBlockPos) {
+        if (world.isAir(pos)) {
+            return ClickResult.PASS;
+        }
 
-	@Override
-	public ClickResult onClickBlock(Player player, World world, Vec3i pos, Player.Hand hand, Facing facing, Vec3d inBlockPos) {
-		if (world.isAir(pos)) {
-			return ClickResult.PASS;
-		}
+        if (BlockUtil.isIRRail(world, pos)) {
+            TileRailBase tileRail = world.getBlockEntity(pos, TileRailBase.class);
+            if (tileRail == null) {
+                return ClickResult.PASS;
+            }
 
-		if (BlockUtil.isIRRail(world, pos)) {
-			TileRailBase tileRail = world.getBlockEntity(pos, TileRailBase.class);
-			if (tileRail == null) {
-				return ClickResult.PASS;
-			}
+            TileRail tileSwitch = tileRail.findSwitchParent();
+            if (tileSwitch == null) {
+                return ClickResult.PASS;
+            }
 
-			TileRail tileSwitch = tileRail.findSwitchParent();
-			if (tileSwitch == null) {
-				return ClickResult.PASS;
-			}
+            return this.lockSwitch(player, world, player.getHeldItem(hand), tileRail, tileSwitch);
+        }
 
-			return lockSwitch(player, world, player.getHeldItem(hand), tileRail, tileSwitch);
-		}
+        return this.resetSwitchFromNbt(player, world, hand);
+    }
 
-		return resetSwitchFromNbt(player, world, hand);
-	}
+    @Override
+    public void onClickAir(Player player, World world, Player.Hand hand) {
+        this.resetSwitchFromNbt(player, world, hand);
+    }
 
-	private ClickResult resetSwitchFromNbt(Player player, World world, Player.Hand hand) {
-		ItemStack stack = player.getHeldItem(hand);
-		Data data = new Data(stack);
+    private ClickResult resetSwitchFromNbt(Player player, World world, Player.Hand hand) {
+        ItemStack stack = player.getHeldItem(hand);
+        Data data = new Data(stack);
 
-		if (!player.hasPermission(Permissions.SWITCH_CONTROL) || data.isInClickCooldown()) {
-			return ClickResult.REJECTED;
-		}
+        if (!player.hasPermission(Permissions.SWITCH_CONTROL) || data.isInClickCooldown()) {
+            return ClickResult.REJECTED;
+        }
 
-		if (data.isEmpty()) {
-			if (world.isClient) {
-				player.sendMessage(PlayerMessage.translate(ChatText.SWITCH_CANT_RESET.toString()));
-			}
-			return ClickResult.REJECTED;
-		}
+        if (data.isEmpty()) {
+            if (world.isClient) {
+                player.sendMessage(PlayerMessage.translate(ChatText.SWITCH_CANT_RESET.toString()));
+            }
+            return ClickResult.REJECTED;
+        }
 
-		TileRailBase lastUsedOn = data.getLastUsedOnSwitch(world);
-		if (lastUsedOn == null) {
-			// Clear out invalid data
-			if (world.isServer) {
-				data.clear();
-				data.write();
-			}
-			return ClickResult.REJECTED;
-		}
+        TileRailBase lastUsedOn = data.getLastUsedOnSwitch(world);
+        if (lastUsedOn == null) {
+            // Clear out invalid data
+            if (world.isServer) {
+                data.clear();
+                data.write();
+            }
+            return ClickResult.REJECTED;
+        }
 
 
-		if (lastUsedOn.isSwitchForced()) {
-			if (world.isServer) {
-				lastUsedOn.setSwitchForced(SwitchState.NONE);
-				data.getLastUsedOnSwitch(world).markDirty();
+        if (lastUsedOn.isSwitchForced()) {
+            if (world.isServer) {
+                lastUsedOn.setSwitchForced(SwitchState.NONE);
+                data.getLastUsedOnSwitch(world).markDirty();
 
-				data.clear();
-				data.write();
-			}
+                data.clear();
+                data.write();
+            }
 
-			if (world.isClient) {
-				player.sendMessage(PlayerMessage.translate(ChatText.SWITCH_RESET.toString()));
-			}
+            if (world.isClient) {
+                player.sendMessage(PlayerMessage.translate(ChatText.SWITCH_RESET.toString()));
+            }
 
-			return ClickResult.ACCEPTED;
-		} else {
-			// Clear out invalid data
-			if(world.isServer) {
-				data.clear();
-				data.write();
-			}
+            return ClickResult.ACCEPTED;
+        } else {
+            // Clear out invalid data
+            if (world.isServer) {
+                data.clear();
+                data.write();
+            }
 
-			if (world.isClient) {
-				player.sendMessage(PlayerMessage.translate(ChatText.SWITCH_ALREADY_RESET.toString()));
-			}
+            if (world.isClient) {
+                player.sendMessage(PlayerMessage.translate(ChatText.SWITCH_ALREADY_RESET.toString()));
+            }
 
-			return ClickResult.REJECTED;
-		}
-	}
+            return ClickResult.REJECTED;
+        }
+    }
 
-	private ClickResult lockSwitch(Player player, World world, ItemStack stack, TileRailBase clickedTileRail, TileRail tileSwitch) {
-		Data data = new Data(stack);
-		if (data.isInClickCooldown()) {
-			return ClickResult.REJECTED;
-		}
+    private ClickResult lockSwitch(Player player, World world, ItemStack stack, TileRailBase clickedTileRail, TileRail tileSwitch) {
+        Data data = new Data(stack);
+        if (data.isInClickCooldown()) {
+            return ClickResult.REJECTED;
+        }
 
-		SwitchState newSwitchForcedState = tileSwitch.cycleSwitchForced();
-		clickedTileRail.markDirty();
+        SwitchState newSwitchForcedState = tileSwitch.cycleSwitchForced();
+        clickedTileRail.markDirty();
 
-		if (tileSwitch.isSwitchForced()) {
-			if (world.isServer) {
-				data.lastUsedOn = clickedTileRail.getPos();
-				data.forcedIntoState = newSwitchForcedState;
-				data.lastUsedAt = System.currentTimeMillis();
-				data.write();
-			}
+        if (tileSwitch.isSwitchForced()) {
+            if (world.isServer) {
+                data.lastUsedOn = clickedTileRail.getPos();
+                data.forcedIntoState = newSwitchForcedState;
+                data.lastUsedAt = System.currentTimeMillis();
+                data.write();
+            }
 
-			if (world.isClient) {
-				player.sendMessage(ChatText.SWITCH_LOCKED.getMessage(newSwitchForcedState.toString()));
-			}
+            if (world.isClient) {
+                player.sendMessage(ChatText.SWITCH_LOCKED.getMessage(newSwitchForcedState.toString()));
+            }
 
-			return ClickResult.ACCEPTED;
-		} else {
-			if (world.isServer) {
-				data.clear();
-				data.write();
-			}
+            return ClickResult.ACCEPTED;
+        } else {
+            if (world.isServer) {
+                data.clear();
+                data.write();
+            }
 
-			if (world.isClient) {
-				player.sendMessage(ChatText.SWITCH_UNLOCKED.getMessage());
-			}
+            if (world.isClient) {
+                player.sendMessage(ChatText.SWITCH_UNLOCKED.getMessage());
+            }
 
-			return ClickResult.ACCEPTED;
-		}
-	}
+            return ClickResult.ACCEPTED;
+        }
+    }
 
-	public static class Data extends ItemDataSerializer {
-		@TagField(value = LAST_USED_ON_KEY)
-		public Vec3i lastUsedOn;
+    public static class Data extends ItemDataSerializer {
+        @TagField(value = LAST_USED_ON_KEY)
+        public Vec3i lastUsedOn;
 
-		@TagField(value = FORCED_INTO_STATE_KEY)
-		public SwitchState forcedIntoState;
+        @TagField(value = FORCED_INTO_STATE_KEY)
+        public SwitchState forcedIntoState;
 
-		@TagField(value = LAST_USED_AT_KEY)
-		public Long lastUsedAt;
+        @TagField(value = LAST_USED_AT_KEY)
+        public Long lastUsedAt;
 
-		public Data(ItemStack stack) {
-			super(stack);
+        public Data(ItemStack stack) {
+            super(stack);
 
-			if (lastUsedAt == null) {
-				lastUsedAt = 0L;
-			}
-		}
+            if (this.lastUsedAt == null) {
+                this.lastUsedAt = 0L;
+            }
+        }
 
-		public boolean isEmpty() {
-			return lastUsedOn == null;
-		}
+        public boolean isInClickCooldown() {
+            return System.currentTimeMillis() < this.lastUsedAt + CLICK_COOLDOWN_MILLIS;
+        }
 
-		public boolean isInClickCooldown() {
-			return System.currentTimeMillis() < this.lastUsedAt + CLICK_COOLDOWN_MILLIS;
-		}
+        public TileRailBase getLastUsedOnSwitch(World world) {
+            if (this.isEmpty()) {
+                return null;
+            }
 
-		public TileRailBase getLastUsedOnSwitch(World world) {
-			if (isEmpty()) {
-				return null;
-			}
+            return world.getBlockEntity(this.lastUsedOn, TileRailBase.class);
+        }
 
-			return world.getBlockEntity(lastUsedOn, TileRailBase.class);
-		}
+        public boolean isEmpty() {
+            return this.lastUsedOn == null;
+        }
 
-		public void clear() {
-			lastUsedOn = null;
-			forcedIntoState = null;
-			lastUsedAt = System.currentTimeMillis();
-		}
-	}
+        public void clear() {
+            this.lastUsedOn = null;
+            this.forcedIntoState = null;
+            this.lastUsedAt = System.currentTimeMillis();
+        }
+    }
 }

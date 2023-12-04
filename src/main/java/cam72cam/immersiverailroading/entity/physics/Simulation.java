@@ -21,13 +21,11 @@ public class Simulation {
     public static int calculatedStates;
     public static int restStates;
     public static int keptStates;
-
-    double maxCouplerDist = 4;
-
     private final World world;
     private final int startTickID;
-    List<Map<UUID, SimulationState>> stateMaps;
     private final List<Vec3i> blocksAlreadyBroken;
+    double maxCouplerDist = 4;
+    List<Map<UUID, SimulationState>> stateMaps;
     List<EntityCoupleableRollingStock> loaded;
 
 
@@ -35,17 +33,17 @@ public class Simulation {
         calculatedStates = keptStates = restStates = 0;
         long startTimeMs = System.currentTimeMillis();
         this.world = world;
-        this.startTickID = ((ServerChronoState)ChronoState.getState(world)).getServerTickID();
+        this.startTickID = ((ServerChronoState) ChronoState.getState(world)).getServerTickID();
 
-        stateMaps = new ArrayList<>();
-        blocksAlreadyBroken = new ArrayList<>();
+        this.stateMaps = new ArrayList<>();
+        this.blocksAlreadyBroken = new ArrayList<>();
 
         for (int i = 0; i < Config.ConfigDebug.physicsFutureTicks; i++) {
-            stateMaps.add(new HashMap<>());
+            this.stateMaps.add(new HashMap<>());
         }
 
-        for (int i = 0; i < stateMaps.size()-1; i++) {
-            simulateTick(i);
+        for (int i = 0; i < this.stateMaps.size() - 1; i++) {
+            this.simulateTick(i);
         }
 
         boolean sendPackets = world.getTicks() % (Config.ConfigDebug.physicsFutureTicks / 2) == 0;
@@ -53,13 +51,17 @@ public class Simulation {
         List<Player> players = sendPackets ? world.getEntities(Player.class) : null;
 
         // Apply new states
-        for (EntityCoupleableRollingStock stock : loaded) {
-            stock.states = stateMaps.stream().map(m -> m.get(stock.getUUID())).filter(Objects::nonNull).collect(Collectors.toList());
+        for (EntityCoupleableRollingStock stock : this.loaded) {
+            stock.states = this.stateMaps.stream()
+                    .map(m -> m.get(stock.getUUID()))
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
             for (SimulationState state : stock.states) {
                 state.dirty = false;
             }
             stock.positions = stock.states.stream().map(TickPos::new).collect(Collectors.toList());
-            if (sendPackets && players.stream().anyMatch(player -> player.getPosition().distanceToSquared(stock.getPosition()) < syncDistanceSq)) {
+            if (sendPackets && players.stream()
+                    .anyMatch(player -> player.getPosition().distanceToSquared(stock.getPosition()) < syncDistanceSq)) {
                 new MRSSyncPacket(stock, stock.positions).sendToObserving(stock);
             }
         }
@@ -73,27 +75,27 @@ public class Simulation {
     public void simulateTick(int iteration) {
         long startTimeMs = System.currentTimeMillis();
 
-        int tickID = startTickID + iteration;
+        int tickID = this.startTickID + iteration;
 
-        Map<UUID, SimulationState> stateMap = stateMaps.get(iteration);
-        Map<UUID, SimulationState> nextStateMap = stateMaps.get(iteration+1);
+        Map<UUID, SimulationState> stateMap = this.stateMaps.get(iteration);
+        Map<UUID, SimulationState> nextStateMap = this.stateMaps.get(iteration + 1);
 
         // Should really only ever run once, maybe twice.  Cut it off after 10 times just to be safe
         for (int tryLoad = 0; tryLoad < 10; tryLoad++) {
             // If this is too slow, we could hang onto the list of stock that is at rest.
             // We should only need to do this when stock is no longer at rest or changes dirty flag
-            int lastCount = loaded == null ? 0 : loaded.size();
-            loaded = world.getEntities(EntityCoupleableRollingStock.class);
-            boolean newChunksLoaded = lastCount != loaded.size();
+            int lastCount = this.loaded == null ? 0 : this.loaded.size();
+            this.loaded = this.world.getEntities(EntityCoupleableRollingStock.class);
+            boolean newChunksLoaded = lastCount != this.loaded.size();
 
-            for (EntityCoupleableRollingStock stock : loaded) {
+            for (EntityCoupleableRollingStock stock : this.loaded) {
 
                 if (!stateMap.containsKey(stock.getUUID())) {
                     for (SimulationState state : stock.states) {
                         int stateIteration = state.tickID - tickID;
                         if (stateIteration >= 0) {
                             state.update(stock);
-                            stateMaps.get(stateIteration).put(stock.getUUID(), state);
+                            this.stateMaps.get(stateIteration).put(stock.getUUID(), state);
                         }
                     }
 
@@ -114,7 +116,7 @@ public class Simulation {
                 }
 
                 // Keep it loaded
-                world.keepLoaded(new Vec3i(state.position));
+                this.world.keepLoaded(new Vec3i(state.position));
 
                 if (state.consist.positions == null) {
                     continue;
@@ -123,10 +125,10 @@ public class Simulation {
                 // Load interacting stock locations
                 // We could in the future do a HashSet<Consist> and reduce the calls to the world.
                 for (Vec3i pos : state.consist.positions) {
-                    if (!world.isBlockLoaded(pos)) {
+                    if (!this.world.isBlockLoaded(pos)) {
                         ImmersiveRailroading.debug("Loading chunk at position %s", pos);
                         // Load the chunk, entities should be directly injected into the world
-                        world.getBlock(pos);
+                        this.world.getBlock(pos);
                         newChunksLoaded = true;
                     }
                 }
@@ -166,18 +168,18 @@ public class Simulation {
                 }
                 SimulationState other = stateMap.get(otherID);
                 if (other == null) {
-                    Vec3i otherPos = loaded.stream()
+                    Vec3i otherPos = this.loaded.stream()
                             .filter(x -> x.getUUID().equals(myID)).findFirst()
                             .map(x -> isMyCouplerFront ? x.lastKnownFront : x.lastKnownRear).orElse(null);
 
-                    if (otherPos != null && !world.isBlockLoaded(otherPos)) {
+                    if (otherPos != null && !this.world.isBlockLoaded(otherPos)) {
                         // Other location is not loaded, we must not need to do this check.
                         continue;
                     }
 
                     // This should really only be hit when removing a piece of stock
                     ImmersiveRailroading.debug("%s-%s: Stock not found %s (%s) -> %s!",
-                            startTickID, state.tickID, myID, myCouplerLabel, otherID);
+                            this.startTickID, state.tickID, myID, myCouplerLabel, otherID);
                     if (isMyCouplerFront) {
                         state.interactingFront = null;
                     } else {
@@ -203,7 +205,7 @@ public class Simulation {
                     This should be fixed with the smarter "dirty" logic above
                      */
                     ImmersiveRailroading.warn("%s-%s: Mismatched coupler states: %s (%s) -> %s (%s, %s)",
-                            startTickID, state.tickID,
+                            this.startTickID, state.tickID,
                             myID, myCouplerLabel,
                             otherID, other.interactingFront, other.interactingRear);
                     if (isMyCouplerFront) {
@@ -219,10 +221,10 @@ public class Simulation {
                 Vec3d otherCouplerPos = isOtherCouplerFront ? other.couplerPositionFront : other.couplerPositionRear;
                 String otherCouplerLabel = isOtherCouplerFront ? "Front" : "Rear";
 
-                double maxCouplerDistScaled = maxCouplerDist * state.config.gauge.scale();
+                double maxCouplerDistScaled = this.maxCouplerDist * state.config.gauge.scale();
                 if (myCouplerPos.distanceToSquared(otherCouplerPos) > maxCouplerDistScaled * maxCouplerDistScaled) {
                     ImmersiveRailroading.debug("%s-%s: Coupler snapping due to distance: %s (%s) -> %s (%s)",
-                            startTickID, state.tickID,
+                            this.startTickID, state.tickID,
                             myID, myCouplerLabel,
                             otherID, otherCouplerLabel);
                     state.dirty = true;
@@ -245,14 +247,14 @@ public class Simulation {
 
 
         // check for potential couplings and collisions
-        for (int sai = 0; sai < states.size()-1; sai++) {
+        for (int sai = 0; sai < states.size() - 1; sai++) {
             SimulationState stateA = states.get(sai);
             if (stateA.interactingFront != null && stateA.interactingRear != null) {
                 // There's stock in front and behind, can't really hit any other stock here
                 continue;
             }
 
-            for (int sbi = sai+1; sbi < states.size(); sbi++) {
+            for (int sbi = sai + 1; sbi < states.size(); sbi++) {
                 SimulationState stateB = states.get(sbi);
                 if (stateA.atRest && stateB.atRest && !stateA.dirty && !stateB.dirty) {
                     continue;
@@ -318,8 +320,8 @@ public class Simulation {
                 Vec3d couplerPosB = targetBCouplerFront ? stateB.couplerPositionFront : stateB.couplerPositionRear;
                 // Move coupler pos up to inside the BB (it's at track level by default)
                 // This could be optimized further, but it's an infrequent calculation
-                couplerPosA = couplerPosA.add(0, stateB.bounds.max().subtract(stateB.bounds.min()).y/2, 0);
-                couplerPosB = couplerPosB.add(0, stateA.bounds.max().subtract(stateA.bounds.min()).y/2, 0);
+                couplerPosA = couplerPosA.add(0, stateB.bounds.max().subtract(stateB.bounds.min()).y / 2, 0);
+                couplerPosB = couplerPosB.add(0, stateA.bounds.max().subtract(stateA.bounds.min()).y / 2, 0);
                 if (!stateB.bounds.contains(couplerPosA) || !stateA.bounds.contains(couplerPosB)) {
                     // Not actually on the same track, just a BB collision and can be ignored
                     continue;
@@ -328,7 +330,7 @@ public class Simulation {
                 stateA.dirty = true;
                 stateB.dirty = true;
                 ImmersiveRailroading.debug("%s-%s: Coupling %s (%s) to %s (%s)",
-                        startTickID, stateA.tickID,
+                        this.startTickID, stateA.tickID,
                         stateA.config.id, targetACouplerFront ? "Front" : "Rear",
                         stateB.config.id, targetBCouplerFront ? "Front" : "Rear");
 
@@ -347,17 +349,13 @@ public class Simulation {
         }
 
         // calculate new velocities
-        Consist.iterate(stateMap, nextStateMap, blocksAlreadyBroken);
+        Consist.iterate(stateMap, nextStateMap, this.blocksAlreadyBroken);
 
         long totalTimeMs = System.currentTimeMillis() - startTimeMs;
         if (totalTimeMs > Config.ConfigDebug.physicsWarnThresholdMs) {
             ImmersiveRailroading.warn("Calculating Immersive Railroading Physics Iteration took %sms (%s, %s, %s)", totalTimeMs, calculatedStates, restStates, keptStates);
         }
     }
-
-
-
-
 
 
     public static void simulate(World world) {

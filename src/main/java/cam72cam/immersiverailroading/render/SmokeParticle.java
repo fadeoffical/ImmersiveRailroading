@@ -14,44 +14,18 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class SmokeParticle extends Particle {
-    public static class SmokeParticleData extends ParticleData {
-        private final float darken;
-        private final float thickness;
-        private final double diameter;
-        private final Identifier texture;
-
-
-        public SmokeParticleData(World world, Vec3d pos, Vec3d motion, int lifespan, float darken, float thickness, double diameter, Identifier texture) {
-            super(world, pos, motion, lifespan);
-            this.darken = darken;
-            this.thickness = thickness;
-            this.diameter = diameter;
-            this.texture = texture;
-        }
-    }
-
-
     private final double rot;
     private final SmokeParticleData data;
-
     public SmokeParticle(SmokeParticleData data) {
         this.data = data;
         this.rot = Math.random() * 360;
     }
 
-    @Override
-    public boolean depthTestEnabled() {
-        return false;
-    }
-
-    @Override
-    public void render(RenderState ctx, float partialTicks) {
-    }
-
     public static void renderAll(List<SmokeParticle> particles, RenderState state, float partialTicks) {
         state.cull_face(false);
 
-        Map<Identifier, List<SmokeParticle>> partitioned = particles.stream().collect(Collectors.groupingBy(p -> p.data.texture));
+        Map<Identifier, List<SmokeParticle>> partitioned = particles.stream()
+                .collect(Collectors.groupingBy(p -> p.data.texture));
         for (Identifier texture : partitioned.keySet()) {
             state.texture(Texture.wrap(texture));
 
@@ -91,6 +65,31 @@ public class SmokeParticle extends Particle {
                 buffer.vertex(matrix.apply(new Vec3d(1, -1, 0))).uv(1, 0).color(darken, darken, darken, alpha);
             }
             buffer.draw(state);
+        }
+    }
+
+    @Override
+    public boolean depthTestEnabled() {
+        return false;
+    }
+
+    @Override
+    public void render(RenderState ctx, float partialTicks) {
+    }
+
+    public static class SmokeParticleData extends ParticleData {
+        private final float darken;
+        private final float thickness;
+        private final double diameter;
+        private final Identifier texture;
+
+
+        public SmokeParticleData(World world, Vec3d pos, Vec3d motion, int lifespan, float darken, float thickness, double diameter, Identifier texture) {
+            super(world, pos, motion, lifespan);
+            this.darken = darken;
+            this.thickness = thickness;
+            this.diameter = diameter;
+            this.texture = texture;
         }
     }
 }

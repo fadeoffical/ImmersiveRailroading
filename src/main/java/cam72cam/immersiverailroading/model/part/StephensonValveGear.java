@@ -19,17 +19,6 @@ public class StephensonValveGear extends ConnectingRodValveGear {
 
     protected final Vec3d drivenWheel;
 
-    public static StephensonValveGear get(WheelSet wheels, ComponentProvider provider, ModelState state, ModelPosition pos, float angleOffset) {
-        ModelComponent drivingRod = provider.parse(ModelComponentType.MAIN_ROD_SIDE, pos);
-        ModelComponent connectingRod = provider.parse(ModelComponentType.SIDE_ROD_SIDE, pos);
-        ModelComponent pistonRod = provider.parse(ModelComponentType.PISTON_ROD_SIDE, pos);
-        ModelComponent cylinder = provider.parse(ModelComponentType.CYLINDER_SIDE, pos);
-        ModelComponent frontExhaust = provider.parse(ModelComponentType.CYLINDER_DRAIN_SIDE, pos.and(ModelPosition.A));
-        ModelComponent rearExhaust = provider.parse(ModelComponentType.CYLINDER_DRAIN_SIDE, pos.and(ModelPosition.B));
-
-        return drivingRod != null && connectingRod != null && pistonRod != null ?
-                new StephensonValveGear(wheels, state, drivingRod, connectingRod, pistonRod, cylinder, angleOffset, frontExhaust, rearExhaust) : null;
-    }
     public StephensonValveGear(WheelSet wheels, ModelState state, ModelComponent drivingRod, ModelComponent connectingRod, ModelComponent pistonRod, ModelComponent cylinder, float angleOffset, ModelComponent frontExhaust, ModelComponent rearExhaust) {
         super(wheels, state, connectingRod, angleOffset);
         this.drivingRod = drivingRod;
@@ -38,28 +27,31 @@ public class StephensonValveGear extends ConnectingRodValveGear {
         Vec3d center = ModelComponent.center(wheels.wheels.stream().map(x -> x.wheel).collect(Collectors.toList()));
         this.reverse = pistonRod.center.x > center.x;
         // TODO this sucks, do better
-        this.angleOffset = angleOffset + (reverse ? -90 : 0);
+        this.angleOffset = angleOffset + (this.reverse ? -90 : 0);
 
 
         //noinspection OptionalGetWithoutIsPresent
-        drivenWheel = wheels.wheels.stream().map(w -> w.wheel.center).min(Comparator.comparingDouble(w -> w.distanceTo(reverse ? drivingRod.min : drivingRod.max))).get();
-        centerOfWheels = drivingRod.pos.equals(ModelPosition.CENTER) ? drivenWheel : center; // Bad hack for old TRI_WALSCHERTS code
+        this.drivenWheel = wheels.wheels.stream()
+                .map(w -> w.wheel.center)
+                .min(Comparator.comparingDouble(w -> w.distanceTo(this.reverse ? drivingRod.min : drivingRod.max)))
+                .get();
+        this.centerOfWheels = drivingRod.pos.equals(ModelPosition.CENTER) ? this.drivenWheel : center; // Bad hack for old TRI_WALSCHERTS code
 
         state.include(cylinder);
 
         state.push(builder -> builder.add((ModelState.Animator) stock -> {
             Matrix4 matrix = new Matrix4();
 
-            Vec3d connRodMovment = connRodMovement(stock);
+            Vec3d connRodMovment = this.connRodMovement(stock);
 
             // X: rear driving rod X - driving rod height/2 (hack assuming diameter == height)
             // Y: Center of the rod
             // Z: does not really matter due to rotation axis
-            Vec3d drivingRodRotPoint = new Vec3d((reverse ? drivingRod.min.x + drivingRod.height()/2 : drivingRod.max.x - drivingRod.height()/2), drivingRod.center.y, reverse ? drivingRod.min.z : drivingRod.max.z);
+            Vec3d drivingRodRotPoint = new Vec3d((this.reverse ? drivingRod.min.x + drivingRod.height() / 2 : drivingRod.max.x - drivingRod.height() / 2), drivingRod.center.y, this.reverse ? drivingRod.min.z : drivingRod.max.z);
             // Angle for movement height vs driving rod length (adjusted for assumed diameter == height, both sides == 2r)
-            float drivingRodAngle = (float) Math.toDegrees(Math.atan2((reverse ? -connRodMovment.z : connRodMovment.z), drivingRod.length() - drivingRod.height()));
+            float drivingRodAngle = (float) Math.toDegrees(Math.atan2((this.reverse ? -connRodMovment.z : connRodMovment.z), drivingRod.length() - drivingRod.height()));
 
-            double connRodRadius = connRodRadius();
+            double connRodRadius = this.connRodRadius();
 
             // Move to conn rod center
             matrix.translate(-connRodRadius, 0, 0);
@@ -79,11 +71,11 @@ public class StephensonValveGear extends ConnectingRodValveGear {
         state.push(builder -> builder.add((ModelState.Animator) stock -> {
             Matrix4 matrix = new Matrix4();
 
-            Vec3d connRodMovment = connRodMovement(stock);
+            Vec3d connRodMovment = this.connRodMovement(stock);
 
             // Piston movement is rod movement offset by the rotation radius
             // Not 100% accurate, missing the offset due to angled driving rod
-            double pistonDelta = connRodMovment.x - connRodRadius();
+            double pistonDelta = connRodMovment.x - this.connRodRadius();
             matrix.translate(pistonDelta, 0, 0);
             return matrix;
         })).include(pistonRod);
@@ -95,5 +87,17 @@ public class StephensonValveGear extends ConnectingRodValveGear {
         this.rearExhaust = rearExhaust != null ?
                 new Exhaust(rearExhaust, 270) :
                 new Exhaust(pistonRod.min, pistonRod.pos, 270);
+    }
+
+    public static StephensonValveGear get(WheelSet wheels, ComponentProvider provider, ModelState state, ModelPosition pos, float angleOffset) {
+        ModelComponent drivingRod = provider.parse(ModelComponentType.MAIN_ROD_SIDE, pos);
+        ModelComponent connectingRod = provider.parse(ModelComponentType.SIDE_ROD_SIDE, pos);
+        ModelComponent pistonRod = provider.parse(ModelComponentType.PISTON_ROD_SIDE, pos);
+        ModelComponent cylinder = provider.parse(ModelComponentType.CYLINDER_SIDE, pos);
+        ModelComponent frontExhaust = provider.parse(ModelComponentType.CYLINDER_DRAIN_SIDE, pos.and(ModelPosition.A));
+        ModelComponent rearExhaust = provider.parse(ModelComponentType.CYLINDER_DRAIN_SIDE, pos.and(ModelPosition.B));
+
+        return drivingRod != null && connectingRod != null && pistonRod != null ?
+                new StephensonValveGear(wheels, state, drivingRod, connectingRod, pistonRod, cylinder, angleOffset, frontExhaust, rearExhaust) : null;
     }
 }

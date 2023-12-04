@@ -15,21 +15,23 @@ public class KeyPressPacket extends Packet {
     @TagField
     private KeyTypes type;
 
-    public KeyPressPacket() { }
+    public KeyPressPacket() {}
+
     public KeyPressPacket(KeyTypes type) {
         this.disableIndependentThrottle = Config.ImmersionConfig.disableIndependentThrottle;
         this.type = type;
         Player player = MinecraftClient.getPlayer();
         if (player.getRiding() instanceof EntityRollingStock) {
             // Do it client side, expect server to overwrite
-            player.getRiding().as(EntityRollingStock.class).handleKeyPress(player, type, disableIndependentThrottle);
+            player.getRiding().as(EntityRollingStock.class).handleKeyPress(player, type, this.disableIndependentThrottle);
         }
     }
+
     @Override
     protected void handle() {
-        Player player = getPlayer();
+        Player player = this.getPlayer();
         if (player.getRiding() instanceof EntityRollingStock && player.hasPermission(Permissions.LOCOMOTIVE_CONTROL)) {
-            player.getRiding().as(EntityRollingStock.class).handleKeyPress(player, type, disableIndependentThrottle);
+            player.getRiding().as(EntityRollingStock.class).handleKeyPress(player, this.type, this.disableIndependentThrottle);
         }
     }
 }

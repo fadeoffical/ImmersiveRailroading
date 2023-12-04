@@ -13,7 +13,12 @@ public class PartSound {
     private final boolean canLoop;
     private final float attenuationDistance;
     private final Supplier<Float> category;
-
+    private final ExpireableMap<UUID, Sounds> entitySounds = new ExpireableMap<UUID, Sounds>() {
+        @Override
+        public void onRemove(UUID key, Sounds value) {
+            value.terminate();
+        }
+    };
 
     public PartSound(SoundDefinition def, boolean canLoop, float attenuationDistance, Supplier<Float> category) {
         this.def = def;
@@ -22,64 +27,19 @@ public class PartSound {
         this.category = category;
     }
 
-    private enum SoundState {
-        STARTING,
-        PLAYING,
-        STOPPING,
-        STOPPED,
-    }
-
-    private class Sounds {
-        SoundState state;
-        final ISound start;
-        final ISound main;
-        final ISound stop;
-
-        public Sounds(EntityMoveableRollingStock stock) {
-            state = SoundState.STOPPED;
-            float distance = def.distance != null ? def.distance : attenuationDistance;
-            start = def.start != null ? stock.createSound(def.start, false, distance, category) : null;
-            main = def.main != null ? stock.createSound(def.main, canLoop && def.looping, distance, category) : null;
-            stop = def.stop != null ? stock.createSound(def.stop, false, distance, category) : null;
-        }
-
-        public void terminate() {
-            if (start != null) {
-                start.stop();
-            }
-            if (main != null) {
-                main.stop();
-            }
-            if (stop != null) {
-                stop.stop();
-            }
-        }
-    }
-
-    private final ExpireableMap<UUID, Sounds> entitySounds = new ExpireableMap<UUID, Sounds>() {
-        @Override
-        public void onRemove(UUID key, Sounds value) {
-            value.terminate();
-        }
-    };
-
     public void effects(EntityMoveableRollingStock stock, boolean enabled) {
-        effects(stock, enabled ? 1 : 0, 1);
-    }
-
-    public void effects(EntityMoveableRollingStock stock, float volume) {
-        effects(stock, volume, 1);
+        this.effects(stock, enabled ? 1 : 0, 1);
     }
 
     public void effects(EntityMoveableRollingStock stock, float volume, float pitch) {
-        if (def == null) {
+        if (this.def == null) {
             return;
         }
 
-        Sounds sounds = entitySounds.get(stock.getUUID());
-        if(sounds == null) {
+        Sounds sounds = this.entitySounds.get(stock.getUUID());
+        if (sounds == null) {
             sounds = new Sounds(stock);
-            entitySounds.put(stock.getUUID(), sounds);
+            this.entitySounds.put(stock.getUUID(), sounds);
         }
 
         ISound toUpdate = null;
@@ -114,7 +74,7 @@ public class PartSound {
                 case PLAYING:
                     // Keep looping until loop is stopped
                     if (sounds.main != null) {
-                        if (canLoop && !sounds.main.isPlaying()) {
+                        if (this.canLoop && !sounds.main.isPlaying()) {
                             // It can go out of attenuation distance and may need to be restarted
                             sounds.main.play(stock.getPosition());
                         }
@@ -128,7 +88,7 @@ public class PartSound {
 
             // Update all sounds to current volume
             // Does not actually change until update is called below on the sound that is playing
-            float currentVolume = volume * def.volume;
+            float currentVolume = volume * this.def.volume;
             if (sounds.start != null) {
                 sounds.start.setVolume(currentVolume);
                 sounds.start.setPitch(pitch);
@@ -177,8 +137,46 @@ public class PartSound {
         }
     }
 
+    public void effects(EntityMoveableRollingStock stock, float volume) {
+        this.effects(stock, volume, 1);
+    }
+
     public void removed(EntityMoveableRollingStock stock) {
-        entitySounds.remove(stock.getUUID());
+        this.entitySounds.remove(stock.getUUID());
+    }
+
+    private enum SoundState {
+        STARTING,
+        PLAYING,
+        STOPPING,
+        STOPPED,
+    }
+
+    private class Sounds {
+        final ISound start;
+        final ISound main;
+        final ISound stop;
+        SoundState state;
+
+        public Sounds(EntityMoveableRollingStock stock) {
+            this.state = SoundState.STOPPED;
+            float distance = PartSound.this.def.distance != null ? PartSound.this.def.distance : PartSound.this.attenuationDistance;
+            this.start = PartSound.this.def.start != null ? stock.createSound(PartSound.this.def.start, false, distance, PartSound.this.category) : null;
+            this.main = PartSound.this.def.main != null ? stock.createSound(PartSound.this.def.main, PartSound.this.canLoop && PartSound.this.def.looping, distance, PartSound.this.category) : null;
+            this.stop = PartSound.this.def.stop != null ? stock.createSound(PartSound.this.def.stop, false, distance, PartSound.this.category) : null;
+        }
+
+        public void terminate() {
+            if (this.start != null) {
+                this.start.stop();
+            }
+            if (this.main != null) {
+                this.main.stop();
+            }
+            if (this.stop != null) {
+                this.stop.stop();
+            }
+        }
     }
 
 }

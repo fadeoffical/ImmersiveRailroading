@@ -11,21 +11,22 @@ import java.util.List;
  * Movable rolling stock sync packet
  */
 public class MRSSyncPacket extends Packet {
-	@TagField
-	private EntityMoveableRollingStock stock;
-	@TagField(mapper = TickPos.ListTagMapper.class)
-	private List<TickPos> positions;
+    @TagField
+    private EntityMoveableRollingStock stock;
+    @TagField(mapper = TickPos.ListTagMapper.class)
+    private List<TickPos> positions;
 
-	public MRSSyncPacket() { }
+    public MRSSyncPacket() {}
 
-	public MRSSyncPacket(EntityMoveableRollingStock mrs, List<TickPos> positions) {
-		this.stock = mrs;
-		this.positions = positions;
-	}
-	@Override
-	public void handle() {
-		if (stock != null) {
-            stock.handleTickPosPacket(positions);
-		}
-	}
+    public MRSSyncPacket(EntityMoveableRollingStock mrs, List<TickPos> positions) {
+        this.stock = mrs;
+        this.positions = positions;
+    }
+
+    @Override
+    public void handle() {
+        if (this.stock != null) {
+            this.stock.handleTickPosPacket(this.positions);
+        }
+    }
 }

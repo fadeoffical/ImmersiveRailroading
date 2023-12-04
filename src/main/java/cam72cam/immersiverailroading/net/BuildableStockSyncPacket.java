@@ -11,22 +11,22 @@ import java.util.List;
  * Movable rolling stock sync packet
  */
 public class BuildableStockSyncPacket extends Packet {
-	@TagField
-	private EntityBuildableRollingStock stock;
-	@TagField(typeHint = ItemComponentType.class)
-	private List<ItemComponentType> items;
+    @TagField
+    private EntityBuildableRollingStock stock;
+    @TagField(typeHint = ItemComponentType.class)
+    private List<ItemComponentType> items;
 
-	public BuildableStockSyncPacket() { }
+    public BuildableStockSyncPacket() {}
 
-	public BuildableStockSyncPacket(EntityBuildableRollingStock stock) {
-		this.stock = stock;
-		this.items = stock.getItemComponents();
-	}
+    public BuildableStockSyncPacket(EntityBuildableRollingStock stock) {
+        this.stock = stock;
+        this.items = stock.getItemComponents();
+    }
 
-	@Override
-	public void handle() {
-		if (stock != null) {
-			stock.setComponents(items);
-		}
-	}
+    @Override
+    public void handle() {
+        if (this.stock != null) {
+            this.stock.setComponents(this.items);
+        }
+    }
 }

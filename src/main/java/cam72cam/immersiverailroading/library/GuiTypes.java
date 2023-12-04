@@ -31,6 +31,8 @@ public class GuiTypes {
     public static final BlockGUI STEAM_HAMMER = GuiRegistry.registerBlockContainer(TileMultiblock.class, SteamHammerContainer::new);
     public static final BlockGUI CASTING = GuiRegistry.registerBlock(TileMultiblock.class, GuiTypes::createMultiblockScreen);
     public static final BlockGUI PLATE_ROLLER = CASTING;
+    public static final GUI CONFIG = GuiRegistry.register(new Identifier(ImmersiveRailroading.MODID, "config"), () -> new ConfigGui(Config.class, ConfigGraphics.class, ConfigSound.class, ConfigPermissions.class));
+
     private static IScreen createMultiblockScreen(TileMultiblock mb) {
         if (!mb.isLoaded()) {
             return null;
@@ -43,8 +45,6 @@ public class GuiTypes {
         }
         return null;
     }
-
-    public static final GUI CONFIG = GuiRegistry.register(new Identifier(ImmersiveRailroading.MODID, "config"), () -> new ConfigGui(Config.class, ConfigGraphics.class, ConfigSound.class, ConfigPermissions.class));
 
     public static void register() {
         // loads static classes and ctrs

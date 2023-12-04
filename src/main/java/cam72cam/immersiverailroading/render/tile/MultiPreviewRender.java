@@ -15,20 +15,24 @@ import cam72cam.mod.world.World;
 import org.apache.commons.lang3.tuple.Pair;
 
 public class MultiPreviewRender {
-    private static ExpireableMap<Pair<World, Vec3i>, TileRailPreview> previews = new ExpireableMap<>();
+    private static final ExpireableMap<Pair<World, Vec3i>, TileRailPreview> previews = new ExpireableMap<>();
 
     static {
         GlobalRender.registerRender(MultiPreviewRender::render);
     }
 
     private static void render(RenderState state, float partialTicks) {
-        state.blend(new BlendMode(BlendMode.GL_CONSTANT_ALPHA, BlendMode.GL_ONE).constantColor(1, 1, 1, 0.7f)).lightmap(1, 1);
+        state.blend(new BlendMode(BlendMode.GL_CONSTANT_ALPHA, BlendMode.GL_ONE).constantColor(1, 1, 1, 0.7f))
+                .lightmap(1, 1);
         for (TileRailPreview preview : previews.values()) {
-            for (BuilderBase builder : ((IIterableTrack) preview.getRailRenderInfo().getBuilder(preview.getWorld(), preview.isAboveRails() ? preview.getPos().down() :preview.getPos())).getSubBuilders()) {
+            for (BuilderBase builder : ((IIterableTrack) preview.getRailRenderInfo()
+                    .getBuilder(preview.getWorld(), preview.isAboveRails() ? preview.getPos()
+                            .down() : preview.getPos())).getSubBuilders()) {
                 RailInfo info = builder.info;
                 Vec3d placementPosition = info.placementInfo.placementPosition.add(builder.pos);
 
-                if (GlobalRender.getCameraPos(partialTicks).distanceTo(placementPosition) < GlobalRender.getRenderDistance() + 50) {
+                if (GlobalRender.getCameraPos(partialTicks)
+                        .distanceTo(placementPosition) < GlobalRender.getRenderDistance() + 50) {
                     RenderState placementState = state.clone().translate(placementPosition);
                     RailRender.render(info, preview.getWorld(), builder.pos, true, placementState);
                 }

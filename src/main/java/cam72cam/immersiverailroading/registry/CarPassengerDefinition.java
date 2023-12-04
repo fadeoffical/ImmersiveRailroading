@@ -17,12 +17,12 @@ public class CarPassengerDefinition extends CarFreightDefinition {
     }
 
     @Override
-    public boolean acceptsPassengers() {
-        return true;
+    public boolean acceptsLivestock() {
+        return false;
     }
 
     @Override
-    public boolean acceptsLivestock() {
-        return false;
+    public boolean acceptsPassengers() {
+        return true;
     }
 }

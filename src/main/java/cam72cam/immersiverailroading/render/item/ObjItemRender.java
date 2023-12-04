@@ -14,7 +14,7 @@ public class ObjItemRender {
     public static Map<Identifier, OBJModel> cache = new HashMap<>();
 
     public static ItemRender.IItemModel getModelFor(Identifier id, Vec3d translate, float scale) {
-            return getModelFor(id, translate, Vec3d.ZERO, scale);
+        return getModelFor(id, translate, Vec3d.ZERO, scale);
     }
 
     public static ItemRender.IItemModel getModelFor(Identifier id, Vec3d translate, Vec3d rotation, float scale) {

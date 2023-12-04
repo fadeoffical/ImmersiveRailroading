@@ -2,12 +2,12 @@ package cam72cam.immersiverailroading.registry;
 
 import cam72cam.immersiverailroading.ImmersiveRailroading;
 import cam72cam.immersiverailroading.entity.LocomotiveDiesel;
-import cam72cam.immersiverailroading.util.DataBlock;
 import cam72cam.immersiverailroading.gui.overlay.GuiBuilder;
 import cam72cam.immersiverailroading.library.Gauge;
 import cam72cam.immersiverailroading.library.ValveGearConfig;
 import cam72cam.immersiverailroading.model.DieselLocomotiveModel;
 import cam72cam.immersiverailroading.model.StockModel;
+import cam72cam.immersiverailroading.util.DataBlock;
 import cam72cam.immersiverailroading.util.FluidQuantity;
 import cam72cam.mod.resource.Identifier;
 
@@ -37,22 +37,22 @@ public class LocomotiveDieselDefinition extends LocomotiveDefinition {
         super.loadData(data);
 
         DataBlock properties = data.getBlock("properties");
-        if (!isCabCar()) {
-            fuelCapacity_l = properties.getValue("fuel_capacity_l").asInteger() * internal_inv_scale * 10;
-            fuelEfficiency = properties.getValue("fuel_efficiency_%").asInteger();
+        if (!this.isCabCar()) {
+            this.fuelCapacity_l = properties.getValue("fuel_capacity_l").asInteger() * this.internal_inv_scale * 10;
+            this.fuelEfficiency = properties.getValue("fuel_efficiency_%").asInteger();
         } else {
-            fuelCapacity_l = 0;
+            this.fuelCapacity_l = 0;
         }
-        notches = properties.getValue("throttle_notches").asInteger();
+        this.notches = properties.getValue("throttle_notches").asInteger();
 
-        hornSus = properties.getValue("horn_sustained").asBoolean();
+        this.hornSus = properties.getValue("horn_sustained").asBoolean();
 
         DataBlock sounds = data.getBlock("sounds");
-        idle = SoundDefinition.getOrDefault(sounds, "idle");
-        running = SoundDefinition.getOrDefault(sounds, "running");
-        enginePitchRange = sounds.getValue("engine_pitch_range").asFloat();
-        horn = SoundDefinition.getOrDefault(sounds, "horn");
-        bell = SoundDefinition.getOrDefault(sounds, "bell");
+        this.idle = SoundDefinition.getOrDefault(sounds, "idle");
+        this.running = SoundDefinition.getOrDefault(sounds, "running");
+        this.enginePitchRange = sounds.getValue("engine_pitch_range").asFloat();
+        this.horn = SoundDefinition.getOrDefault(sounds, "horn");
+        this.bell = SoundDefinition.getOrDefault(sounds, "bell");
     }
 
     @Override
@@ -61,40 +61,41 @@ public class LocomotiveDieselDefinition extends LocomotiveDefinition {
     }
 
     @Override
+    public StockModel<?, ?> getModel() {
+        return super.getModel();
+    }
+
+    public ValveGearConfig getValveGear() {
+        return super.getValveGear() == null ? new ValveGearConfig(ValveGearConfig.ValveGearType.CONNECTING, null) : super.getValveGear();
+    }
+
+    @Override
     protected GuiBuilder getDefaultOverlay(DataBlock data) throws IOException {
-        return readCabCarFlag(data) ?
+        return this.readCabCarFlag(data) ?
                 GuiBuilder.parse(new Identifier(ImmersiveRailroading.MODID, "gui/default/cab_car.caml")) :
                 GuiBuilder.parse(new Identifier(ImmersiveRailroading.MODID, "gui/default/diesel.caml"));
     }
 
-    @Override
-    public StockModel<?, ?> getModel() {
-        return (DieselLocomotiveModel) super.getModel();
-    }
-
     //checks to see if horn is sustained, on by default
     public boolean getHornSus() {
-        return hornSus;
+        return this.hornSus;
     }
 
     public FluidQuantity getFuelCapacity(Gauge gauge) {
-        return FluidQuantity.FromLiters((int) Math.ceil(this.fuelCapacity_l * gauge.scale())).min(FluidQuantity.FromBuckets(1)).roundBuckets();
+        return FluidQuantity.FromLiters((int) Math.ceil(this.fuelCapacity_l * gauge.scale()))
+                .min(FluidQuantity.FromBuckets(1))
+                .roundBuckets();
     }
 
     public int getFuelEfficiency() {
         return this.fuelEfficiency;
     }
 
-
-    public ValveGearConfig getValveGear() {
-        return super.getValveGear() == null ? new ValveGearConfig(ValveGearConfig.ValveGearType.CONNECTING, null) : super.getValveGear();
-    }
-
     public int getThrottleNotches() {
-        return notches;
+        return this.notches;
     }
 
     public float getEnginePitchRange() {
-        return enginePitchRange;
+        return this.enginePitchRange;
     }
 }

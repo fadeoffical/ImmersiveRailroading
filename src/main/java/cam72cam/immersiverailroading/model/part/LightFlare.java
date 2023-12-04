@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import static cam72cam.immersiverailroading.model.ModelState.lcgPattern;
 
 public class LightFlare<T extends EntityMoveableRollingStock> {
+    private static final Pattern rgb = Pattern.compile(String.format(".*_0[xX](%s%<s)(%<s%<s)(%<s%<s).*", "[0-9A-Fa-f]"));
     private final ModelComponent component;
     private final boolean forward;
     private final Map<UUID, List<Light>> castLights = new HashMap<>();
@@ -48,16 +49,6 @@ public class LightFlare<T extends EntityMoveableRollingStock> {
     private float redReverse;
     private float greenReverse;
     private float blueReverse;
-
-    private static final Pattern rgb = Pattern.compile(String.format(".*_0[xX](%s%<s)(%<s%<s)(%<s%<s).*", "[0-9A-Fa-f]"));
-
-    public static <T extends EntityMoveableRollingStock> List<LightFlare<T>> get(EntityRollingStockDefinition def, ComponentProvider provider, ModelState state, ModelComponentType type) {
-        return provider.parseAll(type).stream().map(c -> new LightFlare<T>(def, state, c)).collect(Collectors.toList());
-    }
-
-    public static <T extends EntityMoveableRollingStock> List<LightFlare<T>> get(EntityRollingStockDefinition def, ComponentProvider provider, ModelState state, ModelComponentType type, ModelPosition pos) {
-        return provider.parseAll(type, pos).stream().map(c -> new LightFlare<T>(def, state, c)).collect(Collectors.toList());
-    }
 
     private LightFlare(EntityRollingStockDefinition def, ModelState state, ModelComponent component) {
         this.component = component;
@@ -81,7 +72,8 @@ public class LightFlare<T extends EntityMoveableRollingStock> {
         this.controlGroup = component.modelIDs.stream()
                 .map(lcgPattern::matcher).filter(Matcher::find).map(m -> m.group(1)).findFirst().orElse(null);
 
-        this.invert = component.modelIDs.stream().anyMatch(g -> g.contains("_LINVERT_") || g.startsWith("LINVERT_") || g.endsWith("_LINVERT"));
+        this.invert = component.modelIDs.stream()
+                .anyMatch(g -> g.contains("_LINVERT_") || g.startsWith("LINVERT_") || g.endsWith("_LINVERT"));
 
         // This is bad...
         LightDefinition config = def.getLight(component.type.toString()
@@ -91,8 +83,8 @@ public class LightFlare<T extends EntityMoveableRollingStock> {
 
         if (config != null) {
             this.lightTex = config.lightTex;
-            this.blinkIntervalTicks = (int)(config.blinkIntervalSeconds * 20);
-            this.blinkOffsetTicks = (int)(config.blinkOffsetSeconds * 20);
+            this.blinkIntervalTicks = (int) (config.blinkIntervalSeconds * 20);
+            this.blinkOffsetTicks = (int) (config.blinkOffsetSeconds * 20);
             this.blinkFullBright = config.blinkFullBright;
             this.castsLights = config.castsLight;
             if (config.reverseColor != null) {
@@ -113,18 +105,30 @@ public class LightFlare<T extends EntityMoveableRollingStock> {
 
         ModelState mystate = state.push(builder -> builder
                 .add((ModelState.Lighter) (stock) ->
-                        new ModelState.LightState(null, null, blinkFullBright ? !isBlinkOff(stock) : !isLightOff(stock), null)
+                        new ModelState.LightState(null, null, this.blinkFullBright ? !this.isBlinkOff(stock) : !this.isLightOff(stock), null)
                 )
         );
         mystate.include(component);
-        location = mystate::getMatrix;
+        this.location = mystate::getMatrix;
+    }
+
+    private boolean isBlinkOff(EntityRollingStock stock) {
+        return this.isLightOff(stock) || this.blinkIntervalTicks > 0 && (stock.getTickCount() + this.blinkOffsetTicks) % (this.blinkIntervalTicks * 2) > this.blinkIntervalTicks;
     }
 
     private boolean isLightOff(EntityRollingStock stock) {
-        return !stock.externalLightsEnabled() || (controlGroup != null && stock.getControlPosition(controlGroup) == (invert ? 1 : 0));
+        return !stock.externalLightsEnabled() || (this.controlGroup != null && stock.getControlPosition(this.controlGroup) == (this.invert ? 1 : 0));
     }
-    private boolean isBlinkOff(EntityRollingStock stock) {
-        return isLightOff(stock) || blinkIntervalTicks > 0 && (stock.getTickCount() + blinkOffsetTicks) % (blinkIntervalTicks*2) > blinkIntervalTicks;
+
+    public static <T extends EntityMoveableRollingStock> List<LightFlare<T>> get(EntityRollingStockDefinition def, ComponentProvider provider, ModelState state, ModelComponentType type) {
+        return provider.parseAll(type).stream().map(c -> new LightFlare<T>(def, state, c)).collect(Collectors.toList());
+    }
+
+    public static <T extends EntityMoveableRollingStock> List<LightFlare<T>> get(EntityRollingStockDefinition def, ComponentProvider provider, ModelState state, ModelComponentType type, ModelPosition pos) {
+        return provider.parseAll(type, pos)
+                .stream()
+                .map(c -> new LightFlare<T>(def, state, c))
+                .collect(Collectors.toList());
     }
 
     public void postRender(T stock, RenderState state) {
@@ -139,29 +143,30 @@ public class LightFlare<T extends EntityMoveableRollingStock> {
             return;
         }
 
-        if (isBlinkOff(stock)) {
+        if (this.isBlinkOff(stock)) {
             return;
         }
 
-        Vec3d flareOffset = new Vec3d(forward ? component.min.x - 0.02 : component.max.x + 0.02, (component.min.y + component.max.y) / 2, (component.min.z + component.max.z) / 2);;
-        if (location != null) {
+        Vec3d flareOffset = new Vec3d(this.forward ? this.component.min.x - 0.02 : this.component.max.x + 0.02, (this.component.min.y + this.component.max.y) / 2, (this.component.min.z + this.component.max.z) / 2);
+        if (this.location != null) {
             // TODO this does not actually work
-            Matrix4 m = location.apply(stock);
+            Matrix4 m = this.location.apply(stock);
             if (m != null) {
                 flareOffset = m.apply(flareOffset);
             }
         }
 
-        Vec3d playerOffset = VecUtil.rotateWrongYaw(stock.getPosition().subtract(MinecraftClient.getPlayer().getPosition()), 180 - (stock.getRotationYaw())).
-                subtract(flareOffset).scale(forward ? 1 : -1);
+        Vec3d playerOffset = VecUtil.rotateWrongYaw(stock.getPosition()
+                        .subtract(MinecraftClient.getPlayer().getPosition()), 180 - (stock.getRotationYaw())).
+                subtract(flareOffset).scale(this.forward ? 1 : -1);
 
         int viewAngle = 45;
         float intensity = 1 - Math.abs(Math.max(-viewAngle, Math.min(viewAngle, VecUtil.toWrongYaw(playerOffset) - 90))) / viewAngle;
-        intensity *= Math.abs(playerOffset.x/(50 * stock.gauge.scale()));
+        intensity *= Math.abs(playerOffset.x / (50 * stock.gauge.scale()));
         intensity = Math.min(intensity, 1.5f);
 
         state = state.clone()
-                .texture(Texture.wrap(lightTex))
+                .texture(Texture.wrap(this.lightTex))
                 .lightmap(1, 1)
                 .depth_test(true)
                 .depth_mask(false)
@@ -169,15 +174,15 @@ public class LightFlare<T extends EntityMoveableRollingStock> {
 
         if (intensity > 0.01) {
             RenderState matrix = state.clone();
-            matrix.translate(flareOffset.x - (intensity / 2)*(forward ? 3 : -3), flareOffset.y, flareOffset.z);
+            matrix.translate(flareOffset.x - (intensity / 2) * (this.forward ? 3 : -3), flareOffset.y, flareOffset.z);
             matrix.rotate(90, 0, 1, 0);
-            double scale = Math.max((component.max.z - component.min.z) * 0.5, intensity * 2);
+            double scale = Math.max((this.component.max.z - this.component.min.z) * 0.5, intensity * 2);
             matrix.scale(scale, scale, scale);
-            if (!forward) {
+            if (!this.forward) {
                 matrix.rotate(180, 0, 1, 0);
             }
 
-            matrix.color(red, green, blue, 1 - (intensity/3f));
+            matrix.color(red, green, blue, 1 - (intensity / 3f));
 
             DirectDraw buffer = new DirectDraw();
             buffer.vertex(-1, -1, 0).uv(0, 0);
@@ -190,12 +195,12 @@ public class LightFlare<T extends EntityMoveableRollingStock> {
         RenderState matrix = state.clone();
         matrix.translate(flareOffset.x, flareOffset.y, flareOffset.z);
         matrix.rotate(90, 0, 1, 0);
-        double scale = (component.max.z - component.min.z) / 1.5;
+        double scale = (this.component.max.z - this.component.min.z) / 1.5;
         matrix.scale(scale, scale, scale);
-        if (!forward) {
+        if (!this.forward) {
             matrix.rotate(180, 0, 1, 0);
         }
-        matrix.color((float)Math.sqrt(red), (float)Math.sqrt(green), (float)Math.sqrt(blue), 1 - (intensity/3f));
+        matrix.color((float) Math.sqrt(red), (float) Math.sqrt(green), (float) Math.sqrt(blue), 1 - (intensity / 3f));
 
         DirectDraw buffer = new DirectDraw();
         buffer.vertex(-1, -1, 0).uv(0, 0);
@@ -206,44 +211,45 @@ public class LightFlare<T extends EntityMoveableRollingStock> {
     }
 
     public void effects(T stock) {
-        if (!castsLights) {
+        if (!this.castsLights) {
             return;
         }
 
-        if (!Light.enabled() || isBlinkOff(stock)) {
+        if (!Light.enabled() || this.isBlinkOff(stock)) {
             this.removed(stock);
             return;
         }
 
         int lightDistance = (int) (15 * stock.gauge.scale());
-        if (!castLights.containsKey(stock.getUUID())) {
-            Vec3d flareOffset = new Vec3d(-component.min.x, (component.min.y + component.max.y) / 2, (component.min.z + component.max.z) / 2).scale(stock.gauge.scale());
+        if (!this.castLights.containsKey(stock.getUUID())) {
+            Vec3d flareOffset = new Vec3d(-this.component.min.x, (this.component.min.y + this.component.max.y) / 2, (this.component.min.z + this.component.max.z) / 2).scale(stock.gauge.scale());
 
-            castLights.put(stock.getUUID(), new ArrayList<>());
-            castPositions.put(stock.getUUID(), new ArrayList<>());
+            this.castLights.put(stock.getUUID(), new ArrayList<>());
+            this.castPositions.put(stock.getUUID(), new ArrayList<>());
             for (int i = 0; i < lightDistance; i++) {
                 for (int j = 0; j < 5; j++) {
-                    castLights.get(stock.getUUID()).add(new Light(stock.getWorld(), stock.getPosition(), 1 - i / (float)lightDistance));
+                    this.castLights.get(stock.getUUID())
+                            .add(new Light(stock.getWorld(), stock.getPosition(), 1 - i / (float) lightDistance));
                 }
                 double xOff = 4;
                 double yOff = -(i / (float) lightDistance) * flareOffset.y;
-                int sign = forward ? 1 : -1;
-                castPositions.get(stock.getUUID()).add(flareOffset.add((i * 2 + xOff) * sign, 0+yOff, 0));
-                castPositions.get(stock.getUUID()).add(flareOffset.add((i * 2 + xOff) * sign, i/2f+yOff, 0));
-                castPositions.get(stock.getUUID()).add(flareOffset.add((i * 2 + xOff) * sign, -i/2f+yOff, 0));
-                castPositions.get(stock.getUUID()).add(flareOffset.add((i * 2 + xOff) * sign, 0+yOff, i/2f));
-                castPositions.get(stock.getUUID()).add(flareOffset.add((i * 2 + xOff) * sign, 0+yOff, -i/2f));
+                int sign = this.forward ? 1 : -1;
+                this.castPositions.get(stock.getUUID()).add(flareOffset.add((i * 2 + xOff) * sign, 0 + yOff, 0));
+                this.castPositions.get(stock.getUUID()).add(flareOffset.add((i * 2 + xOff) * sign, i / 2f + yOff, 0));
+                this.castPositions.get(stock.getUUID()).add(flareOffset.add((i * 2 + xOff) * sign, -i / 2f + yOff, 0));
+                this.castPositions.get(stock.getUUID()).add(flareOffset.add((i * 2 + xOff) * sign, 0 + yOff, i / 2f));
+                this.castPositions.get(stock.getUUID()).add(flareOffset.add((i * 2 + xOff) * sign, 0 + yOff, -i / 2f));
             }
         }
         Vec3d[] collided = new Vec3d[5];
         Vec3d nop = null;
-        for (int i = 0; i < castLights.get(stock.getUUID()).size(); i++) {
-            if (collided[i%5] != null) {
-                castLights.get(stock.getUUID()).get(i).setPosition(collided[i%5]);
+        for (int i = 0; i < this.castLights.get(stock.getUUID()).size(); i++) {
+            if (collided[i % 5] != null) {
+                this.castLights.get(stock.getUUID()).get(i).setPosition(collided[i % 5]);
             } else {
-                Vec3d cpos = castPositions.get(stock.getUUID()).get(i);
-                if (location != null) {
-                    Matrix4 m = location.apply(stock);
+                Vec3d cpos = this.castPositions.get(stock.getUUID()).get(i);
+                if (this.location != null) {
+                    Matrix4 m = this.location.apply(stock);
                     if (m != null) {
                         cpos = m.apply(cpos);
                     }
@@ -253,20 +259,20 @@ public class LightFlare<T extends EntityMoveableRollingStock> {
                     nop = pos;
                 }
                 if (!stock.getWorld().isReplaceable(new Vec3i(pos).up())) {
-                    collided[i%5] = nop;
-                    castLights.get(stock.getUUID()).get(i).setPosition(nop);
+                    collided[i % 5] = nop;
+                    this.castLights.get(stock.getUUID()).get(i).setPosition(nop);
                 } else {
-                    castLights.get(stock.getUUID()).get(i).setPosition(pos);
+                    this.castLights.get(stock.getUUID()).get(i).setPosition(pos);
                 }
             }
         }
     }
 
     public void removed(T stock) {
-        if (castLights.containsKey(stock.getUUID())) {
-            castLights.get(stock.getUUID()).forEach(Light::remove);
-            castLights.remove(stock.getUUID());
-            castPositions.remove(stock.getUUID());
+        if (this.castLights.containsKey(stock.getUUID())) {
+            this.castLights.get(stock.getUUID()).forEach(Light::remove);
+            this.castLights.remove(stock.getUUID());
+            this.castPositions.remove(stock.getUUID());
         }
     }
 }

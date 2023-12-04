@@ -17,49 +17,49 @@ public class MergedBlocks implements DataBlock {
         this.blocks = new LinkedHashMap<>(base.getBlockMap());
         this.blockSets = new LinkedHashMap<>(base.getBlocksMap());
 
-        primitives.putAll(override.getValueMap());
+        this.primitives.putAll(override.getValueMap());
         override.getValuesMap().forEach((key, values) -> {
-            if (primitiveSets.containsKey(key)) {
+            if (this.primitiveSets.containsKey(key)) {
                 // Merge into new list
-                List<Value> tmp = new ArrayList<>(primitiveSets.get(key));
+                List<Value> tmp = new ArrayList<>(this.primitiveSets.get(key));
                 tmp.addAll(values);
                 values = tmp;
             }
-            primitiveSets.put(key, values);
+            this.primitiveSets.put(key, values);
         });
         override.getBlockMap().forEach((key, block) -> {
-            if (blocks.containsKey(key)) {
-                block = new MergedBlocks(blocks.get(key), block);
+            if (this.blocks.containsKey(key)) {
+                block = new MergedBlocks(this.blocks.get(key), block);
             }
-            blocks.put(key, block);
+            this.blocks.put(key, block);
         });
         override.getBlocksMap().forEach((key, blocks) -> {
-            if (blockSets.containsKey(key)) {
-                List<DataBlock> tmp = new ArrayList<>(blockSets.get(key));
+            if (this.blockSets.containsKey(key)) {
+                List<DataBlock> tmp = new ArrayList<>(this.blockSets.get(key));
                 tmp.addAll(blocks);
                 blocks = tmp;
             }
-            blockSets.put(key, blocks);
+            this.blockSets.put(key, blocks);
         });
     }
 
     @Override
     public Map<String, Value> getValueMap() {
-        return primitives;
-    }
-
-    @Override
-    public Map<String, List<Value>> getValuesMap() {
-        return primitiveSets;
+        return this.primitives;
     }
 
     @Override
     public Map<String, DataBlock> getBlockMap() {
-        return blocks;
+        return this.blocks;
     }
 
     @Override
     public Map<String, List<DataBlock>> getBlocksMap() {
-        return blockSets;
+        return this.blockSets;
+    }
+
+    @Override
+    public Map<String, List<Value>> getValuesMap() {
+        return this.primitiveSets;
     }
 }

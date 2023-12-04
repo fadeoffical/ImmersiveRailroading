@@ -17,237 +17,239 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class BuilderCubicCurve extends BuilderIterator {
-	private List<BuilderBase> subBuilders;
+    private List<BuilderBase> subBuilders;
+    private HashMap<Double, List<PosStep>> cache;
 
-	public BuilderCubicCurve(RailInfo info, World world, Vec3i pos) {
-		this(info, world, pos, false);
-	}
+    public BuilderCubicCurve(RailInfo info, World world, Vec3i pos) {
+        this(info, world, pos, false);
+    }
 
-	@Override
-	public List<BuilderBase> getSubBuilders() {
-		return subBuilders;
-	}
+    public BuilderCubicCurve(RailInfo info, World world, Vec3i pos, boolean endOfTrack) {
+        super(info, world, pos, endOfTrack);
+        CubicCurve curve = this.getCurve();
+        List<CubicCurve> subCurves = curve.subsplit((int) (101 * 2 * 3.1415f / 4));
+        if (subCurves.size() > 1) {
+            this.subBuilders = new ArrayList<>();
+            for (CubicCurve subCurve : subCurves) {
+                // main pos -> subCurve's start pos
+                Vec3d relOff = info.placementInfo.placementPosition.add(subCurve.p1);
+                Vec3i relPos = new Vec3i(relOff);
+                Vec3i sPos = pos.add(relPos);
+                // The block remainder of curve position, with the subCurve move to origin block included
+                Vec3d delta = relOff.subtract(relPos).subtract(subCurve.p1);
+                //delta = delta.subtract(new Vec3i(delta)); // Relative position within the block
+                PlacementInfo startPos = new PlacementInfo(subCurve.p1.add(delta), info.placementInfo.direction, subCurve.angleStart(), subCurve.ctrl1.add(delta));
+                PlacementInfo endPos = new PlacementInfo(subCurve.p2.add(delta), info.placementInfo.direction, subCurve.angleStop(), subCurve.ctrl2.add(delta));
+                RailInfo subInfo = new RailInfo(info.settings.with(b -> b.type = TrackItems.CUSTOM), startPos, endPos, SwitchState.NONE, SwitchState.NONE, 0);
 
-	public BuilderCubicCurve(RailInfo info, World world, Vec3i pos, boolean endOfTrack) {
-		super(info, world, pos, endOfTrack);
-		CubicCurve curve = getCurve();
-		List<CubicCurve> subCurves = curve.subsplit((int) (101 * 2 * 3.1415f / 4));
-		if (subCurves.size() > 1) {
-			subBuilders = new ArrayList<>();
-			for (CubicCurve subCurve : subCurves) {
-				// main pos -> subCurve's start pos
-				Vec3d relOff = info.placementInfo.placementPosition.add(subCurve.p1);
-				Vec3i relPos = new Vec3i(relOff);
-				Vec3i sPos = pos.add(relPos);
-				// The block remainder of curve position, with the subCurve move to origin block included
-				Vec3d delta = relOff.subtract(relPos).subtract(subCurve.p1);
-				//delta = delta.subtract(new Vec3i(delta)); // Relative position within the block
-				PlacementInfo startPos = new PlacementInfo(subCurve.p1.add(delta), info.placementInfo.direction, subCurve.angleStart(), subCurve.ctrl1.add(delta));
-				PlacementInfo endPos   = new PlacementInfo(subCurve.p2.add(delta), info.placementInfo.direction, subCurve.angleStop(), subCurve.ctrl2.add(delta));
-				RailInfo subInfo = new RailInfo(info.settings.with(b -> b.type = TrackItems.CUSTOM), startPos, endPos, SwitchState.NONE, SwitchState.NONE, 0);
+                BuilderCubicCurve subBuilder = new BuilderCubicCurve(subInfo, world, sPos);
+                if (this.subBuilders.size() != 0) {
+                    for (TrackBase track : subBuilder.tracks) {
+                        if (track instanceof TrackRail) {
+                            track.overrideParent(this.subBuilders.get(0).getParentPos());
+                        }
+                    }
+                } else {
+                    this.tracks = subBuilder.tracks;
+                }
+                this.subBuilders.add(subBuilder);
+            }
+        }
+    }
 
-				BuilderCubicCurve subBuilder = new BuilderCubicCurve(subInfo, world, sPos);
-				if (subBuilders.size() != 0) {
-					for (TrackBase track : subBuilder.tracks) {
-						if (track instanceof TrackRail) {
-							track.overrideParent(subBuilders.get(0).getParentPos());
-						}
-					}
-				} else {
-					tracks = subBuilder.tracks;
-				}
-				subBuilders.add(subBuilder);
-			}
-		}
-	}
+    public CubicCurve getCurve() {
+        Vec3d nextPos = new Vec3d(new Vec3i(VecUtil.fromYaw(this.info.settings.length, this.info.placementInfo.yaw + 45)));
 
-	private HashMap<Double, List<PosStep>> cache;
+        boolean isDefault = this.info.customInfo.placementPosition.equals(this.info.placementInfo.placementPosition);
+        if (!isDefault) {
+            nextPos = this.info.customInfo.placementPosition.subtract(this.info.placementInfo.placementPosition);
+        }
 
-	public CubicCurve getCurve() {
-		Vec3d nextPos = new Vec3d(new Vec3i(VecUtil.fromYaw(info.settings.length, info.placementInfo.yaw + 45)));
+        double ctrlGuess = nextPos.length() / 2 * Math.max(0.1, this.info.settings.curvosity);
+        float angle = this.info.placementInfo.yaw;
 
-		boolean isDefault = info.customInfo.placementPosition.equals(info.placementInfo.placementPosition);
-		if (!isDefault) {
-			nextPos = info.customInfo.placementPosition.subtract(info.placementInfo.placementPosition);
-		}
+        float angle2 = angle + 180;
 
-		double ctrlGuess = nextPos.length()/2 * Math.max(0.1, info.settings.curvosity);
-		float angle = info.placementInfo.yaw;
+        if (!isDefault) {
+            angle2 = this.info.customInfo.yaw;
+        }
 
-		float angle2 = angle + 180;
+        Vec3d ctrl1 = VecUtil.fromYaw(ctrlGuess, angle);
+        Vec3d ctrl2 = nextPos.add(VecUtil.fromYaw(ctrlGuess, angle2));
 
-		if (!isDefault) {
-			angle2 = info.customInfo.yaw;
-		}
+        CubicCurve adjusted = new CubicCurve(Vec3d.ZERO, ctrl1, ctrl2, nextPos).linearize(this.info.settings.smoothing);
+        ctrl1 = adjusted.ctrl1;
+        ctrl2 = adjusted.ctrl2;
 
-		Vec3d ctrl1 = VecUtil.fromYaw(ctrlGuess, angle);
-		Vec3d ctrl2 = nextPos.add(VecUtil.fromYaw(ctrlGuess, angle2));
+        if (this.info.placementInfo.control != null) {
+            ctrl1 = this.info.placementInfo.control.subtract(this.info.placementInfo.placementPosition);
+        }
+        if (this.info.customInfo.control != null && !isDefault) {
+            ctrl2 = this.info.customInfo.control.subtract(this.info.placementInfo.placementPosition);
+        }
 
-		CubicCurve adjusted = new CubicCurve(Vec3d.ZERO, ctrl1, ctrl2, nextPos).linearize(info.settings.smoothing);
-		ctrl1 = adjusted.ctrl1;
-		ctrl2 = adjusted.ctrl2;
+        return new CubicCurve(Vec3d.ZERO, ctrl1, ctrl2, nextPos);
+    }
 
-		if (info.placementInfo.control != null) {
-			ctrl1= info.placementInfo.control.subtract(info.placementInfo.placementPosition);
-		}
-		if (info.customInfo.control != null && !isDefault) {
-            ctrl2 = info.customInfo.control.subtract(info.placementInfo.placementPosition);
-		}
+    @Override
+    public List<BuilderBase> getSubBuilders() {
+        return this.subBuilders;
+    }
 
-		return new CubicCurve(Vec3d.ZERO, ctrl1, ctrl2, nextPos);
-	}
-
-	@Override
+    @Override
     public List<PosStep> getPath(double stepSize) {
-		if (cache == null) {
-			cache = new HashMap<>();
-		}
+        if (this.cache == null) {
+            this.cache = new HashMap<>();
+        }
 
-		if (cache.containsKey(stepSize)) {
-			return cache.get(stepSize);
-		}
+        if (this.cache.containsKey(stepSize)) {
+            return this.cache.get(stepSize);
+        }
 
-		List<PosStep> res = new ArrayList<>();
-		CubicCurve curve = getCurve();
+        List<PosStep> res = new ArrayList<>();
+        CubicCurve curve = this.getCurve();
 
-		// HACK for super long curves
-		// Skip the super long calculation since it'll be overridden anyways
-		curve = curve.subsplit(200).get(0);
+        // HACK for super long curves
+        // Skip the super long calculation since it'll be overridden anyways
+        curve = curve.subsplit(200).get(0);
 
-		List<Vec3d> points = curve.toList(stepSize);
-		for(int i = 0; i < points.size(); i++) {
-			Vec3d p = points.get(i);
-			float yaw;
-			float pitch;
-			if (points.size() == 1) {
-				yaw = info.placementInfo.yaw;
-				pitch = 0;
-			} else if (i == points.size()-1) {
-				Vec3d next = points.get(i-1);
-				pitch = (float) Math.toDegrees(Math.atan2(next.y - p.y, next.distanceTo(p)));
+        List<Vec3d> points = curve.toList(stepSize);
+        for (int i = 0; i < points.size(); i++) {
+            Vec3d p = points.get(i);
+            float yaw;
+            float pitch;
+            if (points.size() == 1) {
+                yaw = this.info.placementInfo.yaw;
+                pitch = 0;
+            } else if (i == points.size() - 1) {
+                Vec3d next = points.get(i - 1);
+                pitch = (float) Math.toDegrees(Math.atan2(next.y - p.y, next.distanceTo(p)));
                 yaw = curve.angleStop();
-			} else if (i == 0) {
-				Vec3d next = points.get(i+1);
-				pitch = (float) -Math.toDegrees(Math.atan2(next.y - p.y, next.distanceTo(p)));
-				yaw = curve.angleStart();
-			} else {
-				Vec3d prev = points.get(i-1);
-				Vec3d next = points.get(i+1);
-				pitch = (float) -Math.toDegrees(Math.atan2(next.y - prev.y, next.distanceTo(prev)));
-				yaw = VecUtil.toYaw(points.get(i+1).subtract(points.get(i-1)));
-			}
-			res.add(new PosStep(p, yaw, pitch));
-		}
-		cache.put(stepSize, res);
-		return cache.get(stepSize);
-	}
+            } else if (i == 0) {
+                Vec3d next = points.get(i + 1);
+                pitch = (float) -Math.toDegrees(Math.atan2(next.y - p.y, next.distanceTo(p)));
+                yaw = curve.angleStart();
+            } else {
+                Vec3d prev = points.get(i - 1);
+                Vec3d next = points.get(i + 1);
+                pitch = (float) -Math.toDegrees(Math.atan2(next.y - prev.y, next.distanceTo(prev)));
+                yaw = VecUtil.toYaw(points.get(i + 1).subtract(points.get(i - 1)));
+            }
+            res.add(new PosStep(p, yaw, pitch));
+        }
+        this.cache.put(stepSize, res);
+        return this.cache.get(stepSize);
+    }
 
-	/* OVERRIDES */
+    /* OVERRIDES */
 
-	@Override
-	public int costTies() {
-		if (subBuilders == null) {
-			return super.costTies();
-		} else {
-			return subBuilders.stream().mapToInt((BuilderBase::costTies)).sum();
-		}
-	}
+    @Override
+    public List<VecYawPitch> getRenderData() {
+        if (this.subBuilders == null) {
+            return super.getRenderData();
+        } else {
+            List<VecYawPitch> data = new ArrayList<>();
+            for (BuilderBase curve : this.subBuilders.subList(0, Math.min(this.subBuilders.size(), 3))) {
+                Vec3d offset = new Vec3d(curve.pos.subtract(this.pos));
+                for (VecYawPitch rd : curve.getRenderData()) {
+                    rd = new VecYawPitch(rd.x + offset.x, rd.y + offset.y, rd.z + offset.z, rd.yaw, rd.pitch, rd.length);
+                    data.add(rd);
+                }
+            }
+            return data;
+        }
+    }
 
-	@Override
-	public int costRails() {
-		if (subBuilders == null) {
-			return super.costRails();
-		} else {
-			return subBuilders.stream().mapToInt((BuilderBase::costRails)).sum();
-		}
-	}
+    @Override
+    public List<TrackBase> getTracksForRender() {
+        if (this.subBuilders == null) {
+            return super.getTracksForRender();
+        } else {
+            return this.subBuilders.subList(0, Math.min(this.subBuilders.size(), 3))
+                    .stream()
+                    .map(BuilderBase::getTracksForRender)
+                    .flatMap(List::stream)
+                    .collect(Collectors.toList());
+        }
+    }
 
-	@Override
-	public int costBed() {
-		if (subBuilders == null) {
-			return super.costBed();
-		} else {
-			return subBuilders.stream().mapToInt((BuilderBase::costBed)).sum();
-		}
-	}
+    @Override
+    public boolean canBuild() {
+        if (this.subBuilders == null) {
+            return super.canBuild();
+        } else {
+            return this.subBuilders.stream().allMatch(BuilderBase::canBuild);
+        }
+    }
 
-	@Override
-	public int costFill() {
-		if (subBuilders == null) {
-			return super.costFill();
-		} else {
-			return subBuilders.stream().mapToInt((BuilderBase::costFill)).sum();
-		}
-	}
+    @Override
+    public void build() {
+        if (this.subBuilders == null) {
+            super.build();
+        } else {
+            this.subBuilders.forEach(BuilderBase::build);
+        }
+    }
 
-	@Override
-	public void setDrops(List<ItemStack> drops) {
-		if (subBuilders == null) {
-			super.setDrops(drops);
-		} else {
-			subBuilders.get(0).setDrops(drops);
-		}
-	}
+    @Override
+    public List<TrackBase> getTracksForFloating() {
+        if (this.subBuilders == null) {
+            return super.getTracksForFloating();
+        }
+        return Collections.emptyList();
+    }
 
+    @Override
+    public int costTies() {
+        if (this.subBuilders == null) {
+            return super.costTies();
+        } else {
+            return this.subBuilders.stream().mapToInt((BuilderBase::costTies)).sum();
+        }
+    }
 
-	@Override
-	public boolean canBuild() {
-		if (subBuilders == null) {
-			return super.canBuild();
-		} else {
-			return subBuilders.stream().allMatch(BuilderBase::canBuild);
-		}
-	}
+    @Override
+    public int costRails() {
+        if (this.subBuilders == null) {
+            return super.costRails();
+        } else {
+            return this.subBuilders.stream().mapToInt((BuilderBase::costRails)).sum();
+        }
+    }
 
-	@Override
-	public void build() {
-		if (subBuilders == null) {
-			super.build();
-		} else {
-			subBuilders.forEach(BuilderBase::build);
-		}
-	}
+    @Override
+    public int costBed() {
+        if (this.subBuilders == null) {
+            return super.costBed();
+        } else {
+            return this.subBuilders.stream().mapToInt((BuilderBase::costBed)).sum();
+        }
+    }
 
-	@Override
-	public void clearArea() {
-		if (subBuilders == null) {
-			super.clearArea();
-		} else {
-			subBuilders.forEach(BuilderBase::clearArea);
-		}
-	}
+    @Override
+    public int costFill() {
+        if (this.subBuilders == null) {
+            return super.costFill();
+        } else {
+            return this.subBuilders.stream().mapToInt((BuilderBase::costFill)).sum();
+        }
+    }
 
-	@Override
-	public List<TrackBase> getTracksForRender() {
-		if (subBuilders == null) {
-			return super.getTracksForRender();
-		} else {
-			return subBuilders.subList(0, Math.min(subBuilders.size(), 3)).stream().map(BuilderBase::getTracksForRender).flatMap(List::stream).collect(Collectors.toList());
-		}
-	}
+    @Override
+    public void setDrops(List<ItemStack> drops) {
+        if (this.subBuilders == null) {
+            super.setDrops(drops);
+        } else {
+            this.subBuilders.get(0).setDrops(drops);
+        }
+    }
 
-	@Override
-	public List<TrackBase> getTracksForFloating() {
-		if (subBuilders == null) {
-			return super.getTracksForFloating();
-		}
-		return Collections.emptyList();
-	}
-
-	@Override
-	public List<VecYawPitch> getRenderData() {
-		if (subBuilders == null) {
-			return super.getRenderData();
-		} else {
-			List<VecYawPitch> data = new ArrayList<>();
-			for (BuilderBase curve : subBuilders.subList(0, Math.min(subBuilders.size(), 3))) {
-				Vec3d offset = new Vec3d(curve.pos.subtract(pos));
-				for (VecYawPitch rd : curve.getRenderData()) {
-					rd = new VecYawPitch(rd.x + offset.x, rd.y + offset.y, rd.z + offset.z, rd.yaw, rd.pitch, rd.length);
-					data.add(rd);
-				}
-			}
-			return data;
-		}
-	}
+    @Override
+    public void clearArea() {
+        if (this.subBuilders == null) {
+            super.clearArea();
+        } else {
+            this.subBuilders.forEach(BuilderBase::clearArea);
+        }
+    }
 }
