@@ -515,9 +515,9 @@ public abstract class Locomotive extends FreightTank {
         }
     }
 
-    public void setHorn(int time, float value) {
-        this.hornTime = time;
-        this.hornPull = value;
+    public void setHorn(int hornTime, float hornPull) {
+        this.hornTime = hornTime;
+        this.hornPull = hornPull;
     }
 
     public int getHornTime() {
@@ -634,8 +634,8 @@ public abstract class Locomotive extends FreightTank {
         return this.bellTime;
     }
 
-    public void setBell(int newBell) {
-        this.bellTime = newBell;
+    public void setBell(int bellTime) {
+        this.bellTime = bellTime;
     }
 
     @Override

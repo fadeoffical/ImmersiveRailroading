@@ -20,7 +20,10 @@ import cam72cam.mod.world.World;
 
 import java.util.List;
 
-public class SpawnUtil {
+public final class SpawnUtil {
+
+    private SpawnUtil() {}
+
     public static ClickResult placeStock(Player player, Player.Hand hand, World worldIn, Vec3i pos, EntityRollingStockDefinition def, List<ItemComponentType> list) {
         ItemRollingStock.Data data = new ItemRollingStock.Data(player.getHeldItem(hand));
 
@@ -50,33 +53,33 @@ public class SpawnUtil {
             stock.setPosition(center);
 
             if (stock instanceof EntityMoveableRollingStock) {
-                EntityMoveableRollingStock moveable = (EntityMoveableRollingStock) stock;
+                EntityMoveableRollingStock movable = (EntityMoveableRollingStock) stock;
                 ITrack centerte = ITrack.get(worldIn, center, true);
                 if (centerte != null) {
-                    float frontDistance = moveable.getDefinition().getBogeyFront(gauge);
-                    float rearDistance = moveable.getDefinition().getBogeyRear(gauge);
+                    float frontDistance = movable.getDefinition().getBogeyFront(gauge);
+                    float rearDistance = movable.getDefinition().getBogeyRear(gauge);
                     Vec3d front = centerte.getNextPosition(center, VecUtil.fromWrongYaw(frontDistance, yaw));
                     Vec3d rear = centerte.getNextPosition(center, VecUtil.fromWrongYaw(rearDistance, yaw));
 
-                    moveable.setRotationYaw(VecUtil.toWrongYaw(front.subtract(rear)));
-                    moveable.setRotationPitch(VecUtil.toPitch(front.subtract(rear)) - 90);
-                    moveable.setPosition(rear.add(front.subtract(rear)
+                    movable.setRotationYaw(VecUtil.toWrongYaw(front.subtract(rear)));
+                    movable.setRotationPitch(VecUtil.toPitch(front.subtract(rear)) - 90);
+                    movable.setPosition(rear.add(front.subtract(rear)
                             .scale(frontDistance / (frontDistance - rearDistance))));
 
                     ITrack frontte = ITrack.get(worldIn, front, true);
                     if (frontte != null) {
-                        Vec3d frontNext = frontte.getNextPosition(front, VecUtil.fromWrongYaw(0.1 * gauge.scale(), moveable.getRotationYaw()));
-                        moveable.setFrontYaw(VecUtil.toWrongYaw(frontNext.subtract(front)));
+                        Vec3d frontNext = frontte.getNextPosition(front, VecUtil.fromWrongYaw(0.1 * gauge.scale(), movable.getRotationYaw()));
+                        movable.setFrontYaw(VecUtil.toWrongYaw(frontNext.subtract(front)));
                     }
 
                     ITrack rearte = ITrack.get(worldIn, rear, true);
                     if (rearte != null) {
-                        Vec3d rearNext = rearte.getNextPosition(rear, VecUtil.fromWrongYaw(0.1 * gauge.scale(), moveable.getRotationYaw()));
-                        moveable.setRearYaw(VecUtil.toWrongYaw(rearNext.subtract(rear)));
+                        Vec3d rearNext = rearte.getNextPosition(rear, VecUtil.fromWrongYaw(0.1 * gauge.scale(), movable.getRotationYaw()));
+                        movable.setRearYaw(VecUtil.toWrongYaw(rearNext.subtract(rear)));
                     }
                 }
 
-                moveable.newlyPlaced = true;
+                movable.newlyPlaced = true;
             }
 
             if (stock instanceof EntityBuildableRollingStock) {

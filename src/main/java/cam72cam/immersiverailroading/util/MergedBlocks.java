@@ -1,15 +1,12 @@
 package cam72cam.immersiverailroading.util;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class MergedBlocks implements DataBlock {
-    Map<String, DataBlock.Value> primitives;
-    Map<String, List<DataBlock.Value>> primitiveSets;
-    Map<String, DataBlock> blocks;
-    Map<String, List<DataBlock>> blockSets;
+    private final Map<String, DataBlock.Value> primitives;
+    private final Map<String, List<DataBlock.Value>> primitiveSets;
+    private final Map<String, DataBlock> blocks;
+    private final Map<String, List<DataBlock>> blockSets;
 
     public MergedBlocks(DataBlock base, DataBlock override) {
         this.primitives = new LinkedHashMap<>(base.getValueMap());
@@ -45,21 +42,21 @@ public class MergedBlocks implements DataBlock {
 
     @Override
     public Map<String, Value> getValueMap() {
-        return this.primitives;
+        return Collections.unmodifiableMap(this.primitives);
     }
 
     @Override
     public Map<String, DataBlock> getBlockMap() {
-        return this.blocks;
+        return Collections.unmodifiableMap(this.blocks);
     }
 
     @Override
     public Map<String, List<DataBlock>> getBlocksMap() {
-        return this.blockSets;
+        return Collections.unmodifiableMap(this.blockSets);
     }
 
     @Override
     public Map<String, List<Value>> getValuesMap() {
-        return this.primitiveSets;
+        return Collections.unmodifiableMap(this.primitiveSets);
     }
 }

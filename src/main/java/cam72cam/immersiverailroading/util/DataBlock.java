@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-@SuppressWarnings("unused")
 public interface DataBlock {
     static DataBlock load(Identifier ident) throws IOException {
         return load(ident, false, null);

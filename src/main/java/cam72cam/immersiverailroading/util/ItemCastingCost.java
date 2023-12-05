@@ -6,7 +6,10 @@ import cam72cam.immersiverailroading.items.ItemRailAugment;
 import cam72cam.immersiverailroading.items.ItemRollingStockComponent;
 import cam72cam.mod.item.ItemStack;
 
-public class ItemCastingCost {
+public final class ItemCastingCost {
+
+    private ItemCastingCost() {}
+
     public static final int BAD_CAST_COST = -999;
 
     public static int getCastCost(ItemStack item) {

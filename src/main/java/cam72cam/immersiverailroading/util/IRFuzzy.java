@@ -5,7 +5,10 @@ import cam72cam.mod.item.CustomItem;
 import cam72cam.mod.item.Fuzzy;
 import cam72cam.mod.item.Recipes;
 
-public class IRFuzzy {
+public final class IRFuzzy {
+
+    private IRFuzzy() {}
+
     public static final Fuzzy IR_CASTING_CASING = Fuzzy.get("irCastingCasing");
     public static final Fuzzy IR_LIGHT_ENG = Fuzzy.get("irLightEngineering");
     public static final Fuzzy IR_HEAVY_ENG = Fuzzy.get("irHeavyEngineering");

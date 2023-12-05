@@ -4,9 +4,10 @@ import cam72cam.mod.math.Vec3d;
 import cam72cam.mod.util.FastMath;
 import util.Matrix4;
 
-public class VecUtil {
+public final class VecUtil {
     private VecUtil() {
         // Disable construction since java does not have static classes
+        // yea, but it does have final classes with private constructors<3 hehe
     }
 
     public static Vec3d fromYaw(double distance, float yaw) {

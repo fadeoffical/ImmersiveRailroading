@@ -18,6 +18,7 @@ import java.util.Map;
  */
 public class JSON {
     public static DataBlock parse(InputStream stream) throws IOException {
+        // todo: try-with-resources; see CAML.java
         try {
             return wrapObject(new JsonParser().parse(new InputStreamReader(stream)).getAsJsonObject());
         } finally {

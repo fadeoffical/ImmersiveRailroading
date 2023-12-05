@@ -9,27 +9,26 @@ import cam72cam.immersiverailroading.track.IIterableTrack;
 import cam72cam.mod.math.Vec3d;
 import cam72cam.mod.math.Vec3i;
 
-public class SwitchUtil {
+
+// todo: this should be moved into the tile rail base class
+//       there is no reason to have this as a separate class
+public final class SwitchUtil {
+
+    private SwitchUtil() {}
+
     public static SwitchState getSwitchState(TileRail rail) {
         return getSwitchState(rail, null);
     }
 
     public static SwitchState getSwitchState(TileRail rail, Vec3d position) {
-        if (rail == null) {
-            return SwitchState.NONE;
-        }
+        if (rail == null) return SwitchState.NONE;
 
-        if (rail.info.settings.type != TrackItems.TURN && rail.info.settings.type != TrackItems.CUSTOM) {
+        if (rail.info.settings.type != TrackItems.TURN && rail.info.settings.type != TrackItems.CUSTOM)
             return SwitchState.NONE;
-        }
 
         TileRail parent = rail.getParentTile();
-        if (parent == null) {
-            return SwitchState.NONE;
-        }
-        if (parent.info.settings.type != TrackItems.SWITCH) {
-            return SwitchState.NONE;
-        }
+        if (parent == null) return SwitchState.NONE;
+        if (parent.info.settings.type != TrackItems.SWITCH) return SwitchState.NONE;
 
         if (position != null) {
             IIterableTrack switchBuilder = (IIterableTrack) parent.info.getBuilder(rail.getWorld());
@@ -57,7 +56,7 @@ public class SwitchUtil {
         return SwitchState.STRAIGHT;
     }
 
-    public static boolean isRailPowered(TileRail rail) {
+    private static boolean isRailPowered(TileRail rail) {
         Vec3d redstoneOrigin = rail.info.placementInfo.placementPosition.add(rail.getPos());
         double horiz = rail.info.settings.gauge.scale() * 1.1;
         if (Config.ConfigDebug.oldNarrowWidth && rail.info.settings.gauge.value() < 1) {

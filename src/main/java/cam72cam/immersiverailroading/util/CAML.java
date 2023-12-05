@@ -37,10 +37,16 @@ import java.util.stream.Collectors;
  *          primitive = A key followed by a value
  *
  * */
-public class CAML {
+public final class CAML {
+
+    private CAML() {}
+
     private static final Pattern base = Pattern.compile("(\\s*)([^=^:]+)\\s*([=:])\\s?(\"[^\"]*\"|[^#]*)(#.*)?");
 
     public static DataBlock parse(InputStream stream) throws IOException {
+        // todo: try-with-resources
+        //       if the below operation fails and stream.close() is never called,
+        //       the stream will be left open and the stream will be leaked
         List<String> lines = IOUtils.readLines(stream, StandardCharsets.UTF_8).stream()
                 .filter(s -> !StringUtils.isWhitespace(s.replaceFirst("#.*", "")))
                 .collect(Collectors.toList());
@@ -58,15 +64,15 @@ public class CAML {
         String spaces = null;
         while (!lines.isEmpty()) {
             String line = lines.get(0);
-            Matcher m = base.matcher(line);
-            if (!m.matches()) {
+            Matcher matcher = base.matcher(line);
+            if (!matcher.matches()) {
                 throw new ParseException(String.format("Invalid Block line '%s'", line));
             }
 
-            String pre = m.group(1);
-            String key = m.group(2);
-            String mod = m.group(3);
-            String val = m.group(4);
+            String pre = matcher.group(1);
+            String key = matcher.group(2);
+            String mod = matcher.group(3);
+            String val = matcher.group(4);
 
             if (spaces == null) {
                 spaces = pre;

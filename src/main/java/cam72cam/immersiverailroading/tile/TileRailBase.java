@@ -47,8 +47,8 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
     private final FluidTank emptyTank = new FluidTank(null, 0);
     private final IInventory emptyInventory = new ItemStackHandler(0);
     private final SingleCache<Vec3i, Vec3i> parentCache = new SingleCache<>(parent -> parent.add(this.getPos()));
-    private final SingleCache<Double, IBoundingBox> boundingBox =
-            new SingleCache<>(height -> IBoundingBox.ORIGIN.expand(new Vec3d(1, height, 1)));
+    private final SingleCache<Double, IBoundingBox> boundingBox = new SingleCache<>(height -> IBoundingBox.ORIGIN.expand(new Vec3d(1, height, 1)));
+    private final boolean skipNextRefresh = false;
     public ItemStack railBedCache = null;
     public boolean blockUpdate;
     @TagField("flexible")
@@ -69,7 +69,6 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
     private boolean willBeReplaced = false;
     @TagField("replaced")
     private TagCompound replaced;
-    private final boolean skipNextRefresh = false;
     private int redstoneLevel = 0;
     @TagField("redstoneMode")
     private StockDetectorMode detectorMode = StockDetectorMode.SIMPLE;
@@ -347,6 +346,13 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
         }
     }
 
+    public void handleSnowTick() {
+        if (this.snowLayers < (ConfigDebug.deepSnow ? 8 : 1)) {
+            this.snowLayers += 1;
+            this.markDirty();
+        }
+    }
+
     public void cleanSnow() {
         int snow = this.getSnowLayers();
         if (snow > 1) {
@@ -390,18 +396,6 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
         this.markDirty();
     }
 
-    @Override
-    public ItemStack onPick() {
-        ItemStack stack = new ItemStack(IRItems.ITEM_TRACK_BLUEPRINT, 1);
-
-        TileRail parent = this.getParentTile();
-        if (parent == null) {
-            return stack;
-        }
-        parent.info.settings.write(stack);
-        return stack;
-    }
-
 	/* TODO HACKS
 	@Override
 	public boolean shouldRefresh(net.minecraft.world.World world, net.minecraft.util.math.BlockPos pos, net.minecraft.block.state.IBlockState oldState, net.minecraft.block.state.IBlockState newState) {
@@ -415,8 +409,20 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
 	*/
 
     @Override
+    public ItemStack onPick() {
+        ItemStack stack = new ItemStack(IRItems.ITEM_TRACK_BLUEPRINT, 1);
+
+        TileRail parent = this.getParentTile();
+        if (parent == null) {
+            return stack;
+        }
+        parent.info.settings.write(stack);
+        return stack;
+    }
+
+    @Override
     public void onNeighborChange(Vec3i neighbor) {
-        TileRailBase te = this;
+        TileRailBase tileRailBase = this;
 
         if (this.getWorld().isClient) {
             return;
@@ -424,13 +430,13 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
 
         this.blockUpdate = true;
 
-        TagCompound data = te.getReplaced();
+        TagCompound data = tileRailBase.getReplaced();
         while (true) {
-            TileRail teParent = te.getParentTile();
+            TileRail teParent = tileRailBase.getParentTile();
             if (teParent != null && teParent.getParentTile() != null) {
-                TileRail switchTile = te.getParentTile();
-                if (te instanceof TileRail) {
-                    switchTile = (TileRail) te;
+                TileRail switchTile = tileRailBase.getParentTile();
+                if (tileRailBase instanceof TileRail) {
+                    switchTile = (TileRail) tileRailBase;
                 }
                 SwitchState state = SwitchUtil.getSwitchState(switchTile);
                 if (state != SwitchState.NONE) {
@@ -440,65 +446,25 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
             if (data == null) {
                 break;
             }
-            te = (TileRailBase) this.getWorld().reconstituteBlockEntity(data);
-            if (te == null) {
+            tileRailBase = (TileRailBase) this.getWorld().reconstituteBlockEntity(data);
+            if (tileRailBase == null) {
                 break;
             }
-            data = te.getReplaced();
+            data = tileRailBase.getReplaced();
         }
     }
 
     @Override
     public IInventory getInventory(Facing side) {
-        if (this.getAugment() != null) {
-            switch (this.getAugment()) {
-                case ITEM_LOADER:
-                case ITEM_UNLOADER:
-                    if (this.canOperate()) {
-                        Freight freight = this.getStockNearBy(Freight.class);
-                        if (freight != null && !freight.isDead()) {
-                            return freight.cargoItems;
-                        }
-                    }
-                    // placeholder for connections
-                    return this.emptyInventory;
-            }
-        }
-        return null;
-    }
+        if (this.augment == null) return null;
+        if (this.augment != Augment.ITEM_LOADER && this.augment != Augment.ITEM_UNLOADER) return null;
+        if (!this.canOperate()) return this.emptyInventory;
 
-    public Augment getAugment() {
-        return this.augment;
-    }
+        Freight freight = this.getStockNearBy(Freight.class);
+        if (freight != null && !freight.isDead()) return freight.cargoItems;
 
-    public void setAugment(Augment augment) {
-        this.augment = augment;
-        if (this.getParentTile() != null) {
-            this.augmentGauge = this.getParentTile().info.settings.gauge;
-            if (ConfigDebug.defaultAugmentComputer && augment != null) {
-                switch (augment) {
-                    case DETECTOR:
-                        this.detectorMode = StockDetectorMode.COMPUTER;
-                        break;
-                    case LOCO_CONTROL:
-                        this.controlMode = LocoControlMode.COMPUTER;
-                        break;
-                }
-            }
-        }
-        this.setAugmentFilter(null);
-        this.redstoneMode = RedstoneMode.ENABLED;
-        this.markDirty();
-    }
-
-    public boolean setAugmentFilter(String definitionID) {
-        if (definitionID != null && !definitionID.equals(this.augmentFilterID)) {
-            this.augmentFilterID = definitionID;
-        } else {
-            this.augmentFilterID = null;
-        }
-        this.markDirty();
-        return this.augmentFilterID != null;
+        // placeholder for connections
+        return this.emptyInventory;
     }
 
     private boolean canOperate() {
@@ -548,9 +514,41 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
         return null;
     }
 
+    public Augment getAugment() {
+        return this.augment;
+    }
+
+    public void setAugment(Augment augment) {
+        this.augment = augment;
+
+        TileRail parentTile = this.getParentTile();
+        if (parentTile != null && augment != null) {
+            this.augmentGauge = parentTile.info.settings.gauge;
+
+            if (ConfigDebug.defaultAugmentComputer) {
+                if (augment == Augment.DETECTOR) this.detectorMode = StockDetectorMode.COMPUTER;
+                else if (augment == Augment.LOCO_CONTROL) this.controlMode = LocoControlMode.COMPUTER;
+            }
+        }
+
+        this.setAugmentFilter(null);
+        this.redstoneMode = RedstoneMode.ENABLED;
+        this.markDirty();
+    }
+
     /*
      * Capabilities tie ins
      */
+
+    public boolean setAugmentFilter(String definitionID) {
+        if (definitionID != null && !definitionID.equals(this.augmentFilterID)) {
+            this.augmentFilterID = definitionID;
+        } else {
+            this.augmentFilterID = null;
+        }
+        this.markDirty();
+        return this.augmentFilterID != null;
+    }
 
     @Override
     public boolean tryBreak(Player player) {
@@ -567,7 +565,8 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
                 }
 
                 while (true) {
-                    if (newGag.getParent() != null && this.getWorld().hasBlockEntity(newGag.getParent(), TileRail.class)) {
+                    if (newGag.getParent() != null && this.getWorld()
+                            .hasBlockEntity(newGag.getParent(), TileRail.class)) {
                         this.getWorld().setBlockEntity(this.getPos(), newGag);
                         rail.breakParentIfExists();
                         return false;
@@ -595,7 +594,8 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
 
     @Override
     public IBoundingBox getBoundingBox() {
-        if (this instanceof TileRailGag && (this.getParent() == null || !this.getWorld().isBlockLoaded(this.getParent()))) {
+        if (this instanceof TileRailGag && (this.getParent() == null || !this.getWorld()
+                .isBlockLoaded(this.getParent()))) {
             // Accessing TEs (parent) in chunks that are currently loading can cause problems
             return this.boundingBox.get(this.getFullHeight() + 0.1);
         }
@@ -608,12 +608,12 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
 
     @Override
     public double getTrackGauge() {
-        if (this.cachedGauge == null && this.getParent() != null) {
-            TileRail parent = this.getParentTile();
-            if (parent != null) {
-                this.cachedGauge = parent.info.settings.gauge.value();
-            }
-        }
+        if (this.cachedGauge != null || this.getParent() == null)
+            return this.cachedGauge != null ? this.cachedGauge : 0;
+
+        TileRail parent = this.getParentTile();
+        if (parent != null) this.cachedGauge = parent.info.settings.gauge.value();
+
         return this.cachedGauge != null ? this.cachedGauge : 0;
     }
 
@@ -626,6 +626,34 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
             return MovementTrack.iterativePathing(this.getWorld(), currentPosition, this, this.getTrackGauge(), motion, maxDistance);
         }
         return this.getNextPositionShort(currentPosition, motion);
+    }
+
+    public TagCompound getReplaced() {
+        return this.replaced;
+    }
+
+    public void setReplaced(TagCompound replaced) {
+        this.replaced = replaced;
+    }
+
+    private void breakParentIfExists() {
+        TileRail parent = this.getParentTile();
+        if (parent != null && !this.getWillBeReplaced()) {
+            parent.spawnDrops();
+            //if (tryBreak(getWorld(), te.getPos())) {
+            this.getWorld().setToAir(parent.getPos());
+            //}
+        }
+    }
+
+    // Called during flex track replacement
+    public boolean getWillBeReplaced() {
+        return this.willBeReplaced;
+    }
+
+    // Called before flex track replacement
+    public void setWillBeReplaced(boolean value) {
+        this.willBeReplaced = value;
     }
 
     public TileRailBase getReplacedTile() {
@@ -687,7 +715,7 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
             Vec3d potential = MovementTrack.nextPositionDirect(this.getWorld(), currentPosition, tile, motion);
             if (potential != null) {
                 // If the track veers onto the curved leg of a switch, try that (with angle limitation)
-                // If two overlapped switches are both set, we could have a weird situation, but it's a incredibly unlikely edge case
+                // If two overlapped switches are both set, we could have a weird situation, but it's an incredibly unlikely edge case
                 if (state == SwitchState.TURN) {
                     // This code is *fundamentally* broken and most of the time no-longer matters due to the complex parent position logic above
                     float other = VecUtil.toWrongYaw(potential.subtract(currentPosition));
@@ -709,19 +737,22 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
         return nextPos;
     }
 
+    /* NEW STUFF */
+
     @Override
     public void update() {
         if (this.getWorld().isClient) {
             return;
         }
 
-        this.ticksExisted += 1;
+        this.ticksExisted++;
 
         if (((int) (Math.random() * ConfigDebug.snowAccumulateRate * 10) == 0)) {
             if (this.getWorld().isSnowing(this.getPos()) && this.getWorld().canSeeSky(this.getPos().up())) {
                 this.handleSnowTick();
             }
         }
+
         if (ConfigDebug.snowMeltRate != 0 && this.snowLayers != 0) {
             if ((int) (Math.random() * ConfigDebug.snowMeltRate * 10) == 0) {
                 if (!this.getWorld().isSnowing(this.getPos())) {
@@ -732,7 +763,7 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
 
         if (this.ticksExisted > 5 && this.blockUpdate || (this.ticksExisted % (20 * 5) == 0 && this.ticksExisted > (20 * 20))) {
             // Double check every 5 seconds that the master is not gone
-            // Wont fire on first due to incr above
+            // Won't fire on first due to incr above
             this.blockUpdate = false;
 
             if (this.getParent() == null || !this.getWorld().isBlockLoaded(this.getParent())) {
@@ -749,7 +780,8 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
                 this.augmentGauge = this.getParentTile().info.settings.gauge;
             }
 
-            if (Config.ConfigDamage.requireSolidBlocks && this instanceof TileRail && this.getWorld().isBlock(this.getPos(), IRBlocks.BLOCK_RAIL)) {
+            if (Config.ConfigDamage.requireSolidBlocks && this instanceof TileRail && this.getWorld()
+                    .isBlock(this.getPos(), IRBlocks.BLOCK_RAIL)) {
                 double floating = ((TileRail) this).percentFloating();
                 if (floating > ConfigBalance.trackFloatingPercent) {
                     if (this.tryBreak(null)) {
@@ -961,43 +993,6 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
         }
     }
 
-    public void handleSnowTick() {
-        if (this.snowLayers < (ConfigDebug.deepSnow ? 8 : 1)) {
-            this.snowLayers += 1;
-            this.markDirty();
-        }
-    }
-
-    public TagCompound getReplaced() {
-        return this.replaced;
-    }
-
-    public void setReplaced(TagCompound replaced) {
-        this.replaced = replaced;
-    }
-
-    private void breakParentIfExists() {
-        TileRail parent = this.getParentTile();
-        if (parent != null && !this.getWillBeReplaced()) {
-            parent.spawnDrops();
-            //if (tryBreak(getWorld(), te.getPos())) {
-            this.getWorld().setToAir(parent.getPos());
-            //}
-        }
-    }
-
-    // Called duing flex track replacement
-    public boolean getWillBeReplaced() {
-        return this.willBeReplaced;
-    }
-
-    /* NEW STUFF */
-
-    // Called before flex track replacement
-    public void setWillBeReplaced(boolean value) {
-        this.willBeReplaced = value;
-    }
-
     @Override
     public int getStrongPower(Facing facing) {
         return this.getAugment() == Augment.DETECTOR ? this.redstoneLevel : 0;
@@ -1025,18 +1020,14 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
 
     public boolean isSwitchForced() {
         TileRail tileSwitch = this.findSwitchParent();
-        if (tileSwitch != null) {
-            return tileSwitch.info.switchForced != SwitchState.NONE;
-        } else {
-            return false;
-        }
+        return tileSwitch != null && tileSwitch.info.switchForced != SwitchState.NONE;
     }
 
     public void setSwitchForced(SwitchState newForcedState) {
         TileRail tileSwitch = this.findSwitchParent();
 
         if (tileSwitch != null && newForcedState != tileSwitch.info.switchForced) {
-            tileSwitch.info = tileSwitch.info.with(b -> b.switchForced = newForcedState);
+            tileSwitch.info = tileSwitch.info.with(info -> info.switchForced = newForcedState);
         }
     }
 
