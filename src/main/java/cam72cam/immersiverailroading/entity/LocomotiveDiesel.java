@@ -76,7 +76,10 @@ public class LocomotiveDiesel extends Locomotive {
             return;
         }
 
-        OptionalDouble control = this.getDefinition().getModel().getControls().stream()
+        OptionalDouble control = this.getDefinition()
+                .getModel()
+                .getControls()
+                .stream()
                 .filter(x -> x.part.type == ModelComponentType.HORN_CONTROL_X)
                 .mapToDouble(this::getControlPosition)
                 .max();
@@ -114,7 +117,7 @@ public class LocomotiveDiesel extends Locomotive {
             }
 
             consumption *= 100;
-            consumption *= this.gauge.scale();
+            consumption *= (float) this.gauge.scale();
 
             this.internalBurn -= consumption;
 
@@ -142,7 +145,10 @@ public class LocomotiveDiesel extends Locomotive {
     public void onDragRelease(Control<?> component) {
         super.onDragRelease(component);
         if (component.part.type == ModelComponentType.ENGINE_START_X) {
-            this.turnedOn = this.getDefinition().getModel().getControls().stream()
+            this.turnedOn = this.getDefinition()
+                    .getModel()
+                    .getControls()
+                    .stream()
                     .filter(c -> c.part.type == ModelComponentType.ENGINE_START_X)
                     .allMatch(c -> this.getControlPosition(c) == 1);
         }
@@ -187,15 +193,6 @@ public class LocomotiveDiesel extends Locomotive {
         }
     }
 
-    public boolean isTurnedOn() {
-        return this.turnedOn;
-    }
-
-    public void setTurnedOn(boolean value) {
-        this.turnedOn = value;
-        this.setControlPositions(ModelComponentType.ENGINE_START_X, this.turnedOn ? 1 : 0);
-    }
-
     @Override
     public LocomotiveDieselDefinition getDefinition() {
         return super.getDefinition(LocomotiveDieselDefinition.class);
@@ -211,14 +208,6 @@ public class LocomotiveDiesel extends Locomotive {
             return maxPowerAtSpeed * this.getThrottle() * this.getReverser();
         }
         return 0;
-    }
-
-    public float getEngineTemperature() {
-        return this.engineTemperature;
-    }
-
-    private void setEngineTemperature(float temp) {
-        this.engineTemperature = temp;
     }
 
     @Override
@@ -242,6 +231,14 @@ public class LocomotiveDiesel extends Locomotive {
         return this.isRunning();
     }
 
+    public float getEngineTemperature() {
+        return this.engineTemperature;
+    }
+
+    private void setEngineTemperature(float temp) {
+        this.engineTemperature = temp;
+    }
+
     public boolean isRunning() {
         if (!Config.isFuelRequired(this.gauge)) {
             return this.isTurnedOn();
@@ -251,6 +248,15 @@ public class LocomotiveDiesel extends Locomotive {
 
     public boolean isEngineOverheated() {
         return this.engineOverheated && Config.ConfigBalance.canDieselEnginesOverheat;
+    }
+
+    public boolean isTurnedOn() {
+        return this.turnedOn;
+    }
+
+    public void setTurnedOn(boolean value) {
+        this.turnedOn = value;
+        this.setControlPositions(ModelComponentType.ENGINE_START_X, this.turnedOn ? 1 : 0);
     }
 
     public void setEngineOverheated(boolean value) {
@@ -269,7 +275,7 @@ public class LocomotiveDiesel extends Locomotive {
 
     @Override
     public List<Fluid> getFluidFilter() {
-        return BurnUtil.burnableFluids();
+        return BurnUtil.getBurnableFuels();
     }
 
     @Override

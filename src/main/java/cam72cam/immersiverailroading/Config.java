@@ -212,7 +212,7 @@ public class Config {
         public static double TurnTableSpeed = 0.4;
 
         public static List<ItemStack> getVillagerPayout() {
-            return Arrays.stream(villagerPayoutItems).map(f -> f.example()).collect(Collectors.toList());
+            return Arrays.stream(villagerPayoutItems).map(Fuzzy::example).collect(Collectors.toList());
         }
     }
 

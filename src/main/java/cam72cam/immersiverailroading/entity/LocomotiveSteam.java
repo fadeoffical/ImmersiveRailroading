@@ -8,7 +8,6 @@ import cam72cam.immersiverailroading.library.ModelComponentType;
 import cam72cam.immersiverailroading.library.Permissions;
 import cam72cam.immersiverailroading.model.part.Control;
 import cam72cam.immersiverailroading.registry.LocomotiveSteamDefinition;
-import cam72cam.immersiverailroading.util.BurnUtil;
 import cam72cam.immersiverailroading.util.FluidQuantity;
 import cam72cam.immersiverailroading.util.LiquidUtil;
 import cam72cam.immersiverailroading.util.Speed;
@@ -29,29 +28,24 @@ import java.util.stream.Collectors;
 
 public class LocomotiveSteam extends Locomotive {
 
-    // PSI
-    @TagSync
-    @TagField("boiler_psi")
-    private float boilerPressure = 0;
-
-    // Celsius
-    @TagSync
-    @TagField("boiler_temperature")
-    private float boilerTemperature;
-
-    @TagSync
-    @TagField("pressure_valve")
-    private boolean pressureValve = false;
-
     // Map<Slot, TicksToBurn>
     @TagSync
     @TagField(value = "burn_time", mapper = LocomotiveSteam.SlotTagMapper.class)
     private final Map<Integer, Integer> burnTime = new HashMap<>();
-
     @TagSync
     @TagField(value = "burn_max", mapper = LocomotiveSteam.SlotTagMapper.class)
     private final Map<Integer, Integer> burnMax = new HashMap<>();
-
+    // PSI
+    @TagSync
+    @TagField("boiler_psi")
+    private float boilerPressure = 0;
+    // Celsius
+    @TagSync
+    @TagField("boiler_temperature")
+    private float boilerTemperature;
+    @TagSync
+    @TagField("pressure_valve")
+    private boolean pressureValve = false;
     private float drainRemainder;
 
     public LocomotiveSteam() {
@@ -71,24 +65,15 @@ public class LocomotiveSteam extends Locomotive {
     public void onTick() {
         super.onTick();
 
-        if (this.getWorld().isClient) {
-            return;
-        }
+        if (this.getWorld().isClient) return;
 
-        if (this.getTickCount() < 2) {
-            // Prevent explosions
-            return;
-        }
+        // todo: this seems like a dirty hack and should be addressed properly
+        // Prevent explosions
+        if (this.getTickCount() < 2) return;
 
+        this.handleWhistle();
 
-        OptionalDouble control = this.getDefinition().getModel().getControls().stream()
-                .filter(x -> x.part.type == ModelComponentType.WHISTLE_CONTROL_X)
-                .mapToDouble(this::getControlPosition)
-                .max();
-        if (control.isPresent() && control.getAsDouble() > 0) {
-            this.setHorn(10, this.hornPlayer);
-        }
-
+        // todo: should we check if its built before handling the whistle?
         if (!this.isBuilt() || this.getDefinition().isCabCar()) {
             return;
         }
@@ -104,10 +89,12 @@ public class LocomotiveSteam extends Locomotive {
                 this.theTank.drain(tender.theTank, desiredDrain, false);
             }
 
+            // todo: this is way too deeply nested !!!!!
             if (this.getTickCount() % 20 == 0 && this.getDefinition().tender_auto_feed) {
                 // Top off stacks
                 for (int slot = 2; slot < this.cargoItems.getSlotCount(); slot++) {
-                    if (BurnUtil.getBurnTime(this.cargoItems.get(slot)) != 0) {
+                    if (this.cargoItems.get(slot).getBurnTime() != 0) {
+
                         for (int tenderSlot = 0; tenderSlot < tender.cargoItems.getSlotCount(); tenderSlot++) {
                             if (this.cargoItems.get(slot).is(tender.cargoItems.get(tenderSlot))) {
                                 if (this.cargoItems.get(slot).getLimit() > this.cargoItems.get(slot).getCount()) {
@@ -128,11 +115,11 @@ public class LocomotiveSteam extends Locomotive {
         }
 
         float boilerTemperature = this.getBoilerTemperature();
-        float boilerPressure = this.getBoilerPressure();
         float waterLevelMB = this.getLiquidAmount();
         int burningSlots = 0;
         float waterUsed = 0;
 
+        float boilerPressure = this.getBoilerPressure();
         if (boilerPressure < 0) {
             boilerPressure = 0;
         }
@@ -142,10 +129,10 @@ public class LocomotiveSteam extends Locomotive {
                 int remainingTime = this.burnTime.getOrDefault(slot, 0);
                 if (remainingTime <= 0) {
                     ItemStack stack = this.cargoItems.get(slot);
-                    if (stack.getCount() <= 0 || BurnUtil.getBurnTime(stack) == 0) {
+                    if (stack.getCount() <= 0 || stack.getBurnTime() == 0) {
                         continue;
                     }
-                    remainingTime = (int) (BurnUtil.getBurnTime(stack) / this.gauge.scale() * (Config.ConfigBalance.locoSteamFuelEfficiency / 100.0));
+                    remainingTime = (int) (stack.getBurnTime() / this.gauge.scale() * (Config.ConfigBalance.locoSteamFuelEfficiency / 100.0));
                     this.burnTime.put(slot, remainingTime);
                     this.burnMax.put(slot, remainingTime);
                     stack.setCount(stack.getCount() - 1);
@@ -160,7 +147,7 @@ public class LocomotiveSteam extends Locomotive {
         double energyKCalDeltaTick = 0;
 
         if (burningSlots != 0 && this.getLiquidAmount() > 0) {
-            energyKCalDeltaTick += burningSlots * this.coalEnergyKCalTick();
+            energyKCalDeltaTick += burningSlots * coalEnergyKCalTick();
         }
 
         // Assume the boiler is a cube...
@@ -216,7 +203,7 @@ public class LocomotiveSteam extends Locomotive {
         float throttle = this.getThrottle() * Math.abs(this.getReverser());
         if (throttle != 0 && boilerPressure > 0) {
             double burnableSlots = this.cargoItems.getSlotCount() - 2;
-            double maxKCalTick = burnableSlots * this.coalEnergyKCalTick();
+            double maxKCalTick = burnableSlots * coalEnergyKCalTick();
             double maxPressureTick = maxKCalTick / (this.getTankCapacity().asMillibuckets() / 1000);
             maxPressureTick *= 0.8; // 20% more pressure gen energyCapability to balance heat loss
 
@@ -230,7 +217,8 @@ public class LocomotiveSteam extends Locomotive {
             waterUsed *= Config.ConfigBalance.locoWaterUsage;
             waterUsed += this.drainRemainder;
             if (waterUsed > 0 && this.theTank.getContents() != null) {
-                this.theTank.drain(new FluidStack(this.theTank.getContents().getFluid(), (int) Math.floor(waterUsed)), false);
+                this.theTank.drain(new FluidStack(this.theTank.getContents()
+                        .getFluid(), (int) Math.floor(waterUsed)), false);
                 this.drainRemainder = waterUsed % 1;
             }
         }
@@ -249,6 +237,21 @@ public class LocomotiveSteam extends Locomotive {
                 this.createExplosion(pos, boilerPressure / 5, Config.ConfigDamage.explosionEnvDamageEnabled);
             }
             this.getWorld().removeEntity(this);
+        }
+    }
+
+    private void handleWhistle() {
+        boolean shouldWhistle = this.getDefinition()
+                .getModel()
+                .getControls()
+                .stream()
+                .filter(control -> control.part.type == ModelComponentType.WHISTLE_CONTROL_X)
+                .mapToDouble(this::getControlPosition)
+                .max()
+                .orElse(0) > 0;
+
+        if (shouldWhistle) {
+            this.setHorn(10, this.hornPlayer);
         }
     }
 
@@ -291,7 +294,8 @@ public class LocomotiveSteam extends Locomotive {
         }
 
         //double traction_N = this.getDefinition().getStartingTractionNewtons(gauge);
-        double traction_N = this.getDefinition().getHorsePower(this.gauge) * 375 / Math.max(Math.abs(speed.imperial()), 1.0);
+        double traction_N = this.getDefinition()
+                .getHorsePower(this.gauge) * 375 / Math.max(Math.abs(speed.imperial()), 1.0);
         if (Config.isFuelRequired(this.gauge)) {
             traction_N = traction_N / this.getDefinition().getMaxPSI(this.gauge) * this.getBoilerPressure();
         }
@@ -299,21 +303,14 @@ public class LocomotiveSteam extends Locomotive {
         // Cap the max "effective" reverser.  At high speeds having a fully open reverser just damages equipment
         double reverser = this.getReverser();
         double reverserCap = 0.25;
-        double maxReverser = 1 - Math.abs(this.getCurrentSpeed().metric()) / this.getDefinition().getMaxSpeed(this.gauge)
+        double maxReverser = 1 - Math.abs(this.getCurrentSpeed().metric()) / this.getDefinition()
+                .getMaxSpeed(this.gauge)
                 .metric() * reverserCap;
 
         // This should probably be tuned...
         double multiplier = Math.copySign(Math.abs(Math.pow(this.getThrottle() * Math.min(Math.abs(reverser), maxReverser), 3)), reverser);
 
         return traction_N * multiplier;
-    }
-
-    public float getBoilerPressure() {
-        return this.boilerPressure;
-    }
-
-    private void setBoilerPressure(float temp) {
-        this.boilerPressure = temp;
     }
 
     @Override
@@ -330,8 +327,12 @@ public class LocomotiveSteam extends Locomotive {
         return this.boilerTemperature;
     }
 
-    private void setBoilerTemperature(float temp) {
-        this.boilerTemperature = temp;
+    public float getBoilerPressure() {
+        return this.boilerPressure;
+    }
+
+    private void setBoilerPressure(float temp) {
+        this.boilerPressure = temp;
     }
 
     private static double coalEnergyKCalTick() {
@@ -342,6 +343,10 @@ public class LocomotiveSteam extends Locomotive {
         double coalEnergyKCal = coalEnergyBTU / (3.968 * 1000); // 3.968 BTU = 1 KCal
         double coalBurnTicks = 1600; // This is a bit of fudge
         return coalEnergyKCal / coalBurnTicks * ConfigBalance.locoHeatTimeScale;
+    }
+
+    private void setBoilerTemperature(float temp) {
+        this.boilerTemperature = temp;
     }
 
     @Override
@@ -400,7 +405,8 @@ public class LocomotiveSteam extends Locomotive {
 
     public boolean cylinderDrainsEnabled() {
         // This could be optimized to once-per-tick, but I'm not sure that is necessary
-        List<Control<?>> drains = this.getDefinition().getModel()
+        List<Control<?>> drains = this.getDefinition()
+                .getModel()
                 .getControls()
                 .stream()
                 .filter(control -> control.part.type == ModelComponentType.CYLINDER_DRAIN_CONTROL_X)
@@ -415,7 +421,8 @@ public class LocomotiveSteam extends Locomotive {
 
     public void setCylinderDrains(boolean enabled) {
         // This could be optimized to once-per-tick, but I'm not sure that is necessary
-        List<Control<?>> drains = this.getDefinition().getModel()
+        List<Control<?>> drains = this.getDefinition()
+                .getModel()
                 .getControls()
                 .stream()
                 .filter(control -> control.part.type == ModelComponentType.CYLINDER_DRAIN_CONTROL_X)
