@@ -11,6 +11,7 @@ import cam72cam.mod.fluid.Fluid;
 import java.util.List;
 
 public class Tender extends CarTank {
+
     public int getInventoryWidth() {
         return this.getDefinition().getInventoryWidth(this.gauge);
     }
@@ -23,16 +24,6 @@ public class Tender extends CarTank {
     @Override
     public List<Fluid> getFluidFilter() {
         return LiquidUtil.getWater();
-    }
-
-    @Override
-    protected int[] getContainerInputSlots() {
-        return new int[]{0};
-    }
-
-    @Override
-    protected int[] getContainertOutputSlots() {
-        return new int[]{1};
     }
 
     @Override
@@ -54,5 +45,10 @@ public class Tender extends CarTank {
             GuiTypes.TENDER.open(player, this);
         }
         return true;
+    }
+
+    @Override
+    protected int[] getContainertOutputSlots() {
+        return new int[]{1};
     }
 }
