@@ -8,23 +8,25 @@ import cam72cam.mod.world.World;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ServerChronoState extends Packet implements ChronoState {
+public final class ServerChronoState extends Packet implements ChronoState {
+
     private final static Map<World, ServerChronoState> states = new HashMap<>();
 
     static {
-        World.onTick(w -> {
-            ServerChronoState state = getState(w);
-            if (state != null) {
-                state.tick();
-            }
+        World.onTick(world -> {
+            ServerChronoState state = getState(world);
+            if (state != null) state.tick();
         });
     }
 
     @TagField
     protected World world;
+
+    // todo: does minecraft use long ticks? if so, maybe we should too
     // int -> two years of ticks, good enough
     @TagField
     protected int tickID;
+
     @TagField
     protected double ticksPerSecond;
 
@@ -33,9 +35,9 @@ public class ServerChronoState extends Packet implements ChronoState {
     }
 
     private ServerChronoState(World world) {
-        this.world = world;
+        this.setWorld(world);
         this.tickID = 0;
-        this.ticksPerSecond = 20;
+        this.ticksPerSecond = 20.0d;
     }
 
     public static void register() {
@@ -47,7 +49,7 @@ public class ServerChronoState extends Packet implements ChronoState {
     }
 
     private void tick() {
-        this.tickID += 1;
+        this.tickID++;
         this.ticksPerSecond = this.world.getTPS(20);
         if (this.tickID % 5 == 0) {
             this.sendToAll();
@@ -71,5 +73,9 @@ public class ServerChronoState extends Packet implements ChronoState {
 
     public int getServerTickID() {
         return this.tickID;
+    }
+
+    public void setWorld(World world) {
+        this.world = world;
     }
 }

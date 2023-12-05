@@ -8,26 +8,29 @@ import cam72cam.mod.world.World;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ClientChronoState implements ChronoState {
+public final class ClientChronoState implements ChronoState {
+
     private final static Map<World, ClientChronoState> states = new HashMap<>();
     private static long lastWorldTickId = -1;
 
     static {
         ClientEvents.TICK.subscribe(() -> {
-            if (MinecraftClient.isReady()) {
-                long currWorldTickId = MinecraftClient.getPlayer().getWorld().getTicks();
-                if (currWorldTickId != lastWorldTickId) { // Handles paused singleplayer vs multiplayer
-                    lastWorldTickId = currWorldTickId;
-                    ClientChronoState state = getState(MinecraftClient.getPlayer().getWorld());
-                    if (state != null) {
-                        state.tick();
-                    }
-                }
-            }
+            if (!MinecraftClient.isReady()) return;
+
+            // todo: This looks ugly; Add a method World#isPaused() method or similar
+            // this should not take three lines of code and a static var to check
+
+            long currWorldTickId = MinecraftClient.getPlayer().getWorld().getTicks();
+            if (currWorldTickId == lastWorldTickId) return; // Handles paused singleplayer vs multiplayer
+            lastWorldTickId = currWorldTickId;
+
+            ClientChronoState state = getState(MinecraftClient.getPlayer().getWorld());
+            if (state != null) state.tick();
+
         });
     }
 
-    protected World world;
+    private final World world;
     private double tickID;
     private double tickSkew;
 
