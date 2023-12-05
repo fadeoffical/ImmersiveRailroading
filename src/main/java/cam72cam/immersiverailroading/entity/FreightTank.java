@@ -33,7 +33,7 @@ public abstract class FreightTank extends Freight {
     @Override
     public void onAssemble() {
         super.onAssemble();
-        this.theTank.setCapacity(this.getTankCapacity().MilliBuckets());
+        this.theTank.setCapacity(this.getTankCapacity().asMillibuckets());
         this.theTank.setFilter(this::getFluidFilter);
         this.theTank.onChanged(this::onTankContentsChanged);
         this.onTankContentsChanged();
@@ -123,7 +123,7 @@ public abstract class FreightTank extends Freight {
     @Override
     public double getMaxWeight() {
         double waterDensity = 1000;
-        return super.getMaxWeight() + this.getTankCapacity().Buckets() * waterDensity;
+        return super.getMaxWeight() + this.getTankCapacity().asBuckets() * waterDensity;
     }
 
     /*
@@ -233,6 +233,6 @@ public abstract class FreightTank extends Freight {
     }
 
     public int getPercentLiquidFull() {
-        return this.getLiquidAmount() * 100 / this.getTankCapacity().MilliBuckets();
+        return this.getLiquidAmount() * 100 / this.getTankCapacity().asMillibuckets();
     }
 }

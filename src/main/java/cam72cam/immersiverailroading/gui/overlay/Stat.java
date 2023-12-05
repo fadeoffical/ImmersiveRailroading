@@ -65,7 +65,7 @@ public enum Stat {
             case MAX_LIQUID:
                 return stock instanceof FreightTank ?
                         String.format("%.1f",
-                                ((FreightTank) stock).getTankCapacity().MilliBuckets() / (float) Fluid.BUCKET_VOLUME)
+                                ((FreightTank) stock).getTankCapacity().asMillibuckets() / (float) Fluid.BUCKET_VOLUME)
                         : "";
             case UNITS_LIQUID:
                 return "B";

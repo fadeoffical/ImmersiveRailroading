@@ -2,51 +2,62 @@ package cam72cam.immersiverailroading.util;
 
 import cam72cam.immersiverailroading.Config.ConfigBalance;
 
-public class FluidQuantity {
+// todo: do we really have to have 'liters' as another unit?
+//       why not just use buckets and millibuckets?
+//       LiquidQuantity.asLiters() is unused
+public final class FluidQuantity {
+
+    /**
+     * The number of millibuckets in a bucket
+     */
     private static final int BUCKET_VOLUME = 1000;
-    public static final FluidQuantity ZERO = FromBuckets(0);
-    private final int mb;
 
-    private FluidQuantity(int mb) {
-        this.mb = mb;
+    /**
+     * Represents zero millibuckets of fluid
+     */
+    public static final FluidQuantity ZERO = fromBuckets(0);
+
+    private final int millibuckets;
+
+    private FluidQuantity(int millibuckets) {
+        this.millibuckets = millibuckets;
     }
 
-    public static FluidQuantity FromLiters(int liters) {
-        return new FluidQuantity(liters * ConfigBalance.MB_PER_LITER);
-    }
-
-    public static FluidQuantity FromMillibuckets(int mb) {
+    public static FluidQuantity fromMillibuckets(int mb) {
         return new FluidQuantity(mb);
     }
 
-    public int Buckets() {
-        return this.mb / BUCKET_VOLUME;
+    public static FluidQuantity fromBuckets(int buckets) {
+        return new FluidQuantity(buckets * BUCKET_VOLUME);
     }
 
-    public int Liters() {
-        return this.mb / ConfigBalance.MB_PER_LITER;
+    public static FluidQuantity fromLiters(int liters) {
+        return new FluidQuantity(liters * ConfigBalance.MB_PER_LITER);
     }
 
-    public int MilliBuckets() {
-        return this.mb;
+    public int asMillibuckets() {
+        return this.millibuckets;
+    }
+
+    public int asBuckets() {
+        return this.millibuckets / BUCKET_VOLUME;
+    }
+
+    public int asLiters() {
+        return this.millibuckets / ConfigBalance.MB_PER_LITER;
     }
 
     public FluidQuantity scale(double scale) {
-        return new FluidQuantity((int) Math.ceil(this.mb * scale));
+        // todo: (why) do we have to ceil this?
+        return fromMillibuckets((int) Math.ceil(this.millibuckets * scale));
     }
 
     public FluidQuantity min(FluidQuantity min) {
-        if (min.mb > this.mb) {
-            return min;
-        }
-        return this;
+        return min.asMillibuckets() > this.millibuckets ? min : this;
     }
 
     public FluidQuantity roundBuckets() {
-        return FromBuckets((int) Math.ceil(this.mb / (double) BUCKET_VOLUME));
-    }
-
-    public static FluidQuantity FromBuckets(int buckets) {
-        return new FluidQuantity(buckets * BUCKET_VOLUME);
+        // todo: (why) do we have to ceil this?
+        return fromBuckets((int) Math.ceil(this.millibuckets / (double) BUCKET_VOLUME));
     }
 }

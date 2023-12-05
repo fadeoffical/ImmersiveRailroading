@@ -23,9 +23,12 @@ import cam72cam.mod.serialization.TagField;
 import cam72cam.mod.serialization.TagMapper;
 
 import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class LocomotiveSteam extends Locomotive {
+
     // PSI
     @TagSync
     @TagField("boiler_psi")
@@ -44,6 +47,7 @@ public class LocomotiveSteam extends Locomotive {
     @TagSync
     @TagField(value = "burn_time", mapper = LocomotiveSteam.SlotTagMapper.class)
     private final Map<Integer, Integer> burnTime = new HashMap<>();
+
     @TagSync
     @TagField(value = "burn_max", mapper = LocomotiveSteam.SlotTagMapper.class)
     private final Map<Integer, Integer> burnMax = new HashMap<>();
@@ -96,7 +100,7 @@ public class LocomotiveSteam extends Locomotive {
 
             // Only drain 10mb at a time from the tender
             int desiredDrain = 10;
-            if (this.getTankCapacity().MilliBuckets() - this.getServerLiquidAmount() >= 10) {
+            if (this.getTankCapacity().asMillibuckets() - this.getServerLiquidAmount() >= 10) {
                 this.theTank.drain(tender.theTank, desiredDrain, false);
             }
 
@@ -160,7 +164,7 @@ public class LocomotiveSteam extends Locomotive {
         }
 
         // Assume the boiler is a cube...
-        double boilerVolume = this.getTankCapacity().Buckets();
+        double boilerVolume = this.getTankCapacity().asBuckets();
         double boilerEdgeM = Math.pow(boilerVolume, 1.0 / 3.0);
         double boilerAreaM = 6 * Math.pow(boilerEdgeM, 2);
 
@@ -213,7 +217,7 @@ public class LocomotiveSteam extends Locomotive {
         if (throttle != 0 && boilerPressure > 0) {
             double burnableSlots = this.cargoItems.getSlotCount() - 2;
             double maxKCalTick = burnableSlots * this.coalEnergyKCalTick();
-            double maxPressureTick = maxKCalTick / (this.getTankCapacity().MilliBuckets() / 1000);
+            double maxPressureTick = maxKCalTick / (this.getTankCapacity().asMillibuckets() / 1000);
             maxPressureTick *= 0.8; // 20% more pressure gen energyCapability to balance heat loss
 
             float delta = (float) (throttle * maxPressureTick);
@@ -330,7 +334,7 @@ public class LocomotiveSteam extends Locomotive {
         this.boilerTemperature = temp;
     }
 
-    private double coalEnergyKCalTick() {
+    private static double coalEnergyKCalTick() {
         // Coal density = 800 KG/m3 (engineering toolbox)
         double coalEnergyDensity = 30000; // KJ/KG (engineering toolbox)
         double coalEnergyKJ = coalEnergyDensity / 9; // Assume each slot is burning 1/9th of a coal block
@@ -364,14 +368,7 @@ public class LocomotiveSteam extends Locomotive {
         this.setBoilerTemperature(this.ambientTemperature());
         this.setBoilerPressure(0);
 
-        for (Integer slot : this.burnTime.keySet()) {
-            this.burnTime.put(slot, 0);
-        }
-    }
-
-    @Override
-    protected int[] getContainerInputSlots() {
-        return new int[]{0};
+        this.burnTime.replaceAll((slot, value) -> 0);
     }
 
     @Override
@@ -380,11 +377,11 @@ public class LocomotiveSteam extends Locomotive {
     }
 
     public Map<Integer, Integer> getBurnTime() {
-        return this.burnTime;
+        return Collections.unmodifiableMap(this.burnTime);
     }
 
     public Map<Integer, Integer> getBurnMax() {
-        return this.burnMax;
+        return Collections.unmodifiableMap(this.burnMax);
     }
 
     @Override
@@ -406,7 +403,7 @@ public class LocomotiveSteam extends Locomotive {
         List<Control<?>> drains = this.getDefinition().getModel()
                 .getControls()
                 .stream()
-                .filter(x -> x.part.type == ModelComponentType.CYLINDER_DRAIN_CONTROL_X)
+                .filter(control -> control.part.type == ModelComponentType.CYLINDER_DRAIN_CONTROL_X)
                 .collect(Collectors.toList());
         if (drains.isEmpty()) {
             double csm = Math.abs(this.getCurrentSpeed().metric()) / this.gauge.scale();
@@ -421,7 +418,7 @@ public class LocomotiveSteam extends Locomotive {
         List<Control<?>> drains = this.getDefinition().getModel()
                 .getControls()
                 .stream()
-                .filter(x -> x.part.type == ModelComponentType.CYLINDER_DRAIN_CONTROL_X)
+                .filter(control -> control.part.type == ModelComponentType.CYLINDER_DRAIN_CONTROL_X)
                 .collect(Collectors.toList());
 
         for (Control<?> drain : drains) {
@@ -432,16 +429,14 @@ public class LocomotiveSteam extends Locomotive {
     private static class SlotTagMapper implements TagMapper<Map<Integer, Integer>> {
         @Override
         public TagAccessor<Map<Integer, Integer>> apply(Class<Map<Integer, Integer>> type, String fieldName, TagField tag) {
-            return new TagAccessor<>(
-                    (d, o) -> d.setMap(fieldName, o, Objects::toString, i -> new TagCompound().setInteger("val", i)),
-                    d -> d.getMap(fieldName, Integer::parseInt, t -> {
-                        Integer val = t.getInteger("val");
-                        if (val == null) {
-                            val = 0;
-                        }
-                        return val;
-                    })
-            );
+            BiConsumer<TagCompound, Map<Integer, Integer>> serializer = (nbt, map) -> nbt.setMap(fieldName, map, Objects::toString, integer -> new TagCompound().setInteger("val", integer));
+            Function<TagCompound, Map<Integer, Integer>> deserializer = nbt -> nbt.getMap(fieldName, Integer::parseInt, valNbt -> {
+                // todo: TagCompound#getIntegerOptional("val").orElse(0)
+                Integer val = valNbt.getInteger("val");
+                return val != null ? val : 0;
+            });
+
+            return new TagAccessor<>(serializer, deserializer);
         }
     }
 }

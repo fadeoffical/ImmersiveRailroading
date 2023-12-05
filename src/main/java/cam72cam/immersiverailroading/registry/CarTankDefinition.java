@@ -35,13 +35,13 @@ public class CarTankDefinition extends FreightDefinition {
     @Override
     public List<String> getTooltip(Gauge gauge) {
         List<String> tips = super.getTooltip(gauge);
-        tips.add(GuiText.TANK_CAPACITY_TOOLTIP.toString(this.getTankCapaity(gauge).Buckets()));
+        tips.add(GuiText.TANK_CAPACITY_TOOLTIP.toString(this.getTankCapaity(gauge).asBuckets()));
         return tips;
     }
 
     public FluidQuantity getTankCapaity(Gauge gauge) {
-        return FluidQuantity.FromLiters((int) Math.ceil(this.capacity_l * gauge.scale()))
-                .min(FluidQuantity.FromBuckets(1))
+        return FluidQuantity.fromLiters((int) Math.ceil(this.capacity_l * gauge.scale()))
+                .min(FluidQuantity.fromBuckets(1))
                 .roundBuckets();
     }
 

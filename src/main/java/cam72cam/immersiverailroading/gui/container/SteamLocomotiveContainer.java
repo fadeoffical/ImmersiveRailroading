@@ -33,7 +33,7 @@ public class SteamLocomotiveContainer extends BaseContainer {
         }
 
         container.drawTankBlock(0, tankY, horizSlots * 2, inventoryRows, this.stock.getLiquid(), this.stock.getLiquidAmount() / (float) this.stock.getTankCapacity()
-                .MilliBuckets());
+                .asMillibuckets());
 
         currY = container.drawBottomBar(0, currY, horizSlots * 2);
 
@@ -58,7 +58,7 @@ public class SteamLocomotiveContainer extends BaseContainer {
         container.drawSlot(this.stock.cargoItems, 0, 1, slotY);
         container.drawSlot(this.stock.cargoItems, 1, (horizSlots * 2 - 1) * 18 - 1, slotY);
 
-        String quantityStr = String.format("%s/%s", this.stock.getLiquidAmount(), this.stock.getTankCapacity().MilliBuckets());
+        String quantityStr = String.format("%s/%s", this.stock.getLiquidAmount(), this.stock.getTankCapacity().asMillibuckets());
         container.drawCenteredString(quantityStr, 0, slotY);
 
         currY = container.drawPlayerInventoryConnector(0, currY, horizSlots);

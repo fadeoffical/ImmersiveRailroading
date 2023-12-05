@@ -31,7 +31,7 @@ public class TenderContainer extends BaseContainer {
         }
 
         container.drawTankBlock(0, tankY, horizSlots, inventoryRows, this.stock.getLiquid(), this.stock.getLiquidAmount() / (float) this.stock.getTankCapacity()
-                .MilliBuckets());
+                .asMillibuckets());
 
         currY = container.drawSlotBlock(this.stock.cargoItems, 2, this.stock.getInventoryWidth(), 0, currY);
 
@@ -39,7 +39,7 @@ public class TenderContainer extends BaseContainer {
         container.drawSlot(this.stock.cargoItems, 0, 1, slotY);
         container.drawSlot(this.stock.cargoItems, 1, 1 + horizSlots * 16, slotY);
 
-        String quantityStr = String.format("%s/%s", this.stock.getLiquidAmount(), this.stock.getTankCapacity().MilliBuckets());
+        String quantityStr = String.format("%s/%s", this.stock.getLiquidAmount(), this.stock.getTankCapacity().asMillibuckets());
         container.drawCenteredString(quantityStr, 0, slotY);
 
         currY = container.drawPlayerInventoryConnector(0, currY, horizSlots);

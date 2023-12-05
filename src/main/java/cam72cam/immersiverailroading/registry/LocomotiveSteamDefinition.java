@@ -92,8 +92,8 @@ public class LocomotiveSteamDefinition extends LocomotiveDefinition {
     }
 
     public FluidQuantity getTankCapacity(Gauge gauge) {
-        return FluidQuantity.FromLiters((int) Math.ceil(this.tankCapacity_l * gauge.scale()))
-                .min(FluidQuantity.FromBuckets(1))
+        return FluidQuantity.fromLiters((int) Math.ceil(this.tankCapacity_l * gauge.scale()))
+                .min(FluidQuantity.fromBuckets(1))
                 .roundBuckets();
     }
 
