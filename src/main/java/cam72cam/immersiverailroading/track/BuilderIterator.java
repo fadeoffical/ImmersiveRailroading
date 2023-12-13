@@ -37,7 +37,7 @@ public abstract class BuilderIterator extends BuilderBase implements IIterableTr
         HashSet<Pair<Integer, Integer>> flexPositions = new HashSet<>();
 
         double horiz = info.settings.gauge.scale() * 1.1;
-        if (Config.ConfigDebug.oldNarrowWidth && info.settings.gauge.value() < 1) {
+        if (Config.ConfigDebug.oldNarrowWidth && info.settings.gauge.getRailDistance() < 1) {
             horiz /= 2;
         }
         if (info.settings.isGradeCrossing) {
@@ -89,7 +89,7 @@ public abstract class BuilderIterator extends BuilderBase implements IIterableTr
                     railHeights.put(gag, (float) relHeight);
                     yOffset.put(gag, (int) (gagPos.y - relHeight));
                 }
-                if (isFlex || Math.abs(q) > info.settings.gauge.value()) {
+                if (isFlex || Math.abs(q) > info.settings.gauge.getRailDistance()) {
                     flexPositions.add(gag);
                 }
             }

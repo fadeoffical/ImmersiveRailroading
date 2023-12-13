@@ -107,7 +107,7 @@ public class TileRail extends TileRailBase {
             TileRailBase be = this.getWorld().getBlockEntity(tpos, TileRailBase.class);
             if (be != null) {
                 be.railBedCache = this.info.settings.railBed;
-                be.cachedGauge = this.info.settings.gauge.value();
+                be.cachedGauge = this.info.settings.gauge.getRailDistance();
                 be.markDirty();
             }
         }
@@ -158,7 +158,7 @@ public class TileRail extends TileRailBase {
         if (this.info == null) {
             return 0;
         }
-        return this.info.settings.gauge.value();
+        return this.info.settings.gauge.getRailDistance();
     }
 
     @Override

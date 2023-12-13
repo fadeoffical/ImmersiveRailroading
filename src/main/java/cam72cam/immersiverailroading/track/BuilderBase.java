@@ -123,7 +123,7 @@ public abstract class BuilderBase {
                 if (!ITrack.isRail(this.world, main) && !this.world.isSnow(main)) {
                     this.world.setToAir(main);
                 }
-                if (this.info.settings.gauge.isModel() && ConfigDamage.enableSideBlockClearing && this.info.settings.type != TrackItems.SLOPE && this.info.settings.type != TrackItems.TURNTABLE) {
+                if (this.info.settings.gauge.isModelGauge() && ConfigDamage.enableSideBlockClearing && this.info.settings.type != TrackItems.SLOPE && this.info.settings.type != TrackItems.TURNTABLE) {
                     for (Facing facing : Facing.HORIZONTALS) {
                         Vec3i pos = main.offset(facing);
                         if (!ITrack.isRail(this.world, pos)) {

@@ -42,4 +42,4 @@ src/main/resources/mcmod.info
 # Files which previously were not ignored but should be ignored
 src/main/resources/META-INF
 src/main/resources/pack.mcmeta
-src/main/generated
+src/generated/**/*

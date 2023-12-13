@@ -242,7 +242,7 @@ public class RailInfo {
     }
 
     public TrackModel getTrackModel() {
-        return DefinitionManager.getTrack(this.settings.track, this.settings.gauge.value());
+        return DefinitionManager.getTrack(this.settings.track, this.settings.gauge.getRailDistance());
     }
 
     public static class Mutable {
@@ -322,7 +322,7 @@ public class RailInfo {
             int length = nbt.getInteger("length");
             int quarters = nbt.getInteger("turnQuarters");
             ItemStack railBed = new ItemStack(nbt.get("railBed"));
-            Gauge gauge = Gauge.from(nbt.getDouble("gauge"));
+            Gauge gauge = Gauge.getClosestGauge(nbt.getDouble("gauge"));
 
             if (type == TrackItems.SWITCH) {
                 quarters = 4;

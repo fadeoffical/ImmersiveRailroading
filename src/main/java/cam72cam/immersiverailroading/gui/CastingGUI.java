@@ -60,7 +60,7 @@ public class CastingGUI implements IScreen {
                                 CastingGUI.this.currentItem.is(IRItems.ITEM_ROLLING_STOCK_COMPONENT) ?
                                         new ItemRollingStockComponent.Data(CastingGUI.this.currentItem).def :
                                         new ItemRollingStock.Data(CastingGUI.this.currentItem).def;
-                        if (def != null && !CastingGUI.this.gauge.isModel() && CastingGUI.this.gauge.value() != def.recommended_gauge.value()) {
+                        if (def != null && !CastingGUI.this.gauge.isModelGauge() && CastingGUI.this.gauge.getRailDistance() != def.recommended_gauge.getRailDistance()) {
                             CastingGUI.this.gauge = def.recommended_gauge;
                             CastingGUI.this.gaugeButton.setText(GuiText.SELECTOR_GAUGE.toString(CastingGUI.this.gauge));
                         }
@@ -78,10 +78,10 @@ public class CastingGUI implements IScreen {
                 if (!CastingGUI.this.currentItem.isEmpty()) {
                     EntityRollingStockDefinition def = new ItemRollingStockComponent.Data(CastingGUI.this.currentItem).def;
                     if (def != null && ConfigBalance.DesignGaugeLock) {
-                        List<Gauge> validGauges = Collections.singletonList(Gauge.from(def.recommended_gauge.value()));
+                        List<Gauge> validGauges = Collections.singletonList(Gauge.getClosestGauge(def.recommended_gauge.getRailDistance()));
                         CastingGUI.this.gauge = next(validGauges, CastingGUI.this.gauge, hand);
                     } else {
-                        CastingGUI.this.gauge = next(Gauge.values(), CastingGUI.this.gauge, hand);
+                        CastingGUI.this.gauge = next(Gauge.getRegisteredGauges(), CastingGUI.this.gauge, hand);
                     }
                 }
                 CastingGUI.this.gaugeButton.setText(GuiText.SELECTOR_GAUGE.toString(CastingGUI.this.gauge));

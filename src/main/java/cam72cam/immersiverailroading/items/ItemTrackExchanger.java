@@ -64,7 +64,7 @@ public class ItemTrackExchanger extends CustomItem {
                 this.railBed = ItemStack.EMPTY;
             }
             if (this.gauge == null) {
-                this.gauge = Gauge.from(Gauge.STANDARD);
+                this.gauge = Gauge.getClosestGauge(Gauge.STANDARD);
             }
         }
     }

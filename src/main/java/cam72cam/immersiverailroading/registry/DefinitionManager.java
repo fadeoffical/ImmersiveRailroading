@@ -121,8 +121,8 @@ public class DefinitionManager {
     }
 
     private static void initGauges() throws IOException {
-        for (Gauge value : new ArrayList<>(Gauge.values())) {
-            Gauge.remove(value.value());
+        for (Gauge value : new ArrayList<>(Gauge.getRegisteredGauges())) {
+            Gauge.removeGauge(value.getRailDistance());
         }
 
         List<DataBlock> blocks = new ArrayList<>();
@@ -144,7 +144,7 @@ public class DefinitionManager {
         for (DataBlock gauges : blocks) {
             DataBlock register = gauges.getBlock("register");
             if (register != null) {
-                register.getValueMap().forEach((key, value) -> Gauge.register(value.asDouble(), key));
+                register.getValueMap().forEach((key, value) -> Gauge.registerGauge(value.asDouble(), key));
             }
             List<DataBlock.Value> remove = gauges.getValues("remove");
             if (remove != null) {
@@ -155,7 +155,7 @@ public class DefinitionManager {
         }
 
         for (double gauge : toRemove) {
-            Gauge.remove(gauge);
+            Gauge.removeGauge(gauge);
         }
     }
 

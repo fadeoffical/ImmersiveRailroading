@@ -103,12 +103,12 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
         double gauge = 0;
         TileRail parent = this.getParentTile();
         if (parent != null && parent.info != null) {
-            gauge = parent.info.settings.gauge.value();
+            gauge = parent.info.settings.gauge.getRailDistance();
         }
         if (this.getParentReplaced() != null && this.getWorld() != null) {
             parent = this.getWorld().getBlockEntity(this.getParentReplaced(), TileRail.class);
             if (parent != null && parent.info != null) {
-                gauge = Math.min(gauge, parent.info.settings.gauge.value());
+                gauge = Math.min(gauge, parent.info.settings.gauge.getRailDistance());
             }
         }
         return gauge;
@@ -612,7 +612,7 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
             return this.cachedGauge != null ? this.cachedGauge : 0;
 
         TileRail parent = this.getParentTile();
-        if (parent != null) this.cachedGauge = parent.info.settings.gauge.value();
+        if (parent != null) this.cachedGauge = parent.info.settings.gauge.getRailDistance();
 
         return this.cachedGauge != null ? this.cachedGauge : 0;
     }

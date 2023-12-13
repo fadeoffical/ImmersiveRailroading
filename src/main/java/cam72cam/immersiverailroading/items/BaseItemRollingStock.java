@@ -62,7 +62,7 @@ public abstract class BaseItemRollingStock extends CustomItem {
             super(stack);
 
             if (this.gauge == null) {
-                this.gauge = this.def != null ? this.def.recommended_gauge : Gauge.from(Gauge.STANDARD);
+                this.gauge = this.def != null ? this.def.recommended_gauge : Gauge.getClosestGauge(Gauge.STANDARD);
             }
 
             if (this.def != null && !this.def.textureNames.containsKey(this.texture)) {

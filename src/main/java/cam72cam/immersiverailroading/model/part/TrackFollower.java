@@ -103,7 +103,7 @@ public class TrackFollower {
     }
 
     public Vec3d nextPosition(World world, Gauge gauge, Vec3d currentPosition, float rotationYaw, float bogeyYaw, double distance) {
-        ITrack rail = MovementTrack.findTrack(world, currentPosition, rotationYaw, gauge.value());
+        ITrack rail = MovementTrack.findTrack(world, currentPosition, rotationYaw, gauge.getRailDistance());
         if (rail == null) {
             return currentPosition;
         }

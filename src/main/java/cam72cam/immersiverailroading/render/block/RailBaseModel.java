@@ -27,7 +27,7 @@ public class RailBaseModel {
         int snow = te.getSnowLayers();
         Augment augment = te.getAugment();
         double gauged = te.getRenderGauge();
-        Gauge gauge = Gauge.from(gauged);
+        Gauge gauge = Gauge.getClosestGauge(gauged);
 
         StandardModel model = new StandardModel();
         if (te instanceof TileRail && ((TileRail) te).info != null) {

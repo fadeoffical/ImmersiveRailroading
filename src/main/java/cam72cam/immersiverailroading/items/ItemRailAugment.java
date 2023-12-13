@@ -69,7 +69,7 @@ public class ItemRailAugment extends CustomItem {
             if (te != null) {
                 ItemStack stack = player.getHeldItem(hand);
                 Data data = new Data(stack);
-                if (te.getAugment() == null && (player.isCreative() || Gauge.from(te.getTrackGauge()) == data.gauge)) {
+                if (te.getAugment() == null && (player.isCreative() || Gauge.getClosestGauge(te.getTrackGauge()) == data.gauge)) {
                     TileRail parent = te.getParentTile();
                     if (parent == null) {
                         return ClickResult.REJECTED;
@@ -125,7 +125,7 @@ public class ItemRailAugment extends CustomItem {
         public Data(ItemStack stack) {
             super(stack);
             if (this.gauge == null) {
-                this.gauge = Gauge.from(Gauge.STANDARD);
+                this.gauge = Gauge.getClosestGauge(Gauge.STANDARD);
             }
             if (this.augment == null) {
                 this.augment = Augment.SPEED_RETARDER;

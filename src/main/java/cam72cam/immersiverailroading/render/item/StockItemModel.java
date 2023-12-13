@@ -63,7 +63,7 @@ public class StockItemModel implements ItemRender.ISpriteItemModel {
         EntityRollingStockDefinition def = data.def;
 
         return new StandardModel().addCustom((state, pt) -> {
-            Gauge std = Gauge.from(Gauge.STANDARD);
+            Gauge std = Gauge.getClosestGauge(Gauge.STANDARD);
             double modelLength = def.getLength(std);
             double size = Math.max(def.getHeight(std), def.getWidth(std));
             double scale = -1.6 / size;

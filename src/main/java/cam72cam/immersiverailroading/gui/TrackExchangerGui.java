@@ -71,7 +71,7 @@ public class TrackExchangerGui implements IScreen {
         this.gaugeButton = new Button(screen, -100, 3 * 22, GuiText.SELECTOR_GAUGE.toString(this.gauge)) {
             @Override
             public void onClick(Player.Hand hand) {
-                TrackExchangerGui.this.gauge = next(Gauge.values(), TrackExchangerGui.this.gauge, hand);
+                TrackExchangerGui.this.gauge = next(Gauge.getRegisteredGauges(), TrackExchangerGui.this.gauge, hand);
                 TrackExchangerGui.this.gaugeButton.setText(GuiText.SELECTOR_GAUGE.toString(TrackExchangerGui.this.gauge));
             }
         };

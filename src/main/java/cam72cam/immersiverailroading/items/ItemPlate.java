@@ -41,7 +41,7 @@ public class ItemPlate extends CustomItem {
                 if (plate != PlateType.BOILER) {
                     Data data = new Data(stack);
                     data.type = plate;
-                    data.gauge = Gauge.from(Gauge.STANDARD);
+                    data.gauge = Gauge.getClosestGauge(Gauge.STANDARD);
                     data.write();
                     items.add(stack);
                 } else {
@@ -50,7 +50,7 @@ public class ItemPlate extends CustomItem {
                             stack = stack.copy();
                             Data data = new Data(stack);
                             data.type = plate;
-                            data.gauge = Gauge.from(Gauge.STANDARD);
+                            data.gauge = Gauge.getClosestGauge(Gauge.STANDARD);
                             data.def = def;
                             data.write();
                             items.add(stack);
@@ -94,7 +94,7 @@ public class ItemPlate extends CustomItem {
             super(stack);
 
             if (this.gauge == null) {
-                this.gauge = this.def != null ? this.def.recommended_gauge : Gauge.from(Gauge.STANDARD);
+                this.gauge = this.def != null ? this.def.recommended_gauge : Gauge.getClosestGauge(Gauge.STANDARD);
             }
             if (this.type == null) {
                 this.type = PlateType.SMALL;

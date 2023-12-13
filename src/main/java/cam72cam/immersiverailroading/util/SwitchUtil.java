@@ -59,7 +59,7 @@ public final class SwitchUtil {
     private static boolean isRailPowered(TileRail rail) {
         Vec3d redstoneOrigin = rail.info.placementInfo.placementPosition.add(rail.getPos());
         double horiz = rail.info.settings.gauge.scale() * 1.1;
-        if (Config.ConfigDebug.oldNarrowWidth && rail.info.settings.gauge.value() < 1) {
+        if (Config.ConfigDebug.oldNarrowWidth && rail.info.settings.gauge.getRailDistance() < 1) {
             horiz /= 2;
         }
         int scale = (int) Math.round(horiz);

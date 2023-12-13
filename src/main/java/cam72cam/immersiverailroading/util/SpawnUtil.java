@@ -32,7 +32,7 @@ public final class SpawnUtil {
             return ClickResult.REJECTED;
         }
         double trackGauge = initte.getTrackGauge();
-        Gauge gauge = Gauge.from(trackGauge);
+        Gauge gauge = Gauge.getClosestGauge(trackGauge);
 
 
         if (!player.isCreative() && gauge != data.gauge) {

@@ -143,7 +143,7 @@ public abstract class Locomotive extends FreightTank {
             if (this.getDefinition().isCog() && this.getTickCount() % 20 == 0) {
                 SimulationState state = this.getCurrentState();
                 if (state != null) {
-                    ITrack found = MovementTrack.findTrack(this.getWorld(), state.couplerPositionFront, state.yaw, this.gauge.value());
+                    ITrack found = MovementTrack.findTrack(this.getWorld(), state.couplerPositionFront, state.yaw, this.gauge.getRailDistance());
                     if (found instanceof TileRailBase) {
                         TileRailBase onTrack = (TileRailBase) found;
                         this.cogging = onTrack.isCog();
@@ -383,7 +383,7 @@ public abstract class Locomotive extends FreightTank {
             if (this.getWorld().isClient) {
                 return ClickResult.ACCEPTED;
             }
-            if (this.gauge.isModel() || this.getDefinition()
+            if (this.gauge.isModelGauge() || this.getDefinition()
                     .getRadioCapability() || !Config.ConfigBalance.RadioEquipmentRequired) {
                 ItemRadioCtrlCard.Data data = new ItemRadioCtrlCard.Data(player.getHeldItem(hand));
                 if (player.isCrouching()) {

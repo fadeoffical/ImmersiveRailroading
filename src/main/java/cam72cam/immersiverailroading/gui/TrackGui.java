@@ -112,7 +112,7 @@ public class TrackGui implements IScreen {
         ytop += height;
 
         this.gaugeSelector = new ListSelector<Gauge>(screen, width, 100, height, this.settings.gauge,
-                Gauge.values()
+                Gauge.getRegisteredGauges()
                         .stream()
                         .collect(Collectors.toMap(Gauge::toString, g -> g, (u, v) -> u, LinkedHashMap::new))
         ) {

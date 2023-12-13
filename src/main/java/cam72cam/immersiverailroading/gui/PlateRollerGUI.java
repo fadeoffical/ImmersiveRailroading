@@ -50,10 +50,10 @@ public class PlateRollerGUI implements IScreen {
                 if (!PlateRollerGUI.this.currentItem.isEmpty()) {
                     EntityRollingStockDefinition def = new ItemPlate.Data(PlateRollerGUI.this.currentItem).def;
                     if (def != null && ConfigBalance.DesignGaugeLock) {
-                        List<Gauge> validGauges = Collections.singletonList(Gauge.from(def.recommended_gauge.value()));
+                        List<Gauge> validGauges = Collections.singletonList(Gauge.getClosestGauge(def.recommended_gauge.getRailDistance()));
                         PlateRollerGUI.this.gauge = next(validGauges, PlateRollerGUI.this.gauge, hand);
                     } else {
-                        PlateRollerGUI.this.gauge = next(Gauge.values(), PlateRollerGUI.this.gauge, hand);
+                        PlateRollerGUI.this.gauge = next(Gauge.getRegisteredGauges(), PlateRollerGUI.this.gauge, hand);
                     }
                 }
                 PlateRollerGUI.this.gaugeButton.setText(GuiText.SELECTOR_GAUGE.toString(PlateRollerGUI.this.gauge));
@@ -78,7 +78,7 @@ public class PlateRollerGUI implements IScreen {
 
                         ItemPlate.Data data = new ItemPlate.Data(item);
                         EntityRollingStockDefinition def = data.def;
-                        if (def != null && !PlateRollerGUI.this.gauge.isModel() && PlateRollerGUI.this.gauge.value() != def.recommended_gauge.value()) {
+                        if (def != null && !PlateRollerGUI.this.gauge.isModelGauge() && PlateRollerGUI.this.gauge.getRailDistance() != def.recommended_gauge.getRailDistance()) {
                             PlateRollerGUI.this.gauge = def.recommended_gauge;
                             PlateRollerGUI.this.gaugeButton.setText(GuiText.SELECTOR_GAUGE.toString(PlateRollerGUI.this.gauge));
                         }

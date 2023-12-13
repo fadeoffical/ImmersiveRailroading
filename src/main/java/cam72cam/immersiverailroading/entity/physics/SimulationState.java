@@ -109,8 +109,8 @@ public class SimulationState {
         Vec3d positionFront = this.couplerPositionFront = this.position.add(bogeyFront);
         Vec3d positionRear = this.couplerPositionRear = this.position.add(bogeyRear);
 
-        ITrack trackFront = MovementTrack.findTrack(this.config.world, positionFront, this.yaw, this.config.gauge.value());
-        ITrack trackRear = MovementTrack.findTrack(this.config.world, positionRear, this.yaw, this.config.gauge.value());
+        ITrack trackFront = MovementTrack.findTrack(this.config.world, positionFront, this.yaw, this.config.gauge.getRailDistance());
+        ITrack trackRear = MovementTrack.findTrack(this.config.world, positionRear, this.yaw, this.config.gauge.getRailDistance());
 
         if (trackFront != null && trackRear != null) {
             Vec3d couplerVecFront = VecUtil.fromWrongYaw(this.config.couplerDistanceFront - this.config.offsetFront, this.yawFront);
@@ -223,8 +223,8 @@ public class SimulationState {
         Vec3d positionRear = VecUtil.fromWrongYawPitch(this.config.offsetRear, this.yaw, this.pitch).add(this.position);
 
         // Find tracks
-        ITrack trackFront = MovementTrack.findTrack(this.config.world, positionFront, this.yawFront, this.config.gauge.value());
-        ITrack trackRear = MovementTrack.findTrack(this.config.world, positionRear, this.yawRear, this.config.gauge.value());
+        ITrack trackFront = MovementTrack.findTrack(this.config.world, positionFront, this.yawFront, this.config.gauge.getRailDistance());
+        ITrack trackRear = MovementTrack.findTrack(this.config.world, positionRear, this.yawRear, this.config.gauge.getRailDistance());
         if (trackFront == null || trackRear == null) {
             return;
         }

@@ -26,6 +26,7 @@ import cam72cam.mod.serialization.TagMapped;
 import cam72cam.mod.sound.ISound;
 import cam72cam.mod.text.TextUtil;
 import cam72cam.mod.world.World;
+import trackapi.lib.Gauges;
 
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
@@ -204,18 +205,18 @@ public abstract class EntityRollingStockDefinition {
         this.internal_model_scale = 1;
         this.internal_inv_scale = 1;
         // TODO Gauge.from(Gauge.STANDARD).value() what happens when != Gauge.STANDARD
-        this.recommended_gauge = Gauge.from(Gauge.STANDARD);
+        this.recommended_gauge = Gauge.getClosestGauge(Gauges.STANDARD);
         Double model_gauge_m = data.getValue("model_gauge_m").asDouble();
         if (model_gauge_m != null) {
-            this.recommended_gauge = Gauge.from(model_gauge_m);
-            this.internal_model_scale = Gauge.STANDARD / model_gauge_m;
+            this.recommended_gauge = Gauge.getClosestGauge(model_gauge_m);
+            this.internal_model_scale = Gauges.STANDARD / model_gauge_m;
         }
         Double recommended_gauge_m = data.getValue("recommended_gauge_m").asDouble();
         if (recommended_gauge_m != null) {
-            this.recommended_gauge = Gauge.from(recommended_gauge_m);
+            this.recommended_gauge = Gauge.getClosestGauge(recommended_gauge_m);
         }
-        if (this.recommended_gauge != Gauge.from(Gauge.STANDARD)) {
-            this.internal_inv_scale = Gauge.STANDARD / this.recommended_gauge.value();
+        if (this.recommended_gauge != Gauge.getClosestGauge(Gauges.STANDARD)) {
+            this.internal_inv_scale = Gauges.STANDARD / this.recommended_gauge.getRailDistance();
         }
 
         this.textureNames = new LinkedHashMap<>();

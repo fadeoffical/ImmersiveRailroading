@@ -23,7 +23,7 @@ public class RailBuilderRender {
     };
 
     public static void renderRailBuilder(RailInfo info, List<VecYawPitch> renderData, RenderState state) {
-        TrackModel model = DefinitionManager.getTrack(info.settings.track, info.settings.gauge.value());
+        TrackModel model = DefinitionManager.getTrack(info.settings.track, info.settings.gauge.getRailDistance());
         if (model == null) {
             return;
         }

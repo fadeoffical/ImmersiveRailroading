@@ -49,7 +49,7 @@ public class Config {
     }
 
     public static boolean isFuelRequired(Gauge gauge) {
-        return !(!ConfigBalance.FuelRequired || (!ConfigBalance.ModelFuelRequired && gauge.isModel()));
+        return !(!ConfigBalance.FuelRequired || (!ConfigBalance.ModelFuelRequired && gauge.isModelGauge()));
     }
 
     @Name("damage")

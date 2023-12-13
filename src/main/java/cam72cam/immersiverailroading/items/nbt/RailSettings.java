@@ -150,7 +150,7 @@ public class RailSettings {
 
         private Mutable(TagCompound data) throws SerializationException {
             // Defaults
-            this.gauge = Gauge.from(Gauge.STANDARD);
+            this.gauge = Gauge.getClosestGauge(Gauge.STANDARD);
             this.type = TrackItems.STRAIGHT;
             this.track = "default";
             this.length = 10;
