@@ -63,7 +63,7 @@ public abstract class EntityRidableRollingStock extends EntityBuildableRollingSt
 
     @Override
     public boolean shouldRiderSit(Entity passenger) {
-        boolean nonSeated = this.getDefinition().shouldSit != null ? this.getDefinition().shouldSit : this.gauge.shouldSit();
+        boolean nonSeated = this.getDefinition().shouldSit != null ? this.getDefinition().shouldSit : this.getGauge().shouldSit();
         return nonSeated || this.seatedPassengers.containsValue(passenger.getUUID());
     }
 
@@ -89,7 +89,7 @@ public abstract class EntityRidableRollingStock extends EntityBuildableRollingSt
 
         int wiggle = passenger.isVillager() ? 10 : 0;
         off = off.add((Math.random() - 0.5) * wiggle, 0, (Math.random() - 0.5) * wiggle);
-        off = this.getDefinition().correctPassengerBounds(this.gauge, off, this.shouldRiderSit(passenger));
+        off = this.getDefinition().correctPassengerBounds(this.getGauge(), off, this.shouldRiderSit(passenger));
 
         return off;
     }
@@ -100,7 +100,7 @@ public abstract class EntityRidableRollingStock extends EntityBuildableRollingSt
                 .map(Map.Entry::getKey).findFirst().orElse(null);
         return this.getDefinition().getModel().getSeats().stream()
                 .filter(s -> s.part.key.equals(seat))
-                .map(s -> new Vec3d(s.part.center.z, s.part.min.y, -s.part.center.x).scale(this.gauge.scale())
+                .map(s -> new Vec3d(s.part.center.z, s.part.min.y, -s.part.center.x).scale(this.getGauge().scale())
                         .subtract(0, 0.6, 0))
                 .findFirst().orElse(null);
     }
@@ -115,7 +115,7 @@ public abstract class EntityRidableRollingStock extends EntityBuildableRollingSt
         if (seat != null) {
             offset = seat;
         } else {
-            offset = this.getDefinition().correctPassengerBounds(this.gauge, offset, this.shouldRiderSit(passenger));
+            offset = this.getDefinition().correctPassengerBounds(this.getGauge(), offset, this.shouldRiderSit(passenger));
         }
         offset = offset.add(0, Math.sin(Math.toRadians(this.getRotationPitch())) * offset.z, 0);
 
@@ -140,8 +140,8 @@ public abstract class EntityRidableRollingStock extends EntityBuildableRollingSt
         if (this instanceof EntityCoupleableRollingStock) {
             EntityCoupleableRollingStock couplable = (EntityCoupleableRollingStock) this;
 
-            boolean atFront = this.getDefinition().isAtFront(this.gauge, offset);
-            boolean atBack = this.getDefinition().isAtRear(this.gauge, offset);
+            boolean atFront = this.getDefinition().isAtFront(this.getGauge(), offset);
+            boolean atBack = this.getDefinition().isAtRear(this.getGauge(), offset);
             // TODO config for strict doors
             boolean atDoor = this.isNearestDoorOpen(source);
 
@@ -174,7 +174,7 @@ public abstract class EntityRidableRollingStock extends EntityBuildableRollingSt
                 .stream()
                 .anyMatch(x -> x.isAtOpenDoor(source, this, Door.Types.EXTERNAL)) &&
                 this.getWorld().isServer &&
-                !this.getDefinition().correctPassengerBounds(this.gauge, offset, this.shouldRiderSit(source)).equals(offset)
+                !this.getDefinition().correctPassengerBounds(this.getGauge(), offset, this.shouldRiderSit(source)).equals(offset)
         ) {
             this.removePassenger(source);
         }
@@ -187,7 +187,7 @@ public abstract class EntityRidableRollingStock extends EntityBuildableRollingSt
         return !this.getDefinition().getModel().getDoors().stream()
                 .filter(d -> d.type == Door.Types.CONNECTING)
                 .filter(d -> d.center(this)
-                        .distanceTo(source.getPosition()) < this.getDefinition().getLength(this.gauge) / 3)
+                        .distanceTo(source.getPosition()) < this.getDefinition().getLength(this.getGauge()) / 3)
                 .min(Comparator.comparingDouble(d -> d.center(this).distanceTo(source.getPosition())))
                 .filter(x -> !x.isOpen(this))
                 .isPresent();
@@ -204,7 +204,7 @@ public abstract class EntityRidableRollingStock extends EntityBuildableRollingSt
         }
 
         //TODO calculate better dismount offset
-        offset = new Vec3d(Math.copySign(this.getDefinition().getWidth(this.gauge) / 2 + 1, offset.x), 0, offset.z);
+        offset = new Vec3d(Math.copySign(this.getDefinition().getWidth(this.getGauge()) / 2 + 1, offset.x), 0, offset.z);
 
         if (this.getWorld().isServer && passenger.isVillager() && this.payingPassengerPositions.containsKey(passenger.getUUID())) {
             double distanceMoved = passenger.getPosition()

@@ -19,12 +19,14 @@ import cam72cam.mod.serialization.TagField;
 import cam72cam.mod.text.TextUtil;
 import cam72cam.mod.util.Facing;
 import cam72cam.mod.world.World;
+import trackapi.lib.Gauges;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 public class ItemRailAugment extends CustomItem {
+
     public ItemRailAugment() {
         super(ImmersiveRailroading.MODID, "item_augment");
     }
@@ -59,7 +61,7 @@ public class ItemRailAugment extends CustomItem {
 
     @Override
     public List<String> getTooltip(ItemStack stack) {
-        return Collections.singletonList(GuiText.GAUGE_TOOLTIP.toString(new Data(stack).gauge));
+        return Collections.singletonList(GuiText.GAUGE_TOOLTIP.translate(new Data(stack).gauge));
     }
 
     @Override
@@ -117,16 +119,17 @@ public class ItemRailAugment extends CustomItem {
     }
 
     public static class Data extends ItemDataSerializer {
+
         @TagField("gauge")
         public Gauge gauge;
+
         @TagField("augment")
         public Augment augment;
 
         public Data(ItemStack stack) {
             super(stack);
-            if (this.gauge == null) {
-                this.gauge = Gauge.getClosestGauge(Gauge.STANDARD);
-            }
+            this.gauge = Gauge.getClosestGauge(Gauges.STANDARD);
+
             if (this.augment == null) {
                 this.augment = Augment.SPEED_RETARDER;
             }

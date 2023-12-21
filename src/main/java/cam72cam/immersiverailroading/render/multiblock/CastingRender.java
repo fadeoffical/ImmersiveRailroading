@@ -1,6 +1,6 @@
 package cam72cam.immersiverailroading.render.multiblock;
 
-import cam72cam.immersiverailroading.multiblock.CastingMultiblock.CastingInstance;
+import cam72cam.immersiverailroading.multiblock.CastingMultiBlock.CastingInstance;
 import cam72cam.immersiverailroading.tile.TileMultiblock;
 import cam72cam.mod.model.obj.OBJModel;
 import cam72cam.mod.render.obj.OBJRender;

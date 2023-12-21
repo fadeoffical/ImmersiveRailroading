@@ -37,11 +37,7 @@ public final class SwitchUtil {
             double isOnTurn = turnBuilder.offsetFromTrack(rail.info, rail.getPos(), position);
 
             if (Math.abs(isOnStraight - isOnTurn) > rail.info.settings.gauge.scale() / 16) {
-                if (isOnStraight > isOnTurn) {
-                    return SwitchState.NONE;
-                } else {
-                    return SwitchState.STRAIGHT;
-                }
+                return isOnStraight > isOnTurn ? SwitchState.NONE : SwitchState.STRAIGHT;
             }
         }
 

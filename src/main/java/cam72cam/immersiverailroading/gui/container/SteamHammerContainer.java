@@ -4,37 +4,40 @@ import cam72cam.immersiverailroading.tile.TileMultiblock;
 import cam72cam.mod.fluid.Fluid;
 import cam72cam.mod.gui.container.IContainer;
 import cam72cam.mod.gui.container.IContainerBuilder;
+import cam72cam.mod.render.opengl.RenderState;
 
 public class SteamHammerContainer implements IContainer {
+
     private final TileMultiblock tile;
 
     public SteamHammerContainer(TileMultiblock tile) {
         this.tile = tile;
     }
 
-    public void draw(IContainerBuilder container) {
-        int currY = 0;
-        int horizSlots = 10;
-        int inventoryRows = 4;
+    @Override
+    public void draw(IContainerBuilder container, RenderState state) {
+        int currentY = 0;
+        int horizontalSlots = 10;
+        currentY = container.drawTopBar(0, currentY, horizontalSlots);
 
-        currY = container.drawTopBar(0, currY, horizSlots);
-        int tankY = currY;
+        int tankY = currentY;
         int slotY = 0;
 
+        int inventoryRows = 4;
         for (int i = 0; i < inventoryRows; i++) {
-            currY = container.drawSlotRow(null, 0, horizSlots, 0, currY);
+            currentY = container.drawSlotRow(null, 0, horizontalSlots, 0, currentY);
             if (i == 0) {
-                slotY = currY;
+                slotY = currentY;
             }
         }
 
-        container.drawTankBlock(0, tankY, horizSlots, inventoryRows, Fluid.LAVA, this.tile.getCraftProgress() / 100f);
+        container.drawTankBlock(0, tankY, horizontalSlots, inventoryRows, Fluid.LAVA, this.tile.getCraftProgress() / 100f);
 
         container.drawSlot(this.tile.getContainer(), 0, 0, slotY);
-        container.drawSlot(this.tile.getContainer(), 1, 16 * horizSlots, slotY);
+        container.drawSlot(this.tile.getContainer(), 1, 16 * horizontalSlots, slotY);
 
-        currY = container.drawPlayerInventoryConnector(0, currY, horizSlots);
-        currY = container.drawPlayerInventory(currY, horizSlots);
+        currentY = container.drawPlayerInventoryConnector(0, currentY, horizontalSlots);
+        currentY = container.drawPlayerInventory(currentY, horizontalSlots);
     }
 
     @Override

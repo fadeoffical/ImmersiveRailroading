@@ -34,7 +34,7 @@ public final class Gauge {
         gauges.add(new Gauge(railDistance, name));
 
         // todo: do we have to sort?
-        gauges.sort((first, second) -> Double.compare(second.railDistance, first.railDistance));
+        gauges.sort((first, second) -> Double.compare(second.getRailDistance(), first.getRailDistance()));
     }
 
     public static void removeGauge(double railDistance) {
@@ -67,15 +67,22 @@ public final class Gauge {
         return gauges.stream()
                 .filter(gauge -> gauge.getRailDistance() == railDistance)
                 .findFirst()
-                .orElseGet(() -> {
-                    Gauge closest = gauges.get(0);
-                    for (Gauge gauge : gauges) {
-                        if (Math.abs(gauge.getRailDistance() - railDistance) < Math.abs(closest.getRailDistance() - railDistance)) {
-                            closest = gauge;
-                        }
-                    }
-                    return closest;
-                });
+                .orElseGet(() -> findClosestGauge(railDistance));
+    }
+
+    private static Gauge findClosestGauge(double railDistance) {
+        if (gauges.isEmpty())
+            throw new IllegalStateException("No gauges registered");
+
+        Gauge closest = gauges.get(0);
+        for (Gauge gauge : gauges) {
+            double loopGaugeDifference = Math.abs(gauge.getRailDistance() - railDistance);
+            double closestGaugeDifference = Math.abs(closest.getRailDistance() - railDistance);
+
+            if (loopGaugeDifference < closestGaugeDifference) closest = gauge;
+        }
+
+        return closest;
     }
 
     public double scale() {
@@ -85,8 +92,8 @@ public final class Gauge {
     @Override
     public boolean equals(Object object) {
         if (!(object instanceof Gauge)) return false;
-        Gauge gauge = (Gauge) object;
 
+        Gauge gauge = (Gauge) object;
         return gauge.getRailDistance() == this.railDistance;
     }
 
@@ -113,19 +120,19 @@ public final class Gauge {
     /**
      * Whether a player should sit while inside a rolling stock with this gauge
      * <p>
-     * A passenger should sit if the gauge is smaller than 1.5 meters
+     * A passenger should sit if the gauge is smaller than minecraft gauge (0.632 meters).
      *
      * @return true if the gauge is a minecraft gauge
      */
     // todo: this should be a field of the model. having this be dependent
     //       on the gauge is weird since you could have a waggon
-    //       on which you stand on
+    //       on which you stand on, which gauge is smaller than or equal to minecraft gauge
     public boolean shouldSit() {
         return this.railDistance <= Gauges.MINECRAFT;
     }
 
     // this has to be protected, as this class is referenced in an annotation
-    // java 8 moment :sob:
+    // java 8(?) moment :sob:
     protected static final class GaugeTagMapper implements TagMapper<Gauge> {
 
         @Override

@@ -5,6 +5,7 @@ import cam72cam.mod.util.FastMath;
 import util.Matrix4;
 
 public final class VecUtil {
+
     private VecUtil() {
         // Disable construction since java does not have static classes
         // yea, but it does have final classes with private constructors<3 hehe

@@ -4,6 +4,7 @@ import cam72cam.immersiverailroading.ImmersiveRailroading;
 import cam72cam.immersiverailroading.library.*;
 import cam72cam.mod.item.ItemStack;
 import cam72cam.mod.serialization.*;
+import trackapi.lib.Gauges;
 
 import java.util.function.Consumer;
 
@@ -104,85 +105,202 @@ public class RailSettings {
         }
     }
 
-    public static class Mutable {
+    public static final class Mutable {
+
         @TagField(value = "gauge")
-        public Gauge gauge;
+        private Gauge gauge;
+
         @TagField("type")
-        public TrackItems type;
+        private TrackItems type;
+
         @TagField("length")
-        public int length;
+        private int length;
+
         @TagField(value = "degrees", mapper = DegreesMapper.class)
-        public float degrees;
+        private float degrees;
+
         @TagField("curvosity")
-        public float curvosity;
+        private float curvosity;
+
         @TagField("pos_type")
-        public TrackPositionType posType;
+        private TrackPositionType posType;
+
         @TagField(value = "smoothing", mapper = SmoothingMapper.class)
-        public TrackSmoothing smoothing;
+        private TrackSmoothing smoothing;
+
         @TagField("direction")
-        public TrackDirection direction;
+        private TrackDirection direction;
+
         @TagField("bedItem")
-        public ItemStack railBed;
+        private ItemStack railBed;
+
         @TagField("bedFill")
-        public ItemStack railBedFill;
+        private ItemStack railBedFill;
+
         @TagField("isPreview")
-        public boolean isPreview;
+        private boolean isPreview;
+
         @TagField("isGradeCrossing")
-        public boolean isGradeCrossing;
+        private boolean isGradeCrossing;
+
         @TagField("track")
-        public String track;
+        private String track;
 
         private Mutable(RailSettings settings) {
-            this.gauge = settings.gauge;
-            this.track = settings.track;
-            this.type = settings.type;
-            this.length = settings.length;
-            this.degrees = settings.degrees;
-            this.curvosity = settings.curvosity;
-            this.posType = settings.posType;
-            this.smoothing = settings.smoothing;
-            this.direction = settings.direction;
-            this.railBed = settings.railBed;
-            this.railBedFill = settings.railBedFill;
-            this.isPreview = settings.isPreview;
-            this.isGradeCrossing = settings.isGradeCrossing;
+            this.setGauge(settings.gauge);
+            this.setTrack(settings.track);
+            this.setType(settings.type);
+            this.setLength(settings.length);
+            this.setDegrees(settings.degrees);
+            this.setCurvosity(settings.curvosity);
+            this.setPosType(settings.posType);
+            this.setSmoothing(settings.smoothing);
+            this.setDirection(settings.direction);
+            this.setRailBed(settings.railBed);
+            this.setRailBedFill(settings.railBedFill);
+            this.setPreview(settings.isPreview);
+            this.setGradeCrossing(settings.isGradeCrossing);
         }
 
         private Mutable(TagCompound data) throws SerializationException {
             // Defaults
-            this.gauge = Gauge.getClosestGauge(Gauge.STANDARD);
-            this.type = TrackItems.STRAIGHT;
-            this.track = "default";
-            this.length = 10;
-            this.degrees = 90;
-            this.posType = TrackPositionType.FIXED;
-            this.smoothing = TrackSmoothing.BOTH;
-            this.direction = TrackDirection.NONE;
-            this.railBed = ItemStack.EMPTY;
-            this.railBedFill = ItemStack.EMPTY;
-            this.isPreview = false;
-            this.isGradeCrossing = false;
-            this.curvosity = 1;
+            this.setGauge(Gauge.getClosestGauge(Gauges.STANDARD));
+            this.setType(TrackItems.STRAIGHT);
+            this.setTrack("default");
+            this.setLength(10);
+            this.setDegrees(90);
+            this.setPosType(TrackPositionType.FIXED);
+            this.setSmoothing(TrackSmoothing.BOTH);
+            this.setDirection(TrackDirection.NONE);
+            this.setRailBed(ItemStack.EMPTY);
+            this.setRailBedFill(ItemStack.EMPTY);
+            this.setPreview(false);
+            this.setGradeCrossing(false);
+            this.setCurvosity(1);
 
             TagSerializer.deserialize(data, this);
         }
 
         public RailSettings immutable() {
             return new RailSettings(
-                    this.gauge,
-                    this.track,
-                    this.type,
-                    this.length,
-                    this.degrees,
-                    this.curvosity,
-                    this.posType,
-                    this.smoothing,
-                    this.direction,
-                    this.railBed,
-                    this.railBedFill,
-                    this.isPreview,
-                    this.isGradeCrossing
+                    this.getGauge(),
+                    this.getTrack(),
+                    this.getType(),
+                    this.getLength(),
+                    this.getDegrees(),
+                    this.getCurvosity(),
+                    this.getPosType(),
+                    this.getSmoothing(),
+                    this.getDirection(),
+                    this.getRailBed(),
+                    this.getRailBedFill(),
+                    this.isPreview(),
+                    this.isGradeCrossing()
             );
+        }
+
+        public Gauge getGauge() {
+            return this.gauge;
+        }
+
+        public void setGauge(Gauge gauge) {
+            this.gauge = gauge;
+        }
+
+        public TrackItems getType() {
+            return this.type;
+        }
+
+        public void setType(TrackItems type) {
+            this.type = type;
+        }
+
+        public int getLength() {
+            return this.length;
+        }
+
+        public void setLength(int length) {
+            this.length = length;
+        }
+
+        public float getDegrees() {
+            return this.degrees;
+        }
+
+        public void setDegrees(float degrees) {
+            this.degrees = degrees;
+        }
+
+        public float getCurvosity() {
+            return this.curvosity;
+        }
+
+        public void setCurvosity(float curvosity) {
+            this.curvosity = curvosity;
+        }
+
+        public TrackPositionType getPosType() {
+            return this.posType;
+        }
+
+        public void setPosType(TrackPositionType posType) {
+            this.posType = posType;
+        }
+
+        public TrackSmoothing getSmoothing() {
+            return this.smoothing;
+        }
+
+        public void setSmoothing(TrackSmoothing smoothing) {
+            this.smoothing = smoothing;
+        }
+
+        public TrackDirection getDirection() {
+            return this.direction;
+        }
+
+        public void setDirection(TrackDirection direction) {
+            this.direction = direction;
+        }
+
+        public ItemStack getRailBed() {
+            return this.railBed;
+        }
+
+        public void setRailBed(ItemStack railBed) {
+            this.railBed = railBed;
+        }
+
+        public ItemStack getRailBedFill() {
+            return this.railBedFill;
+        }
+
+        public void setRailBedFill(ItemStack railBedFill) {
+            this.railBedFill = railBedFill;
+        }
+
+        public boolean isPreview() {
+            return this.isPreview;
+        }
+
+        public void setPreview(boolean preview) {
+            this.isPreview = preview;
+        }
+
+        public boolean isGradeCrossing() {
+            return this.isGradeCrossing;
+        }
+
+        public void setGradeCrossing(boolean gradeCrossing) {
+            this.isGradeCrossing = gradeCrossing;
+        }
+
+        public String getTrack() {
+            return this.track;
+        }
+
+        public void setTrack(String track) {
+            this.track = track;
         }
     }
 
@@ -191,19 +309,19 @@ public class RailSettings {
         @Override
         public TagAccessor<RailSettings> apply(Class<RailSettings> type, String fieldName, TagField tag) throws SerializationException {
             return new TagAccessor<>(
-                    (d, o) -> {
+                    (nbt, railSettings) -> {
                         TagCompound target = new TagCompound();
                         try {
-                            TagSerializer.serialize(target, o.mutable());
+                            TagSerializer.serialize(target, railSettings.mutable());
                         } catch (SerializationException e) {
                             // This is messy
                             throw new RuntimeException(e);
                         }
-                        d.set(fieldName, target);
+                        nbt.set(fieldName, target);
                     },
-                    d -> {
+                    nbt -> {
                         try {
-                            return new Mutable(d.get(fieldName)).immutable();
+                            return new Mutable(nbt.get(fieldName)).immutable();
                         } catch (SerializationException e) {
                             throw new RuntimeException(e);
                         }

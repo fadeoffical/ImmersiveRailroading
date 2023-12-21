@@ -19,14 +19,14 @@ import cam72cam.mod.sound.SoundCategory;
 import cam72cam.mod.sound.StandardSound;
 import cam72cam.mod.world.World;
 
-public class BoilerRollerMultiblock extends Multiblock {
+public class BoilerRollerMultiBlock extends MultiBlock {
     public static final String NAME = "BOILER_MACHINE";
     private static final Vec3i render = new Vec3i(2, 0, 0);
     private static final Vec3i power = new Vec3i(5, 0, 3);
     private static final Vec3i crafting = new Vec3i(2, 0, 4);
     private static final FuzzyProvider slab = () -> Fuzzy.STONE_SLAB;
 
-    public BoilerRollerMultiblock() {
+    public BoilerRollerMultiBlock() {
         super(NAME, componentGenerator());
     }
 
@@ -87,7 +87,7 @@ public class BoilerRollerMultiblock extends Multiblock {
 
                         craftTe.getContainer().set(1, ItemStack.EMPTY);
                     }
-                } else if (held.is(IRItems.ITEM_PLATE) && new ItemPlate.Data(held).type == PlateType.BOILER) {
+                } else if (held.is(IRItems.ITEM_PLATE) && new ItemPlate.ItemPlateData(held).plateType == PlateType.BOILER) {
                     TileMultiblock craftTe = this.getTile(crafting);
                     if (craftTe == null) {
                         return false;
@@ -155,7 +155,7 @@ public class BoilerRollerMultiblock extends Multiblock {
 
             if (progress == 0) {
                 // Try to start crafting
-                if (input.is(IRItems.ITEM_PLATE) && new ItemPlate.Data(input).type == PlateType.BOILER && output.isEmpty()) {
+                if (input.is(IRItems.ITEM_PLATE) && new ItemPlate.ItemPlateData(input).plateType == PlateType.BOILER && output.isEmpty()) {
                     progress = 100;
                     craftTe.setCraftProgress(100);
                 }
@@ -164,9 +164,9 @@ public class BoilerRollerMultiblock extends Multiblock {
             if (progress == 1) {
                 // Stop crafting
                 ItemStack out = new ItemStack(IRItems.ITEM_ROLLING_STOCK_COMPONENT, 1);
-                ItemPlate.Data source = new ItemPlate.Data(input);
+                ItemPlate.ItemPlateData source = new ItemPlate.ItemPlateData(input);
                 ItemRollingStockComponent.Data data = new ItemRollingStockComponent.Data(out);
-                data.def = source.def;
+                data.rollingStockDefinition = source.rollingStockDefinition;
                 data.gauge = source.gauge;
                 data.componentType = ItemComponentType.BOILER_SEGMENT;
                 data.write();

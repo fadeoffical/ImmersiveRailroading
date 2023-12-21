@@ -13,7 +13,7 @@ import java.util.List;
 public class Tender extends CarTank {
 
     public int getInventoryWidth() {
-        return this.getDefinition().getInventoryWidth(this.gauge);
+        return this.getDefinition().getInventoryWidth(this.getGauge());
     }
 
     @Override
@@ -28,7 +28,7 @@ public class Tender extends CarTank {
 
     @Override
     public int getInventorySize() {
-        return this.getDefinition().getInventorySize(this.gauge) + 2;
+        return this.getDefinition().getInventorySize(this.getGauge()) + 2;
     }
 
     @Override
@@ -48,7 +48,7 @@ public class Tender extends CarTank {
     }
 
     @Override
-    protected int[] getContainertOutputSlots() {
+    protected int[] getContainerOutputSlots() {
         return new int[]{1};
     }
 }

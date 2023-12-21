@@ -35,7 +35,7 @@ public class RailBaseModel {
                 RailInfo info = ((TileRail) te).info;
                 if (info.settings.type == TrackItems.SWITCH) {
                     //TODO render switch and don't render turn
-                    info = info.withSettings(b -> b.type = TrackItems.STRAIGHT);
+                    info = info.withSettings(b -> b.setType(TrackItems.STRAIGHT));
                 }
                 if (info.settings.type == TrackItems.TURNTABLE) {
                     ItemStack held = MinecraftClient.getPlayer().getHeldItem(Player.Hand.PRIMARY);

@@ -50,7 +50,7 @@ public class CargoItems {
                 if (stack.is(IRItems.ITEM_ROLLING_STOCK_COMPONENT)) {
                     ItemRollingStockComponent.Data data = new ItemRollingStockComponent.Data(stack);
                     for (ModelComponentType r : data.componentType.render) {
-                        List<ModelComponent> mc = data.def.getComponents(r);
+                        List<ModelComponent> mc = data.rollingStockDefinition.getComponents(r);
                         if (mc == null) {
                             continue;
                         }
@@ -134,11 +134,11 @@ public class CargoItems {
                             model.addCustom((s, pt) -> {
                                 s.translate(pos);
                                 s.scale(data.gauge.scale(), data.gauge.scale(), data.gauge.scale());
-                                try (OBJRender.Binding binder = data.def.getModel()
+                                try (OBJRender.Binding binder = data.rollingStockDefinition.getModel()
                                         .binder()
                                         .texture(data.texture)
                                         .bind(s)) {
-                                    binder.draw(data.def.itemGroups);
+                                    binder.draw(data.rollingStockDefinition.itemGroups);
                                 }
                             });
                             renderSlot++;
@@ -150,7 +150,7 @@ public class CargoItems {
                             List<String> groups = new ArrayList<>();
 
                             for (ModelComponentType r : data.componentType.render) {
-                                List<ModelComponent> mc = data.def.getComponents(r);
+                                List<ModelComponent> mc = data.rollingStockDefinition.getComponents(r);
                                 if (mc == null || r == ModelComponentType.CARGO_FILL_X || r == ModelComponentType.CARGO_FILL_POS_X) {
                                     continue;
                                 }
@@ -162,7 +162,7 @@ public class CargoItems {
                                 s.translate(pos);
                                 s.scale(data.gauge.scale(), data.gauge.scale(), data.gauge.scale());
                                 s.translate(0, -componentOffset, 0);
-                                try (OBJRender.Binding binder = data.def.getModel()
+                                try (OBJRender.Binding binder = data.rollingStockDefinition.getModel()
                                         .binder()
                                         .texture(data.texture)
                                         .bind(s)) {

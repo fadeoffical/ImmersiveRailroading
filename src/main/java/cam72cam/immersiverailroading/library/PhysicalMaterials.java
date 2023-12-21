@@ -6,10 +6,6 @@ public enum PhysicalMaterials {
     WOOD,
     ;
 
-    public float staticFriction(PhysicalMaterials other) {
-        return this.friction(other, false);
-    }
-
     private float friction(PhysicalMaterials other, boolean kinetic) {
         // unless otherwise specified: https://structx.com/Material_Properties_005a.html
 
@@ -27,12 +23,16 @@ public enum PhysicalMaterials {
         return 0;
     }
 
-    private boolean match(PhysicalMaterials materialA, PhysicalMaterials materialB, PhysicalMaterials matchA, PhysicalMaterials matchB) {
-        return materialA == matchA && materialB == matchB ||
-                materialA == matchB && materialB == matchA;
+    public float staticFriction(PhysicalMaterials other) {
+        return this.friction(other, false);
     }
 
     public float kineticFriction(PhysicalMaterials other) {
         return this.friction(other, true);
+    }
+
+    private boolean match(PhysicalMaterials materialA, PhysicalMaterials materialB, PhysicalMaterials matchA, PhysicalMaterials matchB) {
+        return materialA == matchA && materialB == matchB ||
+                materialA == matchB && materialB == matchA;
     }
 }

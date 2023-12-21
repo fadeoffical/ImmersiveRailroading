@@ -1,6 +1,6 @@
 package cam72cam.immersiverailroading.gui.container;
 
-import cam72cam.immersiverailroading.entity.LocomotiveSteam;
+import cam72cam.immersiverailroading.entity.SteamLocomotive;
 import cam72cam.mod.gui.container.IContainerBuilder;
 import cam72cam.mod.item.Fuzzy;
 import cam72cam.mod.item.ItemStack;
@@ -8,10 +8,11 @@ import cam72cam.mod.item.ItemStack;
 import java.util.Map;
 
 public class SteamLocomotiveContainer extends BaseContainer {
-    public final LocomotiveSteam stock;
+
+    public final SteamLocomotive stock;
     private final ItemStack template;
 
-    public SteamLocomotiveContainer(LocomotiveSteam stock) {
+    public SteamLocomotiveContainer(SteamLocomotive stock) {
         this.stock = stock;
         this.template = Fuzzy.BUCKET.example();
     }

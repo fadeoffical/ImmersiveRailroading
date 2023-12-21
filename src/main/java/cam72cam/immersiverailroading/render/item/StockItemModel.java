@@ -14,6 +14,7 @@ import cam72cam.mod.render.obj.OBJRender;
 import cam72cam.mod.render.opengl.RenderState;
 import cam72cam.mod.resource.Identifier;
 import cam72cam.mod.world.World;
+import trackapi.lib.Gauges;
 
 public class StockItemModel implements ItemRender.ISpriteItemModel {
     @Override
@@ -27,7 +28,7 @@ public class StockItemModel implements ItemRender.ISpriteItemModel {
         double scale = data.gauge.scale();
         scale = 0.2 * Math.sqrt(scale);
 
-        if (data.def == null) {
+        if (data.rollingStockDefinition == null) {
             stack.setCount(0);
             return;
         }
@@ -36,23 +37,23 @@ public class StockItemModel implements ItemRender.ISpriteItemModel {
                 .translate(0.5, 0, 0)
                 .rotate(-90, 0, 1, 0)
                 .scale(scale, scale, scale);
-        try (OBJRender.Binding vbo = data.def.getModel().binder().texture(data.texture).bind(state)) {
-            vbo.draw(data.def.itemGroups);
+        try (OBJRender.Binding vbo = data.rollingStockDefinition.getModel().binder().texture(data.texture).bind(state)) {
+            vbo.draw(data.rollingStockDefinition.itemGroups);
         }
     }
 
     @Override
     public Identifier getSpriteKey(ItemStack stack) {
         ItemRollingStock.Data data = new ItemRollingStock.Data(stack);
-        if (data.def == null) {
+        if (data.rollingStockDefinition == null) {
             // Stock pack removed
             //System.out.println(stack.getTagCompound());
             return null;
         }
         return new Identifier(
                 ImmersiveRailroading.MODID,
-                data.def.defID + "_" +
-                        data.def.getModel().hash + "_" +
+                data.rollingStockDefinition.defID + "_" +
+                        data.rollingStockDefinition.getModel().hash + "_" +
                         (!ConfigGraphics.stockItemVariants || data.texture == null ? "" : data.texture)
         );
     }
@@ -60,10 +61,10 @@ public class StockItemModel implements ItemRender.ISpriteItemModel {
     @Override
     public StandardModel getSpriteModel(ItemStack stack) {
         ItemRollingStock.Data data = new ItemRollingStock.Data(stack);
-        EntityRollingStockDefinition def = data.def;
+        EntityRollingStockDefinition def = data.rollingStockDefinition;
 
         return new StandardModel().addCustom((state, pt) -> {
-            Gauge std = Gauge.getClosestGauge(Gauge.STANDARD);
+            Gauge std = Gauge.getClosestGauge(Gauges.STANDARD);
             double modelLength = def.getLength(std);
             double size = Math.max(def.getHeight(std), def.getWidth(std));
             double scale = -1.6 / size;

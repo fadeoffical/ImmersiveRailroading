@@ -19,7 +19,7 @@ public class CarTank extends FreightTank {
 
     @Override
     public FluidQuantity getTankCapacity() {
-        return this.getDefinition().getTankCapaity(this.gauge);
+        return this.getDefinition().getTankCapaity(this.getGauge());
     }
 
     @Override

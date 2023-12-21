@@ -4,8 +4,8 @@ import cam72cam.immersiverailroading.*;
 import cam72cam.immersiverailroading.entity.*;
 import cam72cam.immersiverailroading.gui.*;
 import cam72cam.immersiverailroading.gui.container.*;
-import cam72cam.immersiverailroading.multiblock.CastingMultiblock;
-import cam72cam.immersiverailroading.multiblock.PlateRollerMultiblock;
+import cam72cam.immersiverailroading.multiblock.CastingMultiBlock;
+import cam72cam.immersiverailroading.multiblock.PlateRollerMultiBlock;
 import cam72cam.immersiverailroading.tile.TileMultiblock;
 import cam72cam.immersiverailroading.tile.TileRailPreview;
 import cam72cam.mod.config.ConfigGui;
@@ -16,11 +16,12 @@ import cam72cam.mod.gui.GuiRegistry.GUI;
 import cam72cam.mod.gui.screen.IScreen;
 import cam72cam.mod.resource.Identifier;
 
-public class GuiTypes {
+public final class GuiTypes {
+
     public static final EntityGUI<Freight> FREIGHT = GuiRegistry.registerEntityContainer(Freight.class, FreightContainer::new);
     public static final EntityGUI<FreightTank> TANK = GuiRegistry.registerEntityContainer(FreightTank.class, TankContainer::new);
     public static final EntityGUI<Tender> TENDER = GuiRegistry.registerEntityContainer(Tender.class, TenderContainer::new);
-    public static final EntityGUI<LocomotiveSteam> STEAM_LOCOMOTIVE = GuiRegistry.registerEntityContainer(LocomotiveSteam.class, SteamLocomotiveContainer::new);
+    public static final EntityGUI<SteamLocomotive> STEAM_LOCOMOTIVE = GuiRegistry.registerEntityContainer(SteamLocomotive.class, SteamLocomotiveContainer::new);
     public static final EntityGUI<LocomotiveDiesel> DIESEL_LOCOMOTIVE = GuiRegistry.registerEntityContainer(LocomotiveDiesel.class, TankContainer::new);
 
     public static final GUI RAIL = GuiRegistry.register(new Identifier(ImmersiveRailroading.MODID, "RAIL"), TrackGui::new);
@@ -34,20 +35,16 @@ public class GuiTypes {
     public static final GUI CONFIG = GuiRegistry.register(new Identifier(ImmersiveRailroading.MODID, "config"), () -> new ConfigGui(Config.class, ConfigGraphics.class, ConfigSound.class, ConfigPermissions.class));
 
     private static IScreen createMultiblockScreen(TileMultiblock mb) {
-        if (!mb.isLoaded()) {
-            return null;
-        }
-        if (mb.getName().equals(CastingMultiblock.NAME)) {
-            return new CastingGUI(mb);
-        }
-        if (mb.getName().equals(PlateRollerMultiblock.NAME)) {
-            return new PlateRollerGUI(mb);
-        }
+        if (!mb.isLoaded()) return null;
+        if (mb.getName().equals(CastingMultiBlock.NAME)) return new CastingGUI(mb);
+        if (mb.getName().equals(PlateRollerMultiBlock.NAME)) return new PlateRollerGUI(mb);
         return null;
     }
 
     public static void register() {
         // loads static classes and ctrs
     }
+
+    private GuiTypes() {}
 
 }

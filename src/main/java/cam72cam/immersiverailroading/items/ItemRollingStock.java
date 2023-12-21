@@ -69,7 +69,7 @@ public class ItemRollingStock extends BaseItemRollingStock {
             }
             ItemStack stack = new ItemStack(this, 1);
             Data data = new Data(stack);
-            data.def = def;
+            data.rollingStockDefinition = def;
             data.gauge = def.recommended_gauge;
             data.write();
             if (tab == null && def.textureNames.size() > 1 && ConfigGraphics.stockItemVariants) {
@@ -94,14 +94,14 @@ public class ItemRollingStock extends BaseItemRollingStock {
         Data data = new Data(stack);
 
         Gauge gauge = data.gauge;
-        EntityRollingStockDefinition def = data.def;
+        EntityRollingStockDefinition def = data.rollingStockDefinition;
         if (def != null) {
             tooltip.addAll(def.getTooltip(gauge));
         }
-        tooltip.add(GuiText.GAUGE_TOOLTIP.toString(gauge));
+        tooltip.add(GuiText.GAUGE_TOOLTIP.translate(gauge));
         String texture = data.texture;
         if (texture != null && def != null && def.textureNames.get(texture) != null) {
-            tooltip.add(GuiText.TEXTURE_TOOLTIP.toString(def.textureNames.get(texture)));
+            tooltip.add(GuiText.TEXTURE_TOOLTIP.translate(def.textureNames.get(texture)));
         }
 
         if (def != null) {
@@ -114,24 +114,26 @@ public class ItemRollingStock extends BaseItemRollingStock {
     @Override
     public ClickResult onClickBlock(Player player, World world, Vec3i pos, Player.Hand hand, Facing facing, Vec3d hit) {
         if (BlockUtil.isIRRail(world, pos)) {
-            TileRailBase te = world.getBlockEntity(pos, TileRailBase.class);
-            if (te.getAugment() != null) {
-                switch (te.getAugment()) {
+            TileRailBase railBase = world.getBlockEntity(pos, TileRailBase.class);
+            if (railBase.getAugment() != null) {
+                switch (railBase.getAugment()) {
                     case DETECTOR:
                     case LOCO_CONTROL:
                     case FLUID_LOADER:
                     case FLUID_UNLOADER:
                     case ITEM_LOADER:
                     case ITEM_UNLOADER:
-                        if (world.isServer) {
-                            Data data = new Data(player.getHeldItem(hand));
-                            boolean set = te.setAugmentFilter(data.def != null ? data.def.defID : null);
-                            if (set) {
-                                player.sendMessage(ChatText.SET_AUGMENT_FILTER.getMessage(data.def != null ? data.def.name() : "Unknown"));
-                            } else {
-                                player.sendMessage(ChatText.RESET_AUGMENT_FILTER.getMessage());
-                            }
-                        }
+                        if (!world.isServer) return ClickResult.ACCEPTED;
+                        Data data = new Data(player.getHeldItem(hand));
+                        EntityRollingStockDefinition rollingStockDefinition = data.rollingStockDefinition;
+
+                        String definitionID = rollingStockDefinition != null ? rollingStockDefinition.defID : null;
+
+                        boolean set = railBase.setAugmentFilter(definitionID);
+                        if (set) {
+                            String humanReadableDefinitionName = rollingStockDefinition != null ? rollingStockDefinition.name() : "Unknown";
+                            player.sendMessage(ChatText.SET_AUGMENT_FILTER.getMessage(humanReadableDefinitionName));
+                        } else player.sendMessage(ChatText.RESET_AUGMENT_FILTER.getMessage());
                         return ClickResult.ACCEPTED;
                     default:
                         break;
@@ -143,28 +145,28 @@ public class ItemRollingStock extends BaseItemRollingStock {
 
     @Override
     public boolean isValidArmor(ItemStack stack, ArmorSlot armorType, Entity entity) {
-        return armorType == ArmorSlot.HEAD && ConfigGraphics.trainsOnTheBrain;
+        return ConfigGraphics.trainsOnTheBrain && armorType == ArmorSlot.HEAD;
     }
 
     public List<ItemStack> getCastableComponents(ItemStack stock) {
         if (!stock.is(IRItems.ITEM_ROLLING_STOCK)) {
             return Collections.emptyList();
         }
-        EntityRollingStockDefinition def = new ItemRollingStockComponent.Data(stock).def;
-        if (def == null) {
+        EntityRollingStockDefinition rollingStockDefiniton = new ItemRollingStockComponent.Data(stock).rollingStockDefinition;
+        if (rollingStockDefiniton == null) {
             return Collections.emptyList();
         }
         Gauge gauge = new ItemRollingStockComponent.Data(stock).gauge;
-        return def.getItemComponents().stream()
-                .filter(c -> !c.isWooden(def) &&
-                        (c.crafting == CraftingType.CASTING || c.crafting == CraftingType.CASTING_HAMMER) &&
-                        c.getCastCost(def, gauge) != ItemCastingCost.BAD_CAST_COST
-                ).map(c -> {
+        return rollingStockDefiniton.getItemComponents().stream()
+                .filter(component -> !component.isWooden(rollingStockDefiniton))
+                .filter(component -> component.crafting == CraftingType.CASTING || component.crafting == CraftingType.CASTING_HAMMER)
+                .filter(component -> component.getCastCost(rollingStockDefiniton, gauge) != ItemCastingCost.BAD_CAST_COST)
+                .map(component -> {
                     ItemStack item = new ItemStack(IRItems.ITEM_ROLLING_STOCK_COMPONENT, 1);
                     ItemRollingStockComponent.Data data = new ItemRollingStockComponent.Data(item);
-                    data.def = def;
+                    data.rollingStockDefinition = rollingStockDefiniton;
                     data.gauge = gauge;
-                    data.componentType = c;
+                    data.componentType = component;
                     data.rawCast = true;
                     data.write();
                     return item;

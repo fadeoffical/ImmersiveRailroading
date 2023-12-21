@@ -12,12 +12,14 @@ import cam72cam.mod.item.CustomItem;
 import cam72cam.mod.item.ItemStack;
 import cam72cam.mod.serialization.TagField;
 import cam72cam.mod.text.TextColor;
+import trackapi.lib.Gauges;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 public class ItemPlate extends CustomItem {
+
     public ItemPlate() {
         super(ImmersiveRailroading.MODID, "item_plate");
     }
@@ -28,35 +30,32 @@ public class ItemPlate extends CustomItem {
     }
 
     @Override
-    public int getStackSize() {
-        return 64;
-    }
-
-    @Override
     public List<ItemStack> getItemVariants(CreativeTab tab) {
+        if (tab != null && !tab.equals(ItemTabs.MAIN_TAB)) return Collections.emptyList();
+
         List<ItemStack> items = new ArrayList<>();
-        if (tab == null || tab.equals(ItemTabs.MAIN_TAB)) {
-            for (PlateType plate : PlateType.values()) {
-                ItemStack stack = new ItemStack(this, 1);
-                if (plate != PlateType.BOILER) {
-                    Data data = new Data(stack);
-                    data.type = plate;
-                    data.gauge = Gauge.getClosestGauge(Gauge.STANDARD);
-                    data.write();
-                    items.add(stack);
-                } else {
-                    for (EntityRollingStockDefinition def : DefinitionManager.getDefinitions()) {
-                        if (def.getItemComponents().contains(ItemComponentType.BOILER_SEGMENT)) {
-                            stack = stack.copy();
-                            Data data = new Data(stack);
-                            data.type = plate;
-                            data.gauge = Gauge.getClosestGauge(Gauge.STANDARD);
-                            data.def = def;
-                            data.write();
-                            items.add(stack);
-                        }
-                    }
-                }
+        for (PlateType plate : PlateType.values()) {
+
+            ItemStack stack = new ItemStack(this, 1);
+            if (plate != PlateType.BOILER) {
+                ItemPlateData data = new ItemPlateData(stack);
+                data.plateType = plate;
+                data.gauge = Gauge.getClosestGauge(Gauges.STANDARD);
+                data.write();
+                items.add(stack);
+
+                continue;
+            }
+
+            for (EntityRollingStockDefinition def : DefinitionManager.getDefinitions()) {
+                if (!def.getItemComponents().contains(ItemComponentType.BOILER_SEGMENT)) continue;
+                stack = stack.copy();
+                ItemPlateData data = new ItemPlateData(stack);
+                data.plateType = plate;
+                data.gauge = Gauge.getClosestGauge(Gauges.STANDARD);
+                data.rollingStockDefinition = def;
+                data.write();
+                items.add(stack);
             }
         }
         return items;
@@ -64,41 +63,32 @@ public class ItemPlate extends CustomItem {
 
     @Override
     public List<String> getTooltip(ItemStack stack) {
-        return Collections.singletonList(GuiText.GAUGE_TOOLTIP.toString(new Data(stack).gauge));
+        return Collections.singletonList(GuiText.GAUGE_TOOLTIP.translate(new ItemPlateData(stack).gauge));
     }
 
     @Override
     public String getCustomName(ItemStack stack) {
-        Data data = new Data(stack);
-        if (data.type == PlateType.BOILER) {
-            if (data.def != null) {
-                return TextColor.RESET.wrap(data.type + " " + data.def.name());
-            }
-        } else {
-            return TextColor.RESET.wrap(data.type.toString());
-        }
-        return null;
+        ItemPlateData data = new ItemPlateData(stack);
+        if (data.plateType == PlateType.BOILER)
+            return data.rollingStockDefinition != null ? TextColor.RESET.wrap(data.plateType + " " + data.rollingStockDefinition.name()) : null;
+        return TextColor.RESET.wrap(data.plateType.toString());
     }
 
-    public static class Data extends ItemDataSerializer {
+    public static class ItemPlateData extends ItemDataSerializer {
+
         @TagField("plate")
-        public PlateType type;
+        public PlateType plateType;
 
         @TagField("defID")
-        public EntityRollingStockDefinition def;
+        public EntityRollingStockDefinition rollingStockDefinition;
 
         @TagField("gauge")
         public Gauge gauge;
 
-        public Data(ItemStack stack) {
+        public ItemPlateData(ItemStack stack) {
             super(stack);
-
-            if (this.gauge == null) {
-                this.gauge = this.def != null ? this.def.recommended_gauge : Gauge.getClosestGauge(Gauge.STANDARD);
-            }
-            if (this.type == null) {
-                this.type = PlateType.SMALL;
-            }
+            this.gauge = Gauge.getClosestGauge(Gauges.STANDARD);
+            this.plateType = PlateType.SMALL;
         }
     }
 }

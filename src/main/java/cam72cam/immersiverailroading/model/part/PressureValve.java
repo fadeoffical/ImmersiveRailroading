@@ -2,7 +2,7 @@ package cam72cam.immersiverailroading.model.part;
 
 import cam72cam.immersiverailroading.ConfigGraphics;
 import cam72cam.immersiverailroading.ConfigSound;
-import cam72cam.immersiverailroading.entity.EntityMoveableRollingStock;
+import cam72cam.immersiverailroading.entity.EntityMovableRollingStock;
 import cam72cam.immersiverailroading.library.ModelComponentType;
 import cam72cam.immersiverailroading.library.Particles;
 import cam72cam.immersiverailroading.model.components.ComponentProvider;
@@ -37,7 +37,7 @@ public class PressureValve {
         return new PressureValve(valves, sndFile); // allow empty for sound only
     }
 
-    public void effects(EntityMoveableRollingStock stock, boolean isBlowingOff) {
+    public void effects(EntityMovableRollingStock stock, boolean isBlowingOff) {
         ISound sound = this.sounds.get(stock.getUUID());
         if (sound == null) {
             sound = stock.createSound(this.sndFile, true, 40, ConfigSound.SoundCategories.Locomotive.Steam::pressureValve);
@@ -60,14 +60,15 @@ public class PressureValve {
             Vec3d fakeMotion = stock.getVelocity();
             for (ModelComponent valve : this.valves) {
                 Vec3d particlePos = stock.getPosition()
-                        .add(VecUtil.rotateWrongYaw(valve.center.scale(stock.gauge.scale()), stock.getRotationYaw() + 180));
+                        .add(VecUtil.rotateWrongYaw(valve.center.scale(stock.getGauge().scale()), stock.getRotationYaw() + 180));
                 particlePos = particlePos.subtract(fakeMotion);
-                Particles.SMOKE.accept(new SmokeParticle.SmokeParticleData(stock.getWorld(), particlePos, new Vec3d(fakeMotion.x, fakeMotion.y + 0.2 * stock.gauge.scale(), fakeMotion.z), 40, 0, 0.2f, valve.width() * stock.gauge.scale(), stock.getDefinition().steamParticleTexture));
+                Particles.SMOKE.accept(new SmokeParticle.SmokeParticleData(stock.getWorld(), particlePos, new Vec3d(fakeMotion.x, fakeMotion.y + 0.2 * stock.getGauge()
+                        .scale(), fakeMotion.z), 40, 0, 0.2f, valve.width() * stock.getGauge().scale(), stock.getDefinition().steamParticleTexture));
             }
         }
     }
 
-    public void removed(EntityMoveableRollingStock stock) {
+    public void removed(EntityMovableRollingStock stock) {
         ISound sound = this.sounds.get(stock.getUUID());
         if (sound != null) {
             sound.stop();

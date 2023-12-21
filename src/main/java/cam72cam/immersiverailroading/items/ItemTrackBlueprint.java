@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class ItemTrackBlueprint extends CustomItem {
+
     public ItemTrackBlueprint() {
         super(ImmersiveRailroading.MODID, "item_rail");
 
@@ -51,21 +52,21 @@ public class ItemTrackBlueprint extends CustomItem {
         RailSettings settings = RailSettings.from(stack);
         TrackDefinition track = DefinitionManager.getTrack(settings.track);
 
-        String indented = "    - %s";
+        tooltip.add(GuiText.TRACK_TYPE.translate(""));
 
-        tooltip.add(GuiText.TRACK_TYPE.toString(""));
+        String indented = "    - %s";
         tooltip.add(String.format(indented, settings.type));
         tooltip.add(String.format(indented, settings.length + " Meters"));
         tooltip.add(String.format(indented, settings.gauge + " Gauge"));
-        // TODO move checks for if applicable to enum
+
         if (settings.type.hasQuarters()) {
-            tooltip.add(String.format(indented, GuiText.TRACK_QUARTERS.toString(settings.degrees)));
+            tooltip.add(String.format(indented, GuiText.TRACK_QUARTERS.translate(settings.degrees)));
         }
         if (settings.type.hasCurvosity()) {
-            tooltip.add(String.format(indented, GuiText.TRACK_CURVOSITY.toString(String.format("%.2f", settings.curvosity))));
+            tooltip.add(String.format(indented, GuiText.TRACK_CURVOSITY.translate(String.format("%.2f", settings.curvosity))));
         }
 
-        tooltip.add(GuiText.SELECTOR_TRACK.toString(""));
+        tooltip.add(GuiText.SELECTOR_TRACK.translate(""));
         tooltip.add(String.format(indented, track.name));
         if (track.modelerName != null) {
             tooltip.add("    " + String.format(indented, track.modelerName));
@@ -74,19 +75,19 @@ public class ItemTrackBlueprint extends CustomItem {
             tooltip.add("    " + String.format(indented, track.packName));
         }
         if (!settings.railBed.isEmpty()) {
-            tooltip.add(String.format(indented, GuiText.TRACK_RAIL_BED.toString(settings.railBed.getDisplayName())));
+            tooltip.add(String.format(indented, GuiText.TRACK_RAIL_BED.translate(settings.railBed.getDisplayName())));
         }
         if (!settings.railBedFill.isEmpty()) {
-            tooltip.add(String.format(indented, GuiText.TRACK_RAIL_BED_FILL.toString(settings.railBedFill.getDisplayName())));
+            tooltip.add(String.format(indented, GuiText.TRACK_RAIL_BED_FILL.translate(settings.railBedFill.getDisplayName())));
         }
 
-        tooltip.add(GuiText.TRACK_POSITION.toString(""));
+        tooltip.add(GuiText.TRACK_POSITION.translate(""));
         tooltip.add(String.format(indented, settings.posType));
         if (settings.type.hasSmoothing()) {
-            tooltip.add(String.format(indented, GuiText.TRACK_SMOOTHING.toString(settings.smoothing)));
+            tooltip.add(String.format(indented, GuiText.TRACK_SMOOTHING.translate(settings.smoothing)));
         }
         if (settings.type.hasDirection()) {
-            tooltip.add(String.format(indented, GuiText.TRACK_DIRECTION.toString(settings.direction)));
+            tooltip.add(String.format(indented, GuiText.TRACK_DIRECTION.translate(settings.direction)));
         }
 
         if (settings.isPreview) {
@@ -94,11 +95,6 @@ public class ItemTrackBlueprint extends CustomItem {
         }
 
         return tooltip;
-
-
-
-        /*return Arrays.asList(
-		);*/
     }
 
     @Override
@@ -107,11 +103,11 @@ public class ItemTrackBlueprint extends CustomItem {
         RailSettings stackInfo = RailSettings.from(stack);
 
         if (world.isServer && hand == Player.Hand.SECONDARY) {
-            ItemStack blockinfo = world.getItemStack(pos);
+            ItemStack blockInfo = world.getItemStack(pos);
             if (player.isCrouching()) {
-                stackInfo = stackInfo.with(b -> b.railBedFill = blockinfo);
+                stackInfo = stackInfo.with(b -> b.setRailBedFill(blockInfo));
             } else {
-                stackInfo = stackInfo.with(b -> b.railBed = blockinfo);
+                stackInfo = stackInfo.with(b -> b.setRailBed(blockInfo));
             }
             stackInfo.write(stack);
             return ClickResult.ACCEPTED;
@@ -151,5 +147,4 @@ public class ItemTrackBlueprint extends CustomItem {
             GuiTypes.RAIL.open(player);
         }
     }
-
 }

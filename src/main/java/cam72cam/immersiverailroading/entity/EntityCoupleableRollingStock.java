@@ -26,7 +26,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public abstract class EntityCoupleableRollingStock extends EntityMoveableRollingStock {
+public abstract class EntityCoupleableRollingStock extends EntityMovableRollingStock {
 
     static {
         World.onTick(world -> {
@@ -203,7 +203,7 @@ public abstract class EntityCoupleableRollingStock extends EntityMoveableRolling
 
     private Vec3d guessCouplerPosition(CouplerType coupler) {
         return this.getPosition().add(VecUtil.fromWrongYaw(this.getDefinition()
-                .getLength(this.gauge) / 2 * (coupler == CouplerType.FRONT ? 1 : -1), this.getRotationYaw()));
+                .getLength(this.getGauge()) / 2 * (coupler == CouplerType.FRONT ? 1 : -1), this.getRotationYaw()));
     }
 
     public final void setCoupledUUID(CouplerType coupler, UUID id) {
@@ -215,7 +215,7 @@ public abstract class EntityCoupleableRollingStock extends EntityMoveableRolling
             // Technically this fires the coupling sound twice (once for each entity)
             new SoundPacket(this.getDefinition().couple_sound,
                     this.getCouplerPosition(coupler), this.getVelocity(),
-                    1, 1, (int) (200 * this.gauge.scale()), this.soundScale(), SoundPacket.PacketSoundCategory.COUPLE)
+                    1, 1, (int) (200 * this.getGauge().scale()), this.soundScale(), SoundPacket.PacketSoundCategory.COUPLE)
                     .sendToObserving(this);
         }
 
@@ -293,19 +293,17 @@ public abstract class EntityCoupleableRollingStock extends EntityMoveableRolling
      */
 
     public final List<EntityCoupleableRollingStock> getTrain(boolean followDisengaged) {
-        List<EntityCoupleableRollingStock> train = new ArrayList<EntityCoupleableRollingStock>();
+        List<EntityCoupleableRollingStock> train = new ArrayList<>();
         this.mapTrain(this, followDisengaged, train::add);
         return train;
     }
 
     public final void mapTrain(EntityCoupleableRollingStock prev, boolean followDisengaged, Consumer<EntityCoupleableRollingStock> fn) {
-        this.mapTrain(prev, true, followDisengaged, (EntityCoupleableRollingStock e, Boolean b) -> fn.accept(e));
+        this.mapTrain(prev, true, followDisengaged, (coupleableRollingStock, direction) -> fn.accept(coupleableRollingStock));
     }
 
     public final void mapTrain(EntityCoupleableRollingStock prev, boolean direction, boolean followDisengaged, BiConsumer<EntityCoupleableRollingStock, Boolean> fn) {
-        for (DirectionalStock stock : this.getDirectionalTrain(followDisengaged)) {
-            fn.accept(stock.stock, stock.direction);
-        }
+        this.getDirectionalTrain(followDisengaged).forEach(stock -> fn.accept(stock.getStock(), stock.isDirection()));
     }
 
     /*
@@ -318,31 +316,18 @@ public abstract class EntityCoupleableRollingStock extends EntityMoveableRolling
 
         Function<DirectionalStock, DirectionalStock> next = (DirectionalStock current) -> {
             for (CouplerType coupler : CouplerType.values()) {
-                EntityCoupleableRollingStock stock = current.stock;
-                boolean direction = current.direction;
+                EntityCoupleableRollingStock stock = current.getStock();
+                boolean direction = current.isDirection();
 
-                if (stock.getCoupledUUID(coupler) == null) {
-                    continue;
-                }
-
-                if (trainMap.contains(stock.getCoupledUUID(coupler))) {
-                    continue;
-                }
-
-                if (!(followDisengaged || stock.isCouplerEngaged(coupler))) {
-                    continue;
-                }
+                if (stock.getCoupledUUID(coupler) == null) continue;
+                if (trainMap.contains(stock.getCoupledUUID(coupler))) continue;
+                if (!(followDisengaged || stock.isCouplerEngaged(coupler))) continue;
 
                 EntityCoupleableRollingStock coupled = stock.getCoupled(coupler);
-
-                if (coupled == null) {
-                    continue;
-                }
+                if (coupled == null) continue;
 
                 CouplerType otherCoupler = coupled.getCouplerFor(stock);
-                if (!(followDisengaged || coupled.isCouplerEngaged(otherCoupler))) {
-                    continue;
-                }
+                if (!(followDisengaged || coupled.isCouplerEngaged(otherCoupler))) continue;
 
                 return new DirectionalStock(stock, coupled, (coupler.opposite() == otherCoupler) == direction);
             }
@@ -351,14 +336,14 @@ public abstract class EntityCoupleableRollingStock extends EntityMoveableRolling
 
 
         DirectionalStock start = new DirectionalStock(null, this, true);
-        trainMap.add(start.stock.getUUID());
+        trainMap.add(start.getStock().getUUID());
         trainList.add(start);
 
         for (int i = 0; i < 2; i++) {
             // Will fire for both front and back
 
             for (DirectionalStock current = next.apply(start); current != null; current = next.apply(current)) {
-                trainMap.add(current.stock.getUUID());
+                trainMap.add(current.getStock().getUUID());
                 trainList.add(current);
             }
         }
@@ -368,23 +353,14 @@ public abstract class EntityCoupleableRollingStock extends EntityMoveableRolling
     }
 
     public boolean isCouplerEngaged(CouplerType coupler) {
-        if (coupler == null) {
-            return false;
-        }
-        switch (coupler) {
-            case FRONT:
-                return this.frontCouplerEngaged;
-            case BACK:
-                return this.backCouplerEngaged;
-            default:
-                return false;
-        }
+        if (coupler == null) return false;
+        else if (coupler == CouplerType.FRONT) return this.frontCouplerEngaged;
+        else if (coupler == CouplerType.BACK) return this.backCouplerEngaged;
+        return false;
     }
 
     public EntityCoupleableRollingStock getCoupled(CouplerType coupler) {
-        if (this.getCoupledUUID(coupler) != null) {
-            return this.findByUUID(this.getCoupledUUID(coupler));
-        }
+        if (this.getCoupledUUID(coupler) != null) return this.findByUUID(this.getCoupledUUID(coupler));
         return null;
     }
 
@@ -439,10 +415,14 @@ public abstract class EntityCoupleableRollingStock extends EntityMoveableRolling
     public enum CouplerType {
         FRONT(0), BACK(180);
 
-        public final float yaw;
+        private final float yaw;
 
         CouplerType(float yaw) {
             this.yaw = yaw;
+        }
+
+        public float getYaw() {
+            return this.yaw;
         }
 
         public CouplerType opposite() {
@@ -456,14 +436,27 @@ public abstract class EntityCoupleableRollingStock extends EntityMoveableRolling
     }
 
     public static class DirectionalStock {
-        public final EntityCoupleableRollingStock prev;
-        public final EntityCoupleableRollingStock stock;
-        public final boolean direction;
 
-        public DirectionalStock(EntityCoupleableRollingStock prev, EntityCoupleableRollingStock stock, boolean direction) {
-            this.prev = prev;
+        private final EntityCoupleableRollingStock previous;
+        private final EntityCoupleableRollingStock stock;
+        private final boolean direction;
+
+        DirectionalStock(EntityCoupleableRollingStock previous, EntityCoupleableRollingStock stock, boolean direction) {
+            this.previous = previous;
             this.stock = stock;
             this.direction = direction;
+        }
+
+        public EntityCoupleableRollingStock getPrevious() {
+            return this.previous;
+        }
+
+        public EntityCoupleableRollingStock getStock() {
+            return this.stock;
+        }
+
+        public boolean isDirection() {
+            return this.direction;
         }
     }
 }

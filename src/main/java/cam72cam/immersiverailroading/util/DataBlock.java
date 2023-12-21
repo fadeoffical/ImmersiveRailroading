@@ -12,12 +12,13 @@ import java.util.Locale;
 import java.util.Map;
 
 public interface DataBlock {
-    static DataBlock load(Identifier ident) throws IOException {
-        return load(ident, false, null);
+
+    static DataBlock load(Identifier identifier) throws IOException {
+        return load(identifier, null, false);
     }
 
-    static DataBlock load(Identifier ident, boolean last, DataBlock parameters) throws IOException {
-        InputStream stream = last ? ident.getLastResourceStream() : ident.getResourceStream();
+    static DataBlock load(Identifier identifier, DataBlock parameters, boolean useLastInputStream) throws IOException {
+        InputStream stream = useLastInputStream ? identifier.getLastResourceStream() : identifier.getResourceStream();
 
         if (parameters != null) {
             String input = IOUtils.toString(stream, Charset.defaultCharset());
@@ -28,11 +29,14 @@ public interface DataBlock {
         }
 
 
-        if (ident.getPath().toLowerCase(Locale.ROOT).endsWith(".caml")) {
+
+        // todo: if file.ext.caml then parseCaml elseif file.ext.json then parseJson else throw error
+        //       current approach seems a bit backwards?
+        if (identifier.getPath().toLowerCase(Locale.ROOT).endsWith(".caml")) {
             return CAML.parse(stream);
         }
-        if (!ident.getPath().toLowerCase(Locale.ROOT).endsWith(".json")) {
-            ImmersiveRailroading.warn("Unexpected file extension '%s', trying JSON...", ident.toString());
+        if (!identifier.getPath().toLowerCase(Locale.ROOT).endsWith(".json")) {
+            ImmersiveRailroading.warn("Unexpected file extension '%s', trying JSON...", identifier.toString());
         }
         return JSON.parse(stream);
     }
@@ -44,7 +48,7 @@ public interface DataBlock {
     }
 
     static DataBlock load(Identifier ident, DataBlock parameters) throws IOException {
-        return load(ident, false, parameters);
+        return load(ident, parameters, false);
     }
 
     default DataBlock getBlock(String key) {

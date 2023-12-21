@@ -1,6 +1,6 @@
 package cam72cam.immersiverailroading.render.multiblock;
 
-import cam72cam.immersiverailroading.multiblock.BoilerRollerMultiblock.BoilerRollerInstance;
+import cam72cam.immersiverailroading.multiblock.BoilerRollerMultiBlock.BoilerRollerInstance;
 import cam72cam.immersiverailroading.tile.TileMultiblock;
 import cam72cam.mod.model.obj.OBJModel;
 import cam72cam.mod.render.obj.OBJRender;

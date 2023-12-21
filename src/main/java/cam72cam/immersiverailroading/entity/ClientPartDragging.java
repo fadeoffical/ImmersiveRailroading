@@ -18,12 +18,13 @@ import cam72cam.mod.world.World;
 import java.util.UUID;
 
 public class ClientPartDragging {
-    private EntityRollingStock interactingStock = null;
-    private Control<?> interactingControl = null;
-    private Float lastValue = null;
 
-    private EntityRollingStock targetStock = null;
-    private Interactable<?> targetInteractable = null;
+    private EntityRollingStock interactingStock;
+    private Control<?> interactingControl;
+    private Float lastValue;
+
+    private EntityRollingStock targetStock;
+    private Interactable<?> targetInteractable;
 
     public static void register() {
         ClientPartDragging dragger = new ClientPartDragging();
@@ -65,9 +66,7 @@ public class ClientPartDragging {
                 return;
             }
 
-            if (this.interactingControl.toggle) {
-                return;
-            }
+            if (this.interactingControl.toggle) return;
 
             float newValue = this.interactingControl.clientMovementDelta(MinecraftClient.getPlayer(), this.interactingStock) + this.interactingStock.getControlPosition(this.interactingControl);
             if (this.lastValue != null && Math.abs(this.lastValue - newValue) < 0.001) {
@@ -92,24 +91,24 @@ public class ClientPartDragging {
 
             for (EntityRollingStock stock : world.getEntities(EntityRollingStock.class)) {
                 if (stock.getPosition().distanceToSquared(player.getPosition()) > stock.getDefinition()
-                        .getLength(stock.gauge) * stock.getDefinition().getLength(stock.gauge)) {
+                        .getLength(stock.getGauge()) * stock.getDefinition().getLength(stock.getGauge())) {
                     continue;
                 }
 
-                double padding = 0.05 * stock.gauge.scale();
-                for (Interactable<?> interactable : stock.getDefinition().getModel().getInteractable()) {
+                double padding = 0.05 * stock.getGauge().scale();
+                for (Interactable<?> interactable : stock.getDefinition().getModel().getInteractive()) {
                     IBoundingBox bb = interactable.getBoundingBox(stock).grow(new Vec3d(padding, padding, padding));
-                    for (double i = 0.125; i < 3; i += 0.05 * stock.gauge.scale()) {
+                    for (double i = 0.125; i < 3; i += 0.05 * stock.getGauge().scale()) {
                         Vec3d cast = start.add(look.scale(i));
-                        if (bb.contains(cast)) {
-                            interactable.lookedAt = MinecraftClient.getPlayer().getWorld().getTicks();
-                            // This is a weird check, but it seems to work
-                            double dist = i * interactable.center(stock).distanceTo(cast);
-                            if (min == null || min > dist) {
-                                min = dist;
-                                this.targetStock = stock;
-                                this.targetInteractable = interactable;
-                            }
+                        if (!bb.contains(cast)) continue;
+
+                        interactable.lookedAt = MinecraftClient.getPlayer().getWorld().getTicks();
+                        // This is a weird check, but it seems to work
+                        double dist = i * interactable.center(stock).distanceTo(cast);
+                        if (min == null || min > dist) {
+                            min = dist;
+                            this.targetStock = stock;
+                            this.targetInteractable = interactable;
                         }
                     }
                 }
@@ -118,29 +117,33 @@ public class ClientPartDragging {
     }
 
     private boolean scroll(double scroll) {
-        if (MinecraftClient.isReady() && this.targetInteractable != null) {
-            if (this.targetInteractable instanceof Control) {
-                float value = this.targetStock.getControlPosition((Control<?>) this.targetInteractable);
-                // Same as GuiBuilder
-                value += scroll / -50 * ConfigGraphics.ScrollSpeed;
-                this.targetStock.setControlPosition((Control<?>) this.targetInteractable, value);
-                this.targetStock.onDragRelease((Control<?>) this.targetInteractable);
-                new DragPacket(this.targetStock, (Control<?>) this.targetInteractable, true, value, true).sendToServer();
-                return false;
-            }
-        }
-        return true;
+        if (!MinecraftClient.isReady()) return true;
+        if (this.targetInteractable == null) return true;
+        if (!(this.targetInteractable instanceof Control)) return true;
+
+        float controlPosition = this.targetStock.getControlPosition((Control<?>) this.targetInteractable);
+        float value = controlPosition + (float) (ConfigGraphics.ScrollSpeed / -50 * scroll);
+
+        this.targetStock.setControlPosition((Control<?>) this.targetInteractable, value);
+        this.targetStock.onDragRelease((Control<?>) this.targetInteractable);
+        new DragPacket(this.targetStock, (Control<?>) this.targetInteractable, true, value, true).sendToServer();
+        return false;
     }
 
     public static class DragPacket extends Packet {
+
         @TagField
         private UUID stockUUID;
+
         @TagField
         private String typeKey;
+
         @TagField
         private double newValue;
+
         @TagField
         private boolean start;
+
         @TagField
         private boolean released;
 

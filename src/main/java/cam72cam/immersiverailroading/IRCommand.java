@@ -7,11 +7,10 @@ import cam72cam.mod.text.Command;
 import cam72cam.mod.text.PlayerMessage;
 
 import java.util.Comparator;
-import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-public class IRCommand extends Command {
+public final class IRCommand extends Command {
 
     @Override
     public String getPrefix() {
@@ -24,16 +23,13 @@ public class IRCommand extends Command {
     }
 
     @Override
-    public int getRequiredPermissionLevel() {
-        return PermissionLevel.LEVEL4;
-    }
-
-    @Override
     public boolean execute(Consumer<PlayerMessage> sender, Optional<Player> player, String[] args) {
         if (args.length != 1) {
             return false;
         }
+
         if (args[0].equals("reload")) {
+            // todo: send message to player
             ImmersiveRailroading.warn("Reloading Immersive Railroading definitions");
             DefinitionManager.initDefinitions();
             ImmersiveRailroading.info("Done reloading Immersive Railroading definitions");
@@ -41,17 +37,23 @@ public class IRCommand extends Command {
         }
 
         if (args[0].equals("debug")) {
-            if (player.isPresent()) {
-                List<EntityRollingStock> ents = player.get().getWorld().getEntities(EntityRollingStock.class);
-                ents.sort(Comparator.comparing(a -> a.getUUID().toString()));
-                for (EntityRollingStock ent : ents) {
-                    sender.accept(PlayerMessage.direct(String.format("%s : %s - %s : %s", ent.getUUID(), ent.getId(), ent.getDefinitionID(), ent.getPosition())));
-                }
-            } else {
+            if (!player.isPresent()) {
                 sender.accept(PlayerMessage.direct("This command is not supported for non-players (yet)"));
+                return true;
             }
+
+            // todo: maybe we should format the message better
+            //       we could display the rolling stock tag for example
+            player.get()
+                    .getWorld()
+                    .getEntities(EntityRollingStock.class)
+                    .stream()
+                    .sorted(Comparator.comparing(a -> a.getUUID().toString()))
+                    .map(rollingStock -> PlayerMessage.direct(String.format("%s : %s - %s : %s", rollingStock.getUUID(), rollingStock.getId(), rollingStock.getDefinitionId(), rollingStock.getPosition())))
+                    .forEach(sender);
             return true;
         }
+
         return false;
     }
 }

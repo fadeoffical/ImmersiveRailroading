@@ -1,7 +1,7 @@
 package cam72cam.immersiverailroading.registry;
 
 import cam72cam.immersiverailroading.ImmersiveRailroading;
-import cam72cam.immersiverailroading.entity.LocomotiveSteam;
+import cam72cam.immersiverailroading.entity.SteamLocomotive;
 import cam72cam.immersiverailroading.gui.overlay.GuiBuilder;
 import cam72cam.immersiverailroading.library.Gauge;
 import cam72cam.immersiverailroading.model.SteamLocomotiveModel;
@@ -28,7 +28,7 @@ public class LocomotiveSteamDefinition extends LocomotiveDefinition {
     private double width;
 
     public LocomotiveSteamDefinition(String defID, DataBlock data) throws Exception {
-        super(LocomotiveSteam.class, defID, data);
+        super(SteamLocomotive.class, defID, data);
     }
 
     @Override

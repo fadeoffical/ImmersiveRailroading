@@ -17,7 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-public class CraftPicker {
+public final class CraftPicker {
+
     private final boolean enableItemPicker;
     private final ItemPickerGUI stockSelector;
     private final ItemPickerGUI itemSelector;
@@ -38,11 +39,11 @@ public class CraftPicker {
         stock.addAll(IRItems.ITEM_ROLLING_STOCK.getItemVariants(ItemTabs.PASSENGER_TAB));
         stock.addAll(IRItems.ITEM_ROLLING_STOCK.getItemVariants(ItemTabs.STOCK_TAB));
 
-        List<ItemStack> toRemove = new ArrayList<ItemStack>();
+        List<ItemStack> toRemove = new ArrayList<>();
         for (ItemStack item : this.items) {
             ItemRollingStockComponent.Data data = new ItemRollingStockComponent.Data(item);
             ItemComponentType comp = data.componentType;
-            if (comp.isWooden(data.def)) {
+            if (comp.isWooden(data.rollingStockDefinition)) {
                 toRemove.add(item);
                 continue;
             }
@@ -85,8 +86,8 @@ public class CraftPicker {
                     continue;
                 }
                 ItemStack item = new ItemStack(IRItems.ITEM_PLATE, 1);
-                ItemPlate.Data data = new ItemPlate.Data(item);
-                data.type = value;
+                ItemPlate.ItemPlateData data = new ItemPlate.ItemPlateData(item);
+                data.plateType = value;
                 data.write();
                 stock.add(item);
             }
@@ -114,17 +115,10 @@ public class CraftPicker {
     }
 
     private boolean isPartOf(ItemStack stock, ItemStack item) {
-        if (stock == null || item == null) {
-            return false;
-        }
-
-        if (!stock.is(IRItems.ITEM_ROLLING_STOCK)) {
-            return false;
-        }
-        if (!item.is(IRItems.ITEM_ROLLING_STOCK_COMPONENT)) {
-            return false;
-        }
-        return new ItemRollingStockComponent.Data(item).def == new ItemRollingStock.Data(stock).def;
+        if (stock == null || item == null) return false;
+        if (!stock.is(IRItems.ITEM_ROLLING_STOCK)) return false;
+        if (!item.is(IRItems.ITEM_ROLLING_STOCK_COMPONENT)) return false;
+        return new ItemRollingStockComponent.Data(item).rollingStockDefinition == new ItemRollingStock.Data(stock).rollingStockDefinition;
     }
 
     private void setupItemSelector() {
@@ -141,18 +135,20 @@ public class CraftPicker {
     private void onStockExit(ItemStack stack) {
         if (stack == null) {
             this.onChoose.accept(null);
+            return;
+        }
+
+        if (!this.enableItemPicker) {
+            this.onChoose.accept(stack);
+            return;
+        }
+
+        this.setupItemSelector();
+        if (this.itemSelector.hasOptions()) {
+            this.itemSelector.show();
         } else {
-            if (this.enableItemPicker) {
-                this.setupItemSelector();
-                if (this.itemSelector.hasOptions()) {
-                    this.itemSelector.show();
-                } else {
-                    this.itemSelector.choosenItem = null;
-                    this.onChoose.accept(stack);
-                }
-            } else {
-                this.onChoose.accept(stack);
-            }
+            this.itemSelector.choosenItem = null;
+            this.onChoose.accept(stack);
         }
     }
 

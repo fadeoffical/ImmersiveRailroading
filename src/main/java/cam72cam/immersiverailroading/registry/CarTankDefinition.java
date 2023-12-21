@@ -35,7 +35,7 @@ public class CarTankDefinition extends FreightDefinition {
     @Override
     public List<String> getTooltip(Gauge gauge) {
         List<String> tips = super.getTooltip(gauge);
-        tips.add(GuiText.TANK_CAPACITY_TOOLTIP.toString(this.getTankCapaity(gauge).asBuckets()));
+        tips.add(GuiText.TANK_CAPACITY_TOOLTIP.translate(this.getTankCapaity(gauge).asBuckets()));
         return tips;
     }
 

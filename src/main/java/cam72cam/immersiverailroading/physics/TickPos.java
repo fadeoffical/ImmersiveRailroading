@@ -2,35 +2,40 @@ package cam72cam.immersiverailroading.physics;
 
 import cam72cam.immersiverailroading.ImmersiveRailroading;
 import cam72cam.immersiverailroading.entity.physics.SimulationState;
-import cam72cam.immersiverailroading.util.Speed;
+import cam72cam.immersiverailroading.library.unit.Speed;
 import cam72cam.mod.math.Vec3d;
 import cam72cam.mod.serialization.*;
 
 import java.util.List;
 
 public class TickPos {
+
     @TagField("tickID")
-    public int tickID;
+    public int tickId;
+
     @TagField("speed")
     public Speed speed;
+
     @TagField("offTrack")
     public boolean isOffTrack;
 
-    //Vec3d frontPosition;
-    //Vec3d backPosition;
     @TagField("pos")
     public Vec3d position;
+
     @TagField("frontYaw")
     public float frontYaw;
+
     @TagField("rearYaw")
     public float rearYaw;
+
     @TagField("rotationYaw")
     public float rotationYaw;
+
     @TagField("rotationPitch")
     public float rotationPitch;
 
-    public TickPos(int tickPosID, Speed speed, Vec3d position, float frontYaw, float rearYaw, float rotationYaw, float rotationPitch, boolean isOffTrack) {
-        this.tickID = tickPosID;
+    public TickPos(int tickId, Speed speed, Vec3d position, float frontYaw, float rearYaw, float rotationYaw, float rotationPitch, boolean isOffTrack) {
+        this.tickId = tickId;
         this.speed = speed;
         this.isOffTrack = isOffTrack;
         this.position = position;
@@ -41,8 +46,8 @@ public class TickPos {
     }
 
     public TickPos(SimulationState state) {
-        this.tickID = state.tickID;
-        this.speed = Speed.fromMinecraft(state.velocity);
+        this.tickId = state.tickID;
+        this.speed = Speed.fromUnit(state.velocity, Speed.SpeedUnit.METERS_PER_TICK);
         this.isOffTrack = false;
         this.position = state.position;
         this.rotationYaw = state.yaw;
@@ -62,7 +67,7 @@ public class TickPos {
     public static TickPos skew(TickPos current, TickPos next, double tick) {
         float ratio = (float) (tick % 1);
         return new TickPos(
-                current.tickID,
+                current.tickId,
                 current.speed,
                 new Vec3d(
                         skewScalar(current.position.x, next.position.x, ratio),
@@ -104,7 +109,7 @@ public class TickPos {
 
     @Override
     public TickPos clone() {
-        return new TickPos(this.tickID, this.speed, this.position, this.frontYaw, this.rearYaw, this.rotationYaw, this.rotationPitch, this.isOffTrack);
+        return new TickPos(this.tickId, this.speed, this.position, this.frontYaw, this.rearYaw, this.rotationYaw, this.rotationPitch, this.isOffTrack);
     }
 
     public static class ListTagMapper implements TagMapper<List<TickPos>> {

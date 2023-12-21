@@ -2,7 +2,7 @@ package cam72cam.immersiverailroading.model;
 
 import cam72cam.immersiverailroading.Config;
 import cam72cam.immersiverailroading.ConfigSound;
-import cam72cam.immersiverailroading.entity.LocomotiveSteam;
+import cam72cam.immersiverailroading.entity.SteamLocomotive;
 import cam72cam.immersiverailroading.gui.overlay.Readouts;
 import cam72cam.immersiverailroading.library.ModelComponentType;
 import cam72cam.immersiverailroading.model.components.ComponentProvider;
@@ -15,7 +15,7 @@ import cam72cam.immersiverailroading.registry.LocomotiveSteamDefinition;
 
 import java.util.List;
 
-public class SteamLocomotiveModel extends LocomotiveModel<LocomotiveSteam, LocomotiveSteamDefinition> {
+public class SteamLocomotiveModel extends LocomotiveModel<SteamLocomotive, LocomotiveSteamDefinition> {
     private final PartSound idleSounds;
     private List<ModelComponent> components;
     private Whistle whistle;
@@ -41,7 +41,7 @@ public class SteamLocomotiveModel extends LocomotiveModel<LocomotiveSteam, Locom
     }
 
     @Override
-    protected void effects(LocomotiveSteam stock) {
+    protected void effects(SteamLocomotive stock) {
         super.effects(stock);
 
         if (this.drivingWheels != null) {
@@ -59,13 +59,13 @@ public class SteamLocomotiveModel extends LocomotiveModel<LocomotiveSteam, Locom
                     (this.drivingWheelsRear != null && this.drivingWheelsRear.isEndStroke(stock));
             this.chimney.effects(stock, isEndStroke);
         }
-        this.pressureValve.effects(stock, stock.isOverpressure() && Config.isFuelRequired(stock.gauge));
+        this.pressureValve.effects(stock, stock.isOverpressure() && Config.isFuelRequired(stock.getGauge()));
         this.idleSounds.effects(stock, stock.getBoilerTemperature() > stock.ambientTemperature() + 5 ? 0.1f : 0);
-        this.whistle.effects(stock, stock.getBoilerPressure() > 0 || !Config.isFuelRequired(stock.gauge) ? stock.getHornTime() : 0, stock.getHornPull());
+        this.whistle.effects(stock, stock.getBoilerPressure() > 0 || !Config.isFuelRequired(stock.getGauge()) ? stock.getHornTime() : 0, stock.getHornPull());
     }
 
     @Override
-    protected void removed(LocomotiveSteam stock) {
+    protected void removed(SteamLocomotive stock) {
         super.removed(stock);
 
         this.pressureValve.removed(stock);
@@ -86,8 +86,8 @@ public class SteamLocomotiveModel extends LocomotiveModel<LocomotiveSteam, Locom
     protected void parseComponents(ComponentProvider provider, LocomotiveSteamDefinition def) {
         this.firebox = provider.parse(ModelComponentType.FIREBOX);
         this.rocking.push(builder -> {
-            builder.add((ModelState.Lighter) stock -> {
-                return new ModelState.LightState(null, null, !Config.isFuelRequired(stock.gauge) || ((LocomotiveSteam) stock).getBurnTime()
+            builder.lighter((ModelState.Lighter) stock -> {
+                return new ModelState.LightState(null, null, !Config.isFuelRequired(stock.getGauge()) || ((SteamLocomotive) stock).getBurnTime()
                         .values()
                         .stream()
                         .anyMatch(x -> x > 1), null);

@@ -21,14 +21,14 @@ import cam72cam.mod.world.World;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public abstract class Multiblock {
+public abstract class MultiBlock {
     protected static final FuzzyProvider AIR = null;
     protected final List<Vec3i> componentPositions;
     // z y x
     private final FuzzyProvider[][][] components;
     private final String name;
 
-    protected Multiblock(String name, FuzzyProvider[][][] components) {
+    protected MultiBlock(String name, FuzzyProvider[][][] components) {
         this.name = name;
         this.components = components;
         this.componentPositions = new ArrayList<>();
@@ -101,7 +101,7 @@ public abstract class Multiblock {
     protected abstract MultiblockInstance newInstance(World world, Vec3i origin, Rotation rot);
 
     public void place(World world, Player player, Vec3i pos, Rotation rot) {
-        Map<String, Integer> missing = new HashMap<String, Integer>();
+        Map<String, Integer> missing = new HashMap<>();
         Vec3i origin = pos.subtract(this.placementPos().rotate(rot));
         for (Vec3i offset : this.componentPositions) {
             Fuzzy component = this.lookup(offset);
@@ -139,7 +139,7 @@ public abstract class Multiblock {
             }
         }
 
-        if (missing.size() != 0) {
+        if (!missing.isEmpty()) {
             player.sendMessage(ChatText.BUILD_MISSING.getMessage("", ""));
             for (String name : missing.keySet()) {
                 player.sendMessage(PlayerMessage.direct(String.format("  - %d x %s", missing.get(name), name)));
@@ -212,7 +212,7 @@ public abstract class Multiblock {
         }
 
         public void onCreate() {
-            for (Vec3i offset : Multiblock.this.componentPositions) {
+            for (Vec3i offset : MultiBlock.this.componentPositions) {
                 Vec3i pos = this.getPos(offset);
                 BlockInfo origState = this.world.getBlock(pos);
 
@@ -220,7 +220,7 @@ public abstract class Multiblock {
 
                 TileMultiblock te = this.world.getBlockEntity(pos, TileMultiblock.class);
 
-                te.configure(Multiblock.this.name, this.rot, offset, origState);
+                te.configure(MultiBlock.this.name, this.rot, offset, origState);
             }
         }
 
@@ -248,7 +248,7 @@ public abstract class Multiblock {
         public abstract boolean canRecievePower(Vec3i offset);
 
         public void onBreak() {
-            for (Vec3i offset : Multiblock.this.componentPositions) {
+            for (Vec3i offset : MultiBlock.this.componentPositions) {
                 Vec3i pos = this.getPos(offset);
                 TileMultiblock te = this.world.getBlockEntity(pos, TileMultiblock.class);
                 if (te == null) {
@@ -263,13 +263,13 @@ public abstract class Multiblock {
             TileMultiblock te = this.world.getBlockEntity(this.getPos(offset), TileMultiblock.class);
             if (te == null) {
                 if (this.world.isServer) {
-                    ImmersiveRailroading.warn("Multiblock TE is null: %s %s %s %s", this.getPos(offset), offset, this.world.isClient, this.getClass());
+                    ImmersiveRailroading.warn("MultiBlock TE is null: %s %s %s %s", this.getPos(offset), offset, this.world.isClient, this.getClass());
                 }
                 return null;
             }
             if (!te.isLoaded()) {
                 if (this.world.isServer) {
-                    ImmersiveRailroading.info("Multiblock is still loading: %s %s %s %s", this.getPos(offset), offset, this.world.isClient, this.getClass());
+                    ImmersiveRailroading.info("MultiBlock is still loading: %s %s %s %s", this.getPos(offset), offset, this.world.isClient, this.getClass());
                 }
                 return null;
             }

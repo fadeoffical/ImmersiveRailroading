@@ -13,30 +13,32 @@ import util.Matrix4;
 import java.util.Comparator;
 import java.util.List;
 
-public class WalschaertsValveGear extends StephensonValveGear {
-    protected final ModelComponent crossHead;
-    protected final ModelComponent combinationLever;
-    protected final ModelComponent returnCrank;
-    protected final ModelComponent returnCrankRod;
-    protected final ModelComponent slottedLink;
-    protected final ModelComponent radiusBar;
-    protected final List<ModelComponent> todo;
+public final class WalschaertsValveGear extends StephensonValveGear {
+
+    private final ModelComponent crossHead;
+    private final ModelComponent combinationLever;
+    private final ModelComponent returnCrank;
+    private final ModelComponent returnCrankRod;
+    private final ModelComponent slottedLink;
+    private final ModelComponent radiusBar;
+
+    private final List<ModelComponent> todo;
     private final Vec3d crankWheel;
 
-    public WalschaertsValveGear(WheelSet wheels, ModelState state,
-                                ModelComponent drivingRod,
-                                ModelComponent connectingRod,
-                                ModelComponent pistonRod,
-                                ModelComponent cylinder,
-                                float angleOffset,
-                                ModelComponent crossHead,
-                                ModelComponent combinationLever,
-                                ModelComponent returnCrank,
-                                ModelComponent returnCrankRod,
-                                ModelComponent slottedLink,
-                                ModelComponent radiusBar,
-                                List<ModelComponent> todo,
-                                ModelComponent frontExhaust, ModelComponent rearExhaust) {
+    private WalschaertsValveGear(WheelSet wheels, ModelState state,
+                                 ModelComponent drivingRod,
+                                 ModelComponent connectingRod,
+                                 ModelComponent pistonRod,
+                                 ModelComponent cylinder,
+                                 float angleOffset,
+                                 ModelComponent crossHead,
+                                 ModelComponent combinationLever,
+                                 ModelComponent returnCrank,
+                                 ModelComponent returnCrankRod,
+                                 ModelComponent slottedLink,
+                                 ModelComponent radiusBar,
+                                 List<ModelComponent> todo,
+                                 ModelComponent frontExhaust, ModelComponent rearExhaust) {
         super(wheels, state, drivingRod, connectingRod, pistonRod, cylinder, angleOffset, frontExhaust, rearExhaust);
         this.crossHead = crossHead;
         this.combinationLever = combinationLever;
@@ -47,30 +49,29 @@ public class WalschaertsValveGear extends StephensonValveGear {
         this.todo = todo;
 
         this.crankWheel = wheels.wheels.stream()
-                .map(w -> w.wheel.center)
+                .map(w -> w.getWheel().center)
                 .min(Comparator.comparingDouble(w -> w.distanceTo(this.reverse ? returnCrank.min : returnCrank.max)))
                 .get();
 
         state.include(todo);
 
         // This is pretty terrible
-        state = state.push(builder -> builder.add((ModelState.GroupAnimator) (stock, group) -> {
-
+        state = state.push(builder -> builder.groupAnimator((stock, group) -> {
             float wheelAngle = super.angle(stock.distanceTraveled);
             float reverser = stock instanceof Locomotive ? ((Locomotive) stock).getReverser() : 0;
 
             // Center of the connecting rod, may not line up with a wheel directly
-            Vec3d connRodPos = super.connectingRod.center;
+            Vec3d connectingRodCenter = super.connectingRod.center;
             // Wheel Center is the center of all wheels, may not line up with a wheel directly
             // The difference between these centers is the radius of the connecting rod movement
-            double connRodRadius = connRodPos.x - this.centerOfWheels.x;
-            // Find new connecting rod pos based on the connecting rod rod radius
-            Vec3d connRodMovment = VecUtil.fromWrongYaw(connRodRadius, wheelAngle);
+            double connectingRodRadius = connectingRodCenter.x - this.centerOfWheels.x;
+            // Find new connecting rod pos based on the connecting rod radius
+            Vec3d connectingRodMovement = VecUtil.fromWrongYaw(connectingRodRadius, wheelAngle);
 
 
             // Piston movement is rod movement offset by the rotation radius
             // Not 100% accurate, missing the offset due to angled driving rod
-            double pistonDelta = connRodMovment.x - connRodRadius;
+            double pistonDelta = connectingRodMovement.x - connectingRodRadius;
 
             // Draw piston rod and cross head
             if (crossHead.modelIDs.contains(group)) {
@@ -221,12 +222,7 @@ public class WalschaertsValveGear extends StephensonValveGear {
         ModelComponent frontExhaust = provider.parse(ModelComponentType.CYLINDER_DRAIN_SIDE, pos.and(ModelPosition.A));
         ModelComponent rearExhaust = provider.parse(ModelComponentType.CYLINDER_DRAIN_SIDE, pos.and(ModelPosition.B));
 
-        List<ModelComponent> todo = provider.parse(pos,
-                ModelComponentType.VALVE_STEM_SIDE,
-                ModelComponentType.REVERSING_ARM_SIDE,
-                ModelComponentType.LIFTING_LINK_SIDE,
-                ModelComponentType.REACH_ROD_SIDE
-        );
+        List<ModelComponent> todo = provider.parse(pos, ModelComponentType.VALVE_STEM_SIDE, ModelComponentType.REVERSING_ARM_SIDE, ModelComponentType.LIFTING_LINK_SIDE, ModelComponentType.REACH_ROD_SIDE);
 
         return drivingRod != null && connectingRod != null && pistonRod != null &&
                 crossHead != null && combinationLever != null && returnCrank != null && returnCrankRod != null && slottedLink != null && radiusBar != null ?

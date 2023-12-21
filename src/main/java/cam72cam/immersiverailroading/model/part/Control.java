@@ -1,7 +1,7 @@
 package cam72cam.immersiverailroading.model.part;
 
 import cam72cam.immersiverailroading.ConfigGraphics;
-import cam72cam.immersiverailroading.entity.EntityMoveableRollingStock;
+import cam72cam.immersiverailroading.entity.EntityMovableRollingStock;
 import cam72cam.immersiverailroading.entity.EntityRollingStock;
 import cam72cam.immersiverailroading.library.ModelComponentType;
 import cam72cam.immersiverailroading.library.ModelComponentType.ModelPosition;
@@ -28,7 +28,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class Control<T extends EntityMoveableRollingStock> extends Interactable<T> {
+public class Control<T extends EntityMovableRollingStock> extends Interactable<T> {
     public final String controlGroup;
     public final String label;
     public final boolean toggle;
@@ -135,13 +135,13 @@ public class Control<T extends EntityMoveableRollingStock> extends Interactable<
 
         if (this.hide) {
             state = state.push(builder ->
-                    builder.add((ModelState.GroupVisibility) (stock, group) -> this.getValue(stock) != 1)
+                    builder.groupVisibility((ModelState.GroupVisibility) (stock, group) -> this.getValue(stock) != 1)
             );
         }
 
         if (!(this.rotationPoint == null && this.translations.isEmpty() && this.scales.isEmpty())) {
             state = state.push(builder -> {
-                builder.add((ModelState.GroupAnimator) (stock, group) -> {
+                builder.groupAnimator((ModelState.GroupAnimator) (stock, group) -> {
                     float valuePercent = this.getValue(stock);
 
                     Matrix4 m = new Matrix4();
@@ -202,19 +202,19 @@ public class Control<T extends EntityMoveableRollingStock> extends Interactable<
         this.modelId = part.modelIDs.stream().findFirst().get();
     }
 
-    public float getValue(EntityMoveableRollingStock stock) {
+    public float getValue(EntityMovableRollingStock stock) {
         float pos = stock.getControlPosition(this) + this.offset;
         return (this.invert ? 1 - pos : pos) - (this.part.type == ModelComponentType.REVERSER_X || this.part.type == ModelComponentType.THROTTLE_BRAKE_X ? 0.5f : 0);
     }
 
-    public static <T extends EntityMoveableRollingStock> List<Control<T>> get(ComponentProvider provider, ModelState state, ModelComponentType type, ModelPosition pos) {
+    public static <T extends EntityMovableRollingStock> List<Control<T>> get(ComponentProvider provider, ModelState state, ModelComponentType type, ModelPosition pos) {
         return provider.parseAll(type, pos)
                 .stream()
                 .map(part1 -> new Control<T>(part1, state, provider.internal_model_scale))
                 .collect(Collectors.toList());
     }
 
-    public static <T extends EntityMoveableRollingStock> List<Control<T>> get(ComponentProvider provider, ModelState state, ModelComponentType type) {
+    public static <T extends EntityMovableRollingStock> List<Control<T>> get(ComponentProvider provider, ModelState state, ModelComponentType type) {
         return provider.parseAll(type)
                 .stream()
                 .map(part1 -> new Control<T>(part1, state, provider.internal_model_scale))
@@ -231,7 +231,7 @@ public class Control<T extends EntityMoveableRollingStock> extends Interactable<
         }
 
         if (MinecraftClient.getPlayer().getPosition().distanceTo(stock.getPosition()) > stock.getDefinition()
-                .getLength(stock.gauge)) {
+                .getLength(stock.getGauge())) {
             return;
         }
 

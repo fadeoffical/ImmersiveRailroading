@@ -5,7 +5,7 @@ import cam72cam.mod.text.TextUtil;
 
 public enum ChatText {
     STOCK_BUILT("stock.built"),
-    STOCK_DISSASEMBLED("stock.dissasembled"),
+    STOCK_DISASSEMBLED("stock.disassembled"),
     STOCK_MISSING("stock.missing"),
     STOCK_INVALID("stock.invalid"),
     STOCK_WRONG_GAUGE("stock.wrong_gauge"),
@@ -35,8 +35,7 @@ public enum ChatText {
     SWITCH_LOCKED("switch_state.locked"),
     SWITCH_RESET("switch_state.reset"),
     SWITCH_CANT_RESET("switch_state.cant_reset"),
-    SWITCH_ALREADY_RESET("switch_state.already_reset"),
-    ;
+    SWITCH_ALREADY_RESET("switch_state.already_reset");
 
     private final String value;
 
@@ -44,12 +43,12 @@ public enum ChatText {
         this.value = value;
     }
 
-    public PlayerMessage getMessage(Object... objects) {
-        return PlayerMessage.translate(this.getRaw(), objects);
+    private String getRaw() {
+        return "chat.immersiverailroading:" + this.value;
     }
 
-    public String getRaw() {
-        return "chat.immersiverailroading:" + this.value;
+    public PlayerMessage getMessage(Object... objects) {
+        return PlayerMessage.translate(this.getRaw(), objects);
     }
 
     @Override

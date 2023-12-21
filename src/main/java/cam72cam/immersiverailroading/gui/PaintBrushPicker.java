@@ -1,7 +1,7 @@
 package cam72cam.immersiverailroading.gui;
 
-import cam72cam.immersiverailroading.entity.EntityMoveableRollingStock;
-import cam72cam.immersiverailroading.gui.components.ListSelector;
+import cam72cam.immersiverailroading.entity.EntityMovableRollingStock;
+import cam72cam.immersiverailroading.gui.component.ListSelector;
 import cam72cam.immersiverailroading.items.ItemPaintBrush;
 import cam72cam.immersiverailroading.library.ChatText;
 import cam72cam.immersiverailroading.library.Gauge;
@@ -17,14 +17,16 @@ import cam72cam.mod.gui.screen.IScreen;
 import cam72cam.mod.gui.screen.IScreenBuilder;
 import cam72cam.mod.gui.screen.Slider;
 import cam72cam.mod.render.opengl.RenderState;
+import trackapi.lib.Gauges;
 import util.Matrix4;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class PaintBrushPicker implements IScreen {
-    private EntityMoveableRollingStock stock;
+public final class PaintBrushPicker implements IScreen {
+
+    private EntityMovableRollingStock stock;
     private String variant;
 
     private double zoom = 1;
@@ -34,15 +36,17 @@ public class PaintBrushPicker implements IScreen {
     public void init(IScreenBuilder screen) {
         this.frame = 0;
 
-        Entity ent = MinecraftClient.getEntityMouseOver();
-        if (ent == null) {
+        Entity entity = MinecraftClient.getEntityMouseOver();
+        if (entity == null) {
             screen.close();
             return;
         }
-        this.stock = ent.as(EntityMoveableRollingStock.class);
+
+        this.stock = entity.as(EntityMovableRollingStock.class);
         if (this.stock == null) {
             screen.close();
         }
+
         this.variant = this.stock.getTexture();
 
         int xtop = -GUIHelpers.getScreenWidth() / 2;
@@ -51,10 +55,9 @@ public class PaintBrushPicker implements IScreen {
         int height = 20;
 
         new ListSelector<String>(screen, 0, width, height, this.variant,
-                this.stock.getDefinition().textureNames.entrySet().stream()
-                        .collect(Collectors.toMap(
-                                Map.Entry::getValue, Map.Entry::getKey,
-                                (u, v) -> u, LinkedHashMap::new))
+                this.stock.getDefinition().textureNames.entrySet()
+                        .stream()
+                        .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey, (u, v) -> u, LinkedHashMap::new))
         ) {
             @Override
             public void onClick(String option) {
@@ -122,7 +125,7 @@ public class PaintBrushPicker implements IScreen {
         } else {
             current = this.stock.getDefinition().textureNames.getOrDefault(current, "Unknown");
         }
-        current = GuiText.TEXTURE_TOOLTIP.toString(current);
+        current = GuiText.TEXTURE_TOOLTIP.translate(current);
 
         GUIHelpers.drawCenteredString(this.stock.getDefinition()
                 .name(), (int) ((200 + (GUIHelpers.getScreenWidth() - 200) / 2) / textScale), (int) (40 / textScale), 0xFFFFFF, new Matrix4().scale(textScale, textScale, textScale));
@@ -140,17 +143,17 @@ public class PaintBrushPicker implements IScreen {
 
         double prevDist = this.stock.distanceTraveled;
         String prevTex = this.stock.getTexture();
-        Gauge prevGauge = this.stock.gauge;
+        Gauge prevGauge = this.stock.getGauge();
 
         this.stock.setTexture(this.variant);
         this.stock.distanceTraveled += this.frame * 0.02;
-        this.stock.gauge = Gauge.standard();
+        this.stock.setGauge(Gauge.getClosestGauge(Gauges.STANDARD));
 
         model.render(this.stock, state, 0);
         model.postRender(this.stock, state, 0);
 
         this.stock.setTexture(prevTex);
         this.stock.distanceTraveled = prevDist;
-        this.stock.gauge = prevGauge;
+        this.stock.setGauge(prevGauge);
     }
 }

@@ -17,6 +17,7 @@ import cam72cam.mod.serialization.TagField;
 import java.util.List;
 
 public abstract class Freight extends EntityCoupleableRollingStock {
+
     @TagField("items")
     public FilteredStackHandler cargoItems = new FilteredStackHandler(0);
 
@@ -52,7 +53,7 @@ public abstract class Freight extends EntityCoupleableRollingStock {
     /**
      * Handle mass depending on item count
      */
-    protected void handleMass() {
+    private void handleMass() {
         int itemInsideCount = 0;
         int stacksWithStuff = 0;
         for (int slot = 0; slot < this.cargoItems.getSlotCount(); slot++) {
@@ -65,9 +66,7 @@ public abstract class Freight extends EntityCoupleableRollingStock {
         this.percentFull = this.getInventorySize() > 0 ? stacksWithStuff * 100 / this.getInventorySize() : 100;
     }
 
-    protected void initContainerFilter() {
-
-    }
+    protected abstract void initContainerFilter();
 
     @Override
     public void onDissassemble() {
@@ -143,32 +142,19 @@ public abstract class Freight extends EntityCoupleableRollingStock {
     }
 
     protected boolean openGui(Player player) {
-        if (this.getInventorySize() == 0) {
-            return false;
-        }
-        if (player.hasPermission(Permissions.FREIGHT_INVENTORY)) {
-            GuiTypes.FREIGHT.open(player, this);
-        }
+        if (this.getInventorySize() == 0) return false;
+        if (player.hasPermission(Permissions.FREIGHT_INVENTORY)) GuiTypes.FREIGHT.open(player, this);
         return true;
     }
 
     @Override
     public double getWeight() {
-        double fLoad = ConfigBalance.blockWeight * this.itemCount;
-		/*
-		for (int i = 0; i < cargoItems.getSlotCount(); i++) {
-			ItemStack item = Fuzzy.WOOD_PLANK.example();
-			item.setCount(64);
-			cargoItems.set(i, item);
-		}*/
-
-        fLoad += super.getWeight();
-        return fLoad;
+        return ConfigBalance.blockWeight * this.itemCount + super.getWeight();
     }
 
     @Override
     public double getMaxWeight() {
-        return super.getMaxWeight() + ConfigBalance.blockWeight * this.getInventorySize() * 64;
+        return ConfigBalance.blockWeight * this.getInventorySize() * 64 + super.getMaxWeight();
     }
 
     public int getPercentCargoFull() {

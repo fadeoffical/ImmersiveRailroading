@@ -21,7 +21,7 @@ public class BuilderTurnTable extends BuilderBase {
     private Vec3i offset;
 
     public BuilderTurnTable(RailInfo infoIn, World world, Vec3i pos) {
-        super(infoIn.withSettings(b -> b.length = Math.min(infoIn.settings.length, BuilderTurnTable.maxLength(infoIn.settings.gauge))), world, pos);
+        super(infoIn.withSettings(b -> b.setLength(Math.min(infoIn.settings.length, BuilderTurnTable.maxLength(infoIn.settings.gauge)))), world, pos);
 
         this.positions = new HashSet<>();
 

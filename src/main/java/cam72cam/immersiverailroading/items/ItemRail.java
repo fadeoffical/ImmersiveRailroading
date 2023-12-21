@@ -7,6 +7,7 @@ import cam72cam.mod.item.CustomItem;
 import cam72cam.mod.item.ItemStack;
 import cam72cam.mod.serialization.TagField;
 import cam72cam.mod.text.TextUtil;
+import trackapi.lib.Gauges;
 
 import java.util.Collections;
 import java.util.List;
@@ -21,11 +22,6 @@ public class ItemRail extends CustomItem {
         return Collections.singletonList(ItemTabs.MAIN_TAB);
     }
 
-    @Override
-    public int getStackSize() {
-        return 64;
-    }
-
     public String getCustomName(ItemStack stack) {
         return String.format("%s (%s)", TextUtil.translate("item.immersiverailroading:item_rail_part.name"), new Data(stack).gauge.toString());
     }
@@ -36,9 +32,7 @@ public class ItemRail extends CustomItem {
 
         public Data(ItemStack stack) {
             super(stack);
-            if (this.gauge == null) {
-                this.gauge = Gauge.getClosestGauge(Gauge.STANDARD);
-            }
+            this.gauge = Gauge.getClosestGauge(Gauges.STANDARD);
         }
     }
 }

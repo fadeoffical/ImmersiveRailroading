@@ -10,6 +10,7 @@ import cam72cam.mod.entity.Player;
 import cam72cam.mod.item.*;
 import cam72cam.mod.serialization.TagField;
 import cam72cam.mod.world.World;
+import trackapi.lib.Gauges;
 
 import java.util.Collections;
 import java.util.List;
@@ -64,7 +65,7 @@ public class ItemTrackExchanger extends CustomItem {
                 this.railBed = ItemStack.EMPTY;
             }
             if (this.gauge == null) {
-                this.gauge = Gauge.getClosestGauge(Gauge.STANDARD);
+                this.gauge = Gauge.getClosestGauge(Gauges.STANDARD);
             }
         }
     }

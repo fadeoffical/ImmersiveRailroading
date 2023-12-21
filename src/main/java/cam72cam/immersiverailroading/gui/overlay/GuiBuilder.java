@@ -168,7 +168,7 @@ public class GuiBuilder {
     private static DataBlock processImports(DataBlock data) throws IOException {
         // This is kinda weird as it appends the import to the current block instead of inserting it in the current
         // element list.  It's definitely a bit of a footgun.  The "correct" way to do this would be to make import part
-        // of parsing in CAML, which is it's own sort of weirdness due to JSON interop.
+        // of parsing in CAML, which is its own sort of weirdness due to JSON interop.
         List<DataBlock.Value> direct = data.getValues("import");
         if (direct != null) {
             for (DataBlock.Value imp : direct) {
@@ -190,18 +190,15 @@ public class GuiBuilder {
     }
 
     public static void onClientTick() {
-        if (target != null && (target.readout == Readouts.TRAIN_BRAKE_LEVER)) {
-            if (!MinecraftClient.isReady()) {
-                return;
-            }
-            Entity riding = MinecraftClient.getPlayer().getRiding();
-            if (!(riding instanceof EntityRollingStock)) {
-                return;
-            }
-            EntityRollingStock stock = (EntityRollingStock) riding;
-            float value = target.invert ? target.getValue(stock) : 1 - target.getValue(stock);
-            new ControlChangePacket(stock, target.readout, target.control, target.global, target.texture_variant, value).sendToServer();
-        }
+        if (target == null || target.readout != Readouts.TRAIN_BRAKE_LEVER) return;
+        if (!MinecraftClient.isReady()) return;
+
+        Entity riding = MinecraftClient.getPlayer().getRiding();
+        if (!(riding instanceof EntityRollingStock)) return;
+
+        EntityRollingStock stock = (EntityRollingStock) riding;
+        float value = target.invert ? target.getValue(stock) : 1 - target.getValue(stock);
+        new ControlChangePacket(stock, target.readout, target.control, target.global, target.texture_variant, value).sendToServer();
     }
 
     private float getValue(EntityRollingStock stock) {

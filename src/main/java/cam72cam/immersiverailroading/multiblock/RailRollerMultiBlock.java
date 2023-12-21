@@ -16,7 +16,7 @@ import cam72cam.mod.sound.SoundCategory;
 import cam72cam.mod.sound.StandardSound;
 import cam72cam.mod.world.World;
 
-public class RailRollerMultiblock extends Multiblock {
+public class RailRollerMultiBlock extends MultiBlock {
     public static final String NAME = "RAIL_MACHINE";
     private static final Vec3i render = new Vec3i(0, 0, 0);
     private static final Vec3i crafter = new Vec3i(1, 1, 15);
@@ -24,7 +24,7 @@ public class RailRollerMultiblock extends Multiblock {
     private static final Vec3i output = new Vec3i(1, 0, 29);
     private static final Vec3i power = new Vec3i(1, 2, 15);
 
-    public RailRollerMultiblock() {
+    public RailRollerMultiBlock() {
         super(NAME, componentGenerator());
     }
 

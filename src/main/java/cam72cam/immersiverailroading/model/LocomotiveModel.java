@@ -1,6 +1,6 @@
 package cam72cam.immersiverailroading.model;
 
-import cam72cam.immersiverailroading.entity.EntityMoveableRollingStock;
+import cam72cam.immersiverailroading.entity.EntityMovableRollingStock;
 import cam72cam.immersiverailroading.entity.Locomotive;
 import cam72cam.immersiverailroading.gui.overlay.Readouts;
 import cam72cam.immersiverailroading.library.ModelComponentType;
@@ -43,9 +43,9 @@ public class LocomotiveModel<ENTITY extends Locomotive, DEFINITION extends Locom
     @Override
     protected void initStates() {
         super.initStates();
-        this.frontLocomotive = this.base.push(settings -> settings.add(this::getFrontLocomotiveMatrix));
+        this.frontLocomotive = this.base.push(settings -> settings.animator(this::getFrontLocomotiveMatrix));
         this.frontLocomotiveRocking = this.addRoll(this.frontLocomotive);
-        this.rearLocomotive = this.base.push(settings -> settings.add(this::getRearLocomotiveMatrix));
+        this.rearLocomotive = this.base.push(settings -> settings.animator(this::getRearLocomotiveMatrix));
         this.rearLocomotiveRocking = this.addRoll(this.rearLocomotive);
     }
 
@@ -125,11 +125,11 @@ public class LocomotiveModel<ENTITY extends Locomotive, DEFINITION extends Locom
         this.bell.removed(stock);
     }
 
-    private Matrix4 getFrontLocomotiveMatrix(EntityMoveableRollingStock s) {
+    private Matrix4 getFrontLocomotiveMatrix(EntityMovableRollingStock s) {
         return this.frontTrackers.get(s).getMatrix();
     }
 
-    private Matrix4 getRearLocomotiveMatrix(EntityMoveableRollingStock s) {
+    private Matrix4 getRearLocomotiveMatrix(EntityMovableRollingStock s) {
         return this.rearTrackers.get(s).getMatrix();
     }
 
@@ -172,11 +172,11 @@ public class LocomotiveModel<ENTITY extends Locomotive, DEFINITION extends Locom
         super.parseComponents(provider, def);
     }
 
-    public float getFrontLocomotiveYaw(EntityMoveableRollingStock s) {
+    public float getFrontLocomotiveYaw(EntityMovableRollingStock s) {
         return this.frontTrackers.get(s).getYawReadout();
     }
 
-    public float getRearLocomotiveYaw(EntityMoveableRollingStock s) {
+    public float getRearLocomotiveYaw(EntityMovableRollingStock s) {
         return this.rearTrackers.get(s).getYawReadout();
     }
 }

@@ -3,7 +3,7 @@ package cam72cam.immersiverailroading.physics;
 import cam72cam.immersiverailroading.ImmersiveRailroading;
 import cam72cam.immersiverailroading.library.Gauge;
 import cam72cam.immersiverailroading.library.TrackItems;
-import cam72cam.immersiverailroading.thirdparty.trackapi.ITrack;
+import cam72cam.immersiverailroading.thirdparty.trackapi.Track;
 import cam72cam.immersiverailroading.tile.TileRail;
 import cam72cam.immersiverailroading.tile.TileRailBase;
 import cam72cam.immersiverailroading.track.IIterableTrack;
@@ -18,7 +18,7 @@ import java.util.List;
 
 public class MovementTrack {
 
-    public static Vec3d iterativePathing(World world, Vec3d currentPosition, ITrack te, double gauge, Vec3d motion, double maxDistance) {
+    public static Vec3d iterativePathing(World world, Vec3d currentPosition, Track te, double gauge, Vec3d motion, double maxDistance) {
         Vec3d startPos = currentPosition;
         Vec3d prevPosition = currentPosition;
         double totalDistance = motion.length();
@@ -65,7 +65,7 @@ public class MovementTrack {
         return currentPosition;
     }
 
-    public static ITrack findTrack(World world, Vec3d currentPosition, float trainYaw, double gauge) {
+    public static Track findTrack(World world, Vec3d currentPosition, float trainYaw, double gauge) {
         Vec3d[] positions = new Vec3d[]{
                 currentPosition,
                 currentPosition.add(VecUtil.fromWrongYaw(1, trainYaw)),
@@ -84,7 +84,7 @@ public class MovementTrack {
 
         for (Vec3d pos : positions) {
             for (double height : heightSkew) {
-                ITrack te = ITrack.get(world, pos.add(0, height + (currentPosition.y % 1), 0), true);
+                Track te = Track.get(world, pos.add(0, height + (currentPosition.y % 1), 0), true);
                 if (te != null && Gauge.getClosestGauge(te.getTrackGauge()) == Gauge.getClosestGauge(gauge)) {
                     return te;
                 }

@@ -9,8 +9,8 @@ import cam72cam.immersiverailroading.library.CraftingMachineMode;
 import cam72cam.immersiverailroading.library.CraftingType;
 import cam72cam.immersiverailroading.library.Gauge;
 import cam72cam.immersiverailroading.library.GuiText;
-import cam72cam.immersiverailroading.multiblock.CastingMultiblock;
-import cam72cam.immersiverailroading.multiblock.CastingMultiblock.CastingInstance;
+import cam72cam.immersiverailroading.multiblock.CastingMultiBlock;
+import cam72cam.immersiverailroading.multiblock.CastingMultiBlock.CastingInstance;
 import cam72cam.immersiverailroading.registry.EntityRollingStockDefinition;
 import cam72cam.immersiverailroading.tile.TileMultiblock;
 import cam72cam.immersiverailroading.util.ItemCastingCost;
@@ -50,7 +50,7 @@ public class CastingGUI implements IScreen {
 
     @Override
     public void init(IScreenBuilder screen) {
-        this.pickerButton = new Button(screen, -100, -20 - 10, GuiText.SELECTOR_TYPE.toString("")) {
+        this.pickerButton = new Button(screen, -100, -20 - 10, GuiText.SELECTOR_TYPE.translate("")) {
             @Override
             public void onClick(Player.Hand hand) {
                 CraftPicker.showCraftPicker(screen, CastingGUI.this.currentItem, CraftingType.CASTING, (ItemStack item) -> {
@@ -58,11 +58,11 @@ public class CastingGUI implements IScreen {
                         CastingGUI.this.currentItem = item;
                         EntityRollingStockDefinition def =
                                 CastingGUI.this.currentItem.is(IRItems.ITEM_ROLLING_STOCK_COMPONENT) ?
-                                        new ItemRollingStockComponent.Data(CastingGUI.this.currentItem).def :
-                                        new ItemRollingStock.Data(CastingGUI.this.currentItem).def;
+                                        new ItemRollingStockComponent.Data(CastingGUI.this.currentItem).rollingStockDefinition :
+                                        new ItemRollingStock.Data(CastingGUI.this.currentItem).rollingStockDefinition;
                         if (def != null && !CastingGUI.this.gauge.isModelGauge() && CastingGUI.this.gauge.getRailDistance() != def.recommended_gauge.getRailDistance()) {
                             CastingGUI.this.gauge = def.recommended_gauge;
-                            CastingGUI.this.gaugeButton.setText(GuiText.SELECTOR_GAUGE.toString(CastingGUI.this.gauge));
+                            CastingGUI.this.gaugeButton.setText(GuiText.SELECTOR_GAUGE.translate(CastingGUI.this.gauge));
                         }
                         CastingGUI.this.updatePickerButton();
                         CastingGUI.this.sendItemPacket();
@@ -72,11 +72,11 @@ public class CastingGUI implements IScreen {
         };
         this.updatePickerButton();
 
-        this.gaugeButton = new Button(screen, 0, -10, 100, 20, GuiText.SELECTOR_GAUGE.toString(this.gauge)) {
+        this.gaugeButton = new Button(screen, 0, -10, 100, 20, GuiText.SELECTOR_GAUGE.translate(this.gauge)) {
             @Override
             public void onClick(Player.Hand hand) {
                 if (!CastingGUI.this.currentItem.isEmpty()) {
-                    EntityRollingStockDefinition def = new ItemRollingStockComponent.Data(CastingGUI.this.currentItem).def;
+                    EntityRollingStockDefinition def = new ItemRollingStockComponent.Data(CastingGUI.this.currentItem).rollingStockDefinition;
                     if (def != null && ConfigBalance.DesignGaugeLock) {
                         List<Gauge> validGauges = Collections.singletonList(Gauge.getClosestGauge(def.recommended_gauge.getRailDistance()));
                         CastingGUI.this.gauge = next(validGauges, CastingGUI.this.gauge, hand);
@@ -84,7 +84,7 @@ public class CastingGUI implements IScreen {
                         CastingGUI.this.gauge = next(Gauge.getRegisteredGauges(), CastingGUI.this.gauge, hand);
                     }
                 }
-                CastingGUI.this.gaugeButton.setText(GuiText.SELECTOR_GAUGE.toString(CastingGUI.this.gauge));
+                CastingGUI.this.gaugeButton.setText(GuiText.SELECTOR_GAUGE.translate(CastingGUI.this.gauge));
                 CastingGUI.this.sendItemPacket();
             }
         };
@@ -122,7 +122,7 @@ public class CastingGUI implements IScreen {
 
     private void updatePickerButton() {
         if (this.currentItem.isEmpty()) {
-            this.pickerButton.setText(GuiText.SELECTOR_TYPE.toString(""));
+            this.pickerButton.setText(GuiText.SELECTOR_TYPE.translate(""));
         } else {
             this.pickerButton.setText(this.currentItem.getDisplayName());
         }
@@ -181,7 +181,7 @@ public class CastingGUI implements IScreen {
         builder.drawTank(-95, 3, 57, 60, Fluid.LAVA, (float) fluidPercent, false, 0x99fb7e15);
         builder.drawTank(-29, 67, 126, 30, Fluid.LAVA, progress / cost, false, 0x998c1919);
 
-        String fillStr = String.format("%s/%s", (int) (fluidPercent * CastingMultiblock.max_volume), (int) CastingMultiblock.max_volume);
+        String fillStr = String.format("%s/%s", (int) (fluidPercent * CastingMultiBlock.max_volume), (int) CastingMultiBlock.max_volume);
         String castStr = String.format("%s/%s", progress, (int) cost);
         builder.drawCenteredString(fillStr, -94 + 27, 3 + 25, 14737632);
         builder.drawCenteredString(castStr, -28 + 60, 67 + 10, 14737632);

@@ -1,7 +1,7 @@
 package cam72cam.immersiverailroading.render.multiblock;
 
 import cam72cam.immersiverailroading.items.ItemManual;
-import cam72cam.immersiverailroading.multiblock.Multiblock;
+import cam72cam.immersiverailroading.multiblock.MultiBlock;
 import cam72cam.mod.entity.Player;
 import cam72cam.mod.item.ItemStack;
 import cam72cam.mod.math.Vec3d;
@@ -17,7 +17,7 @@ import java.util.Map;
 public class MBBlueprintRender {
     public static void renderMouseover(Player player, ItemStack stack, Vec3i pos, Vec3d hit, RenderState state, float partialTicks) {
         pos = pos.up();
-        Multiblock mb = new ItemManual.Data(stack).multiblock;
+        MultiBlock mb = new ItemManual.Data(stack).multiblock;
         if (mb == null) {
             return;
         }

@@ -4,8 +4,14 @@ import cam72cam.immersiverailroading.entity.FreightTank;
 import cam72cam.mod.gui.container.IContainerBuilder;
 import cam72cam.mod.item.Fuzzy;
 import cam72cam.mod.item.ItemStack;
+import cam72cam.mod.render.opengl.RenderState;
 
 public class TankContainer extends BaseContainer {
+
+    private static final int INVENTORY_WIDTH = 10;
+    private static final int INVENTORY_HEIGHT = 4;
+
+
     public final FreightTank stock;
     private final ItemStack template;
 
@@ -14,44 +20,43 @@ public class TankContainer extends BaseContainer {
         this.template = Fuzzy.BUCKET.example();
     }
 
-    public void draw(IContainerBuilder container) {
-        int currY = 0;
-        int horizSlots = 10;
-        int inventoryRows = 4;
+    @Override
+    public void draw(IContainerBuilder container, RenderState state) {
+        int currentY = 0;
         int slotY = 0;
 
-        currY = container.drawTopBar(0, currY, horizSlots);
+        currentY = container.drawTopBar(0, currentY, INVENTORY_WIDTH);
 
-        int tankY = currY;
-        for (int i = 0; i < 4; i++) {
-            currY = container.drawSlotRow(null, 0, horizSlots, 0, currY);
+        int tankY = currentY;
+        for (int i = 0; i < INVENTORY_HEIGHT; i++) {
+            currentY = container.drawSlotRow(null, 0, INVENTORY_WIDTH, 0, currentY);
             if (i == 0) {
-                slotY = currY;
+                slotY = currentY;
             }
         }
 
-        container.drawTankBlock(0, tankY, horizSlots, inventoryRows, this.stock.getLiquid(), this.stock.getLiquidAmount() / (float) this.stock.getTankCapacity()
+        container.drawTankBlock(0, tankY, INVENTORY_WIDTH, INVENTORY_HEIGHT, this.stock.getLiquid(), this.stock.getLiquidAmount() / (float) this.stock.getTankCapacity()
                 .asMillibuckets());
 
         container.drawSlotOverlay(this.template, 1, slotY);
         container.drawSlot(this.stock.cargoItems, 0, 1, slotY);
-        container.drawSlot(this.stock.cargoItems, 1, 1 + horizSlots * 16, slotY);
+        container.drawSlot(this.stock.cargoItems, 1, 1 + INVENTORY_WIDTH * 16, slotY);
 
-        String quantityStr = String.format("%s/%s", this.stock.getLiquidAmount(), this.stock.getTankCapacity().asMillibuckets());
-        container.drawCenteredString(quantityStr, 0, slotY);
+        String quantityFormatted = String.format("%s/%s", this.stock.getLiquidAmount(), this.stock.getTankCapacity().asMillibuckets());
+        container.drawCenteredString(quantityFormatted, 0, slotY);
 
-        currY = container.drawPlayerInventoryConnector(0, currY, horizSlots);
-        currY = container.drawPlayerInventory(currY, horizSlots);
+        currentY = container.drawPlayerInventoryConnector(0, currentY, INVENTORY_WIDTH);
+        currentY = container.drawPlayerInventory(currentY, INVENTORY_WIDTH);
         this.drawName(container, this.stock);
     }
 
     @Override
     public int getSlotsX() {
-        return 10;
+        return INVENTORY_WIDTH;
     }
 
     @Override
     public int getSlotsY() {
-        return 4;
+        return INVENTORY_HEIGHT;
     }
 }

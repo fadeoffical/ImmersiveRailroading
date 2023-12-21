@@ -15,7 +15,7 @@ import cam72cam.mod.sound.SoundCategory;
 import cam72cam.mod.sound.StandardSound;
 import cam72cam.mod.world.World;
 
-public class PlateRollerMultiblock extends Multiblock {
+public class PlateRollerMultiBlock extends MultiBlock {
     public static final String NAME = "PLATE_MACHINE";
     private static final Vec3i render = new Vec3i(2, 0, 0);
     private static final Vec3i crafter = new Vec3i(2, 0, 14);
@@ -23,7 +23,7 @@ public class PlateRollerMultiblock extends Multiblock {
     private static final Vec3i output = new Vec3i(2, 0, 29);
     private static final Vec3i power = new Vec3i(1, 4, 14);
 
-    public PlateRollerMultiblock() {
+    public PlateRollerMultiBlock() {
         super(NAME, componentGenerator());
     }
 

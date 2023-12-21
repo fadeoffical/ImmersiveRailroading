@@ -9,7 +9,7 @@ import cam72cam.immersiverailroading.model.part.Control;
 import cam72cam.immersiverailroading.registry.LocomotiveDieselDefinition;
 import cam72cam.immersiverailroading.util.BurnUtil;
 import cam72cam.immersiverailroading.util.FluidQuantity;
-import cam72cam.immersiverailroading.util.Speed;
+import cam72cam.immersiverailroading.library.unit.Speed;
 import cam72cam.mod.entity.Player;
 import cam72cam.mod.entity.sync.TagSync;
 import cam72cam.mod.fluid.Fluid;
@@ -21,6 +21,7 @@ import java.util.OptionalDouble;
 
 public class LocomotiveDiesel extends Locomotive {
 
+    public static final double DIESEL_ENGINE_EFFICIENCY = 0.82;
     private float soundThrottle;
     private float internalBurn = 0;
     private int turnOnOffDelay = 0;
@@ -113,11 +114,11 @@ public class LocomotiveDiesel extends Locomotive {
 
             while (this.internalBurn < 0 && this.getLiquidAmount() > 0) {
                 this.internalBurn += burnTime;
-                this.theTank.drain(new FluidStack(this.theTank.getContents().getFluid(), 1), false);
+                this.tank.drain(new FluidStack(this.tank.getContents().getFluid(), 1), false);
             }
 
             consumption *= 100;
-            consumption *= (float) this.gauge.scale();
+            consumption *= (float) this.getGauge().scale();
 
             this.internalBurn -= consumption;
 
@@ -200,28 +201,28 @@ public class LocomotiveDiesel extends Locomotive {
 
     @Override
     public double getAppliedTractiveEffort(Speed speed) {
-        if (this.isRunning() && (this.getEngineTemperature() > 75 || !Config.isFuelRequired(this.gauge))) {
-            double maxPower_W = this.getDefinition().getHorsePower(this.gauge) * 745.7d;
-            double efficiency = 0.82; // Similar to a *lot* of imperial references
-            double speed_M_S = (Math.abs(speed.metric()) / 3.6);
-            double maxPowerAtSpeed = maxPower_W * efficiency / Math.max(0.001, speed_M_S);
-            return maxPowerAtSpeed * this.getThrottle() * this.getReverser();
-        }
-        return 0;
+        if (!this.isRunning()) return 0;
+        if (this.getEngineTemperature() <= 75 && Config.isFuelRequired(this.getGauge())) return 0;
+
+        double maxPowerWatts = this.getDefinition().getHorsePower(this.getGauge()) * 745.7d;
+        double speedMetersPerSecond = speed.as(Speed.SpeedUnit.METERS_PER_SECOND).value();
+        double maxPowerAtSpeed = maxPowerWatts * DIESEL_ENGINE_EFFICIENCY / Math.max(0.001, speedMetersPerSecond);
+        return maxPowerAtSpeed * this.getThrottle() * this.getReverser();
     }
 
     @Override
-    public void setThrottle(float newThrottle) {
+    public void setThrottle(float throttle) {
         int notches = this.getDefinition().getThrottleNotches();
-        if (newThrottle > this.getThrottle()) {
-            super.setThrottle((float) (Math.ceil(newThrottle * notches) / notches));
+        if (throttle > this.getThrottle()) {
+            super.setThrottle((float) (Math.ceil(throttle * notches) / notches));
         } else {
-            super.setThrottle((float) (Math.floor(newThrottle * notches) / notches));
+            super.setThrottle((float) (Math.floor(throttle * notches) / notches));
         }
     }
 
     @Override
     public void setReverser(float newReverser) {
+        // todo: why round?
         super.setReverser(Math.round(newReverser));
 
     }
@@ -240,14 +241,12 @@ public class LocomotiveDiesel extends Locomotive {
     }
 
     public boolean isRunning() {
-        if (!Config.isFuelRequired(this.gauge)) {
-            return this.isTurnedOn();
-        }
+        if (!Config.isFuelRequired(this.getGauge())) return this.isTurnedOn();
         return this.isTurnedOn() && !this.isEngineOverheated() && this.getLiquidAmount() > 0;
     }
 
     public boolean isEngineOverheated() {
-        return this.engineOverheated && Config.ConfigBalance.canDieselEnginesOverheat;
+        return Config.ConfigBalance.canDieselEnginesOverheat && this.engineOverheated;
     }
 
     public boolean isTurnedOn() {
@@ -259,7 +258,7 @@ public class LocomotiveDiesel extends Locomotive {
         this.setControlPositions(ModelComponentType.ENGINE_START_X, this.turnedOn ? 1 : 0);
     }
 
-    public void setEngineOverheated(boolean value) {
+    private void setEngineOverheated(boolean value) {
         this.engineOverheated = value;
     }
 
@@ -270,7 +269,7 @@ public class LocomotiveDiesel extends Locomotive {
 
     @Override
     public FluidQuantity getTankCapacity() {
-        return this.getDefinition().getFuelCapacity(this.gauge);
+        return this.getDefinition().getFuelCapacity(this.getGauge());
     }
 
     @Override

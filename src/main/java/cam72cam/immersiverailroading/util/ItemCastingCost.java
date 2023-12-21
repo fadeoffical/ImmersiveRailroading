@@ -17,7 +17,7 @@ public final class ItemCastingCost {
         int count = 1;
         if (item.is(IRItems.ITEM_ROLLING_STOCK_COMPONENT)) {
             ItemRollingStockComponent.Data data = new ItemRollingStockComponent.Data(item);
-            cost = data.componentType.getCastCost(data.def, data.gauge);
+            cost = data.componentType.getCastCost(data.rollingStockDefinition, data.gauge);
         } else if (item.is(IRItems.ITEM_CAST_RAIL)) {
             cost = (int) Math.ceil(20 * new ItemCastRail.Data(item).gauge.scale());
         } else if (item.is(IRItems.ITEM_AUGMENT)) {

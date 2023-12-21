@@ -13,11 +13,11 @@ public class TileMultiblockRender {
     private static final Map<String, IMultiblockRender> renderers = new HashMap<>();
 
     static {
-        renderers.put(SteamHammerMultiblock.NAME, new SteamHammerRender());
-        renderers.put(PlateRollerMultiblock.NAME, new PlateRollerRender());
-        renderers.put(RailRollerMultiblock.NAME, new RailRollerRender());
-        renderers.put(BoilerRollerMultiblock.NAME, new BoilerRollerRender());
-        renderers.put(CastingMultiblock.NAME, new CastingRender());
+        renderers.put(SteamHammerMultiBlock.NAME, new SteamHammerRender());
+        renderers.put(PlateRollerMultiBlock.NAME, new PlateRollerRender());
+        renderers.put(RailRollerMultiBlock.NAME, new RailRollerRender());
+        renderers.put(BoilerRollerMultiBlock.NAME, new BoilerRollerRender());
+        renderers.put(CastingMultiBlock.NAME, new CastingRender());
     }
 
     public static StandardModel render(TileMultiblock te) {

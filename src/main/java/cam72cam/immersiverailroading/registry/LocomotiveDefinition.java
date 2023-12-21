@@ -1,5 +1,6 @@
 package cam72cam.immersiverailroading.registry;
 
+import cam72cam.immersiverailroading.ConfigGraphics;
 import cam72cam.immersiverailroading.ImmersiveRailroading;
 import cam72cam.immersiverailroading.entity.EntityRollingStock;
 import cam72cam.immersiverailroading.library.Gauge;
@@ -7,7 +8,7 @@ import cam72cam.immersiverailroading.library.GuiText;
 import cam72cam.immersiverailroading.model.LocomotiveModel;
 import cam72cam.immersiverailroading.model.StockModel;
 import cam72cam.immersiverailroading.util.DataBlock;
-import cam72cam.immersiverailroading.util.Speed;
+import cam72cam.immersiverailroading.library.unit.Speed;
 import cam72cam.mod.resource.Identifier;
 
 import java.util.List;
@@ -38,11 +39,11 @@ public abstract class LocomotiveDefinition extends FreightDefinition {
     @Override
     public List<String> getTooltip(Gauge gauge) {
         List<String> tips = super.getTooltip(gauge);
-        tips.add(GuiText.LOCO_WORKS.toString(this.works));
+        tips.add(GuiText.LOCO_WORKS.translate(this.works));
         if (!this.isCabCar) {
-            tips.add(GuiText.LOCO_HORSE_POWER.toString(this.getHorsePower(gauge)));
-            tips.add(GuiText.LOCO_TRACTION.toString(this.getStartingTractionNewtons(gauge)));
-            tips.add(GuiText.LOCO_MAX_SPEED.toString(this.getMaxSpeed(gauge).metricString()));
+            tips.add(GuiText.LOCO_HORSE_POWER.translate(this.getHorsePower(gauge)));
+            tips.add(GuiText.LOCO_TRACTION.translate(this.getStartingTractionNewtons(gauge)));
+            tips.add(GuiText.LOCO_MAX_SPEED.translate(this.getMaxSpeed(gauge).as(ConfigGraphics.speedUnit).format() + " " + ConfigGraphics.speedUnit.getDisplayString()));
         }
         return tips;
     }
@@ -59,7 +60,8 @@ public abstract class LocomotiveDefinition extends FreightDefinition {
     }
 
     public Speed getMaxSpeed(Gauge gauge) {
-        return Speed.fromMinecraft(gauge.scale() * this.maxSpeed.minecraft());
+        double maxSpeed = this.maxSpeed.as(Speed.SpeedUnit.METERS_PER_TICK).value();
+        return Speed.fromUnit(gauge.scale() * maxSpeed, Speed.SpeedUnit.METERS_PER_TICK);
     }
 
     public boolean isLinearBrakeControl() {
@@ -91,7 +93,7 @@ public abstract class LocomotiveDefinition extends FreightDefinition {
             this.power = properties.getValue("horsepower").asInteger() * this.internal_inv_scale;
             this.traction = properties.getValue("tractive_effort_lbf").asInteger() * this.internal_inv_scale;
             this.factorOfAdhesion = properties.getValue("factor_of_adhesion").asDouble(4);
-            this.maxSpeed = Speed.fromMetric(properties.getValue("max_speed_kmh").asDouble() * this.internal_inv_scale);
+            this.maxSpeed = Speed.fromUnit(properties.getValue("max_speed_kmh").asDouble() * this.internal_inv_scale, Speed.SpeedUnit.KILOMETERS_PER_HOUR);
             this.muliUnitCapable = properties.getValue("multi_unit_capable").asBoolean();
         }
         this.isLinkedBrakeThrottle = properties.getValue("isLinkedBrakeThrottle").asBoolean();

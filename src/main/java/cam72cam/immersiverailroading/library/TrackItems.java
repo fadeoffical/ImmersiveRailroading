@@ -2,62 +2,51 @@ package cam72cam.immersiverailroading.library;
 
 import cam72cam.mod.text.TextUtil;
 
-import java.util.Locale;
-
 public enum TrackItems {
-    STRAIGHT,
-    CROSSING,
-    SLOPE,
-    TURN,
-    SWITCH,
-    TURNTABLE,
-    CUSTOM,
-    ;
+    STRAIGHT("straight", false, false, false, false),
+    CROSSING("crossing", false, false, false, false),
+    SLOPE("slope", false, false, true, false),
+    TURN("turn", true, false, true, true),
+    SWITCH("switch", true, true, true, true),
+    TURNTABLE("turntable", false, false, false, false),
+    CUSTOM("custom", false, true, true, false);
 
-    @Override
-    public String toString() {
-        return TextUtil.translate("track.immersiverailroading:class." + super.toString().toLowerCase(Locale.ROOT));
+    private final String name;
+    private final boolean hasQuarters;
+    private final boolean hasCurvosity;
+    private final boolean hasSmoothing;
+    private final boolean hasDirection;
+
+    TrackItems(String name, boolean hasQuarters, boolean hasCurvosity, boolean hasSmoothing, boolean hasDirection) {
+        this.name = name;
+        this.hasQuarters = hasQuarters;
+        this.hasCurvosity = hasCurvosity;
+        this.hasSmoothing = hasSmoothing;
+        this.hasDirection = hasDirection;
     }
 
     public boolean hasQuarters() {
-        switch (this) {
-            case TURN:
-            case SWITCH:
-                return true;
-            default:
-                return false;
-        }
+        return this.hasQuarters;
     }
 
     public boolean hasCurvosity() {
-        switch (this) {
-            case SWITCH:
-            case CUSTOM:
-                return true;
-            default:
-                return false;
-        }
+        return this.hasCurvosity;
     }
 
     public boolean hasSmoothing() {
-        switch (this) {
-            case SLOPE:
-            case TURN:
-            case SWITCH:
-            case CUSTOM:
-                return true;
-            default:
-                return false;
-        }
+        return this.hasSmoothing;
     }
 
     public boolean hasDirection() {
-        switch (this) {
-            case TURN:
-            case SWITCH:
-                return true;
-            default:
-                return false;
-        }
+        return this.hasDirection;
+    }
+
+    @Override
+    public String toString() {
+        return TextUtil.translate("track.immersiverailroading:class." + this.getName());
+    }
+
+    public String getName() {
+        return this.name;
     }
 }

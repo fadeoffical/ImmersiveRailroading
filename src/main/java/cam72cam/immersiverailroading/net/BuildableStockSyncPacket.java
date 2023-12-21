@@ -7,12 +7,14 @@ import cam72cam.mod.serialization.TagField;
 
 import java.util.List;
 
-/*
+/**
  * Movable rolling stock sync packet
  */
-public class BuildableStockSyncPacket extends Packet {
+public final class BuildableStockSyncPacket extends Packet {
+
     @TagField
     private EntityBuildableRollingStock stock;
+
     @TagField(typeHint = ItemComponentType.class)
     private List<ItemComponentType> items;
 

@@ -1,6 +1,10 @@
 package cam72cam.immersiverailroading.util;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 public class MergedBlocks implements DataBlock {
     private final Map<String, DataBlock.Value> primitives;

@@ -140,16 +140,16 @@ public enum ItemComponentType {
     public int getPlateCost(Gauge gauge, EntityRollingStockDefinition definition) {
         ModelComponent comp = this.getExampleComponent(definition);
 
-        double mult = 0;
+        double multiplier;
         switch (this.crafting) {
             case PLATE_LARGE:
-                mult = 0.25;
+                multiplier = 0.25;
                 break;
             case PLATE_MEDIUM:
-                mult = 0.5;
+                multiplier = 0.5;
                 break;
             case PLATE_SMALL:
-                mult = 1;
+                multiplier = 1;
                 break;
             default:
                 return 0;
@@ -159,8 +159,7 @@ public enum ItemComponentType {
         double size = comp.width() * comp.height() * 2 + comp.length() * comp.height() * 2 + comp.width() * comp.height() * 2;
         size *= Math.pow(gauge.scale(), 3);
         size /= 4;
-
-        return (int) Math.ceil(size * mult);
+        return (int) Math.ceil(size * multiplier);
     }
 
     private ModelComponent getExampleComponent(EntityRollingStockDefinition def) {

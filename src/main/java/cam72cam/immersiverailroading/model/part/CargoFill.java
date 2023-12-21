@@ -12,7 +12,7 @@ import java.util.List;
 
 public class CargoFill {
     public CargoFill(List<ModelComponent> cargoLoads, ModelState state, boolean showCurrentLoadOnly) {
-        state.push(settings -> settings.add((ModelState.GroupVisibility) (stock, group) -> {
+        state.push(settings -> settings.groupVisibility((ModelState.GroupVisibility) (stock, group) -> {
             int percentFull = stock instanceof Freight ? ((Freight) stock).getPercentCargoFull() : 100;
             for (ModelComponent cargoLoad : cargoLoads) {
                 if (cargoLoad.id <= percentFull) {

@@ -10,7 +10,7 @@ import cam72cam.immersiverailroading.model.part.Control;
 import cam72cam.immersiverailroading.registry.LocomotiveSteamDefinition;
 import cam72cam.immersiverailroading.util.FluidQuantity;
 import cam72cam.immersiverailroading.util.LiquidUtil;
-import cam72cam.immersiverailroading.util.Speed;
+import cam72cam.immersiverailroading.library.unit.Speed;
 import cam72cam.mod.entity.Player;
 import cam72cam.mod.entity.sync.TagSync;
 import cam72cam.mod.fluid.Fluid;
@@ -26,15 +26,16 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class LocomotiveSteam extends Locomotive {
+public final class SteamLocomotive extends Locomotive {
 
-    // Map<Slot, TicksToBurn>
     @TagSync
-    @TagField(value = "burn_time", mapper = LocomotiveSteam.SlotTagMapper.class)
-    private final Map<Integer, Integer> burnTime = new HashMap<>();
+    @TagField(value = "burn_time", mapper = SteamLocomotive.SlotTagMapper.class)
+    private final Map<Integer /* slot */, Integer /* ticks to burn*/> burnTime = new HashMap<>();
+
     @TagSync
-    @TagField(value = "burn_max", mapper = LocomotiveSteam.SlotTagMapper.class)
+    @TagField(value = "burn_max", mapper = SteamLocomotive.SlotTagMapper.class)
     private final Map<Integer, Integer> burnMax = new HashMap<>();
+
     // PSI
     @TagSync
     @TagField("boiler_psi")
@@ -48,7 +49,7 @@ public class LocomotiveSteam extends Locomotive {
     private boolean pressureValve = false;
     private float drainRemainder;
 
-    public LocomotiveSteam() {
+    public SteamLocomotive() {
         this.boilerTemperature = this.ambientTemperature();
     }
 
@@ -86,7 +87,7 @@ public class LocomotiveSteam extends Locomotive {
             // Only drain 10mb at a time from the tender
             int desiredDrain = 10;
             if (this.getTankCapacity().asMillibuckets() - this.getServerLiquidAmount() >= 10) {
-                this.theTank.drain(tender.theTank, desiredDrain, false);
+                this.tank.drain(tender.tank, desiredDrain, false);
             }
 
             // todo: this is way too deeply nested !!!!!
@@ -132,7 +133,7 @@ public class LocomotiveSteam extends Locomotive {
                     if (stack.getCount() <= 0 || stack.getBurnTime() == 0) {
                         continue;
                     }
-                    remainingTime = (int) (stack.getBurnTime() / this.gauge.scale() * (Config.ConfigBalance.locoSteamFuelEfficiency / 100.0));
+                    remainingTime = (int) (stack.getBurnTime() / this.getGauge().scale() * (Config.ConfigBalance.locoSteamFuelEfficiency / 100.0));
                     this.burnTime.put(slot, remainingTime);
                     this.burnMax.put(slot, remainingTime);
                     stack.setCount(stack.getCount() - 1);
@@ -184,7 +185,7 @@ public class LocomotiveSteam extends Locomotive {
             }
 
             // Pressure relief valve
-            int maxPSI = this.getDefinition().getMaxPSI(this.gauge);
+            int maxPSI = this.getDefinition().getMaxPSI(this.getGauge());
             this.pressureValve = boilerPressure > maxPSI;
             if (boilerPressure > maxPSI) {
                 waterUsed += boilerPressure - maxPSI;
@@ -216,8 +217,8 @@ public class LocomotiveSteam extends Locomotive {
         if (waterUsed != 0) {
             waterUsed *= Config.ConfigBalance.locoWaterUsage;
             waterUsed += this.drainRemainder;
-            if (waterUsed > 0 && this.theTank.getContents() != null) {
-                this.theTank.drain(new FluidStack(this.theTank.getContents()
+            if (waterUsed > 0 && this.tank.getContents() != null) {
+                this.tank.drain(new FluidStack(this.tank.getContents()
                         .getFluid(), (int) Math.floor(waterUsed)), false);
                 this.drainRemainder = waterUsed % 1;
             }
@@ -226,8 +227,8 @@ public class LocomotiveSteam extends Locomotive {
         this.setBoilerPressure(boilerPressure);
         this.setBoilerTemperature(Math.max(boilerTemperature, this.ambientTemperature()));
 
-        if (boilerPressure > this.getDefinition().getMaxPSI(this.gauge) * 1.1 || (boilerPressure > this.getDefinition()
-                .getMaxPSI(this.gauge) * 0.5 && boilerTemperature > 150)) {
+        if (boilerPressure > this.getDefinition().getMaxPSI(this.getGauge()) * 1.1 || (boilerPressure > this.getDefinition()
+                .getMaxPSI(this.getGauge()) * 0.5 && boilerTemperature > 150)) {
             // 10% over max pressure OR
             // Half max pressure and high boiler temperature
             //EXPLODE
@@ -289,28 +290,27 @@ public class LocomotiveSteam extends Locomotive {
 
     @Override
     public double getAppliedTractiveEffort(Speed speed) {
-        if (this.getDefinition().isCabCar()) {
-            return 0;
-        }
+        if (this.getDefinition().isCabCar()) return 0;
 
-        //double traction_N = this.getDefinition().getStartingTractionNewtons(gauge);
-        double traction_N = this.getDefinition()
-                .getHorsePower(this.gauge) * 375 / Math.max(Math.abs(speed.imperial()), 1.0);
-        if (Config.isFuelRequired(this.gauge)) {
-            traction_N = traction_N / this.getDefinition().getMaxPSI(this.gauge) * this.getBoilerPressure();
+        //double tractionNewtons = this.getDefinition().getStartingTractionNewtons(gauge);
+        double speedMph = speed.as(Speed.SpeedUnit.MILES_PER_HOUR).absolute().value();
+        double tractionNewtons = this.getDefinition().getHorsePower(this.getGauge()) * 375 / Math.max(speedMph, 1.0);
+
+        if (Config.isFuelRequired(this.getGauge())) {
+            tractionNewtons /= this.getDefinition().getMaxPSI(this.getGauge()) * this.getBoilerPressure();
         }
 
         // Cap the max "effective" reverser.  At high speeds having a fully open reverser just damages equipment
         double reverser = this.getReverser();
         double reverserCap = 0.25;
-        double maxReverser = 1 - Math.abs(this.getCurrentSpeed().metric()) / this.getDefinition()
-                .getMaxSpeed(this.gauge)
-                .metric() * reverserCap;
+        double currentSpeed = this.getCurrentSpeed().as(Speed.SpeedUnit.KILOMETERS_PER_HOUR).absolute().value();
+        double maxSpeed = this.getDefinition().getMaxSpeed(this.getGauge()).as(Speed.SpeedUnit.KILOMETERS_PER_HOUR).value();
+        double maxReverser = 1 - currentSpeed / maxSpeed * reverserCap;
 
         // This should probably be tuned...
         double multiplier = Math.copySign(Math.abs(Math.pow(this.getThrottle() * Math.min(Math.abs(reverser), maxReverser), 3)), reverser);
 
-        return traction_N * multiplier;
+        return tractionNewtons * multiplier;
     }
 
     @Override
@@ -320,7 +320,7 @@ public class LocomotiveSteam extends Locomotive {
 
     @Override
     public FluidQuantity getTankCapacity() {
-        return this.getDefinition().getTankCapacity(this.gauge);
+        return this.getDefinition().getTankCapacity(this.getGauge());
     }
 
     public float getBoilerTemperature() {
@@ -356,7 +356,7 @@ public class LocomotiveSteam extends Locomotive {
 
     @Override
     public int getInventorySize() {
-        return this.getDefinition().getInventorySize(this.gauge) + 2;
+        return this.getDefinition().getInventorySize(this.getGauge()) + 2;
     }
 
     @Override
@@ -377,7 +377,7 @@ public class LocomotiveSteam extends Locomotive {
     }
 
     @Override
-    protected int[] getContainertOutputSlots() {
+    protected int[] getContainerOutputSlots() {
         return new int[]{1};
     }
 
@@ -396,7 +396,7 @@ public class LocomotiveSteam extends Locomotive {
 
     @Override
     public int getInventoryWidth() {
-        return this.getDefinition().getInventoryWidth(this.gauge);
+        return this.getDefinition().getInventoryWidth(this.getGauge());
     }
 
     public boolean isOverpressure() {
@@ -412,25 +412,22 @@ public class LocomotiveSteam extends Locomotive {
                 .filter(control -> control.part.type == ModelComponentType.CYLINDER_DRAIN_CONTROL_X)
                 .collect(Collectors.toList());
         if (drains.isEmpty()) {
-            double csm = Math.abs(this.getCurrentSpeed().metric()) / this.gauge.scale();
+            double csm = this.getCurrentSpeed().as(Speed.SpeedUnit.KILOMETERS_PER_HOUR).absolute().value() / this.getGauge()
+                    .scale();
             return csm < 20;
         }
 
-        return drains.stream().anyMatch(c -> this.getControlPosition(c) == 1);
+        return drains.stream().anyMatch(control -> this.getControlPosition(control) == 1);
     }
 
     public void setCylinderDrains(boolean enabled) {
         // This could be optimized to once-per-tick, but I'm not sure that is necessary
-        List<Control<?>> drains = this.getDefinition()
+        this.getDefinition()
                 .getModel()
                 .getControls()
                 .stream()
                 .filter(control -> control.part.type == ModelComponentType.CYLINDER_DRAIN_CONTROL_X)
-                .collect(Collectors.toList());
-
-        for (Control<?> drain : drains) {
-            this.setControlPosition(drain, enabled ? 1 : 0);
-        }
+                .forEach(drain -> this.setControlPosition(drain, enabled ? 1 : 0));
     }
 
     private static class SlotTagMapper implements TagMapper<Map<Integer, Integer>> {

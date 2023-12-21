@@ -3,8 +3,8 @@ package cam72cam.immersiverailroading.tile;
 import cam72cam.immersiverailroading.ImmersiveRailroading;
 import cam72cam.immersiverailroading.library.CraftingMachineMode;
 import cam72cam.immersiverailroading.library.Permissions;
-import cam72cam.immersiverailroading.multiblock.Multiblock.MultiblockInstance;
-import cam72cam.immersiverailroading.multiblock.MultiblockRegistry;
+import cam72cam.immersiverailroading.multiblock.MultiBlock.MultiblockInstance;
+import cam72cam.immersiverailroading.multiblock.MultiBlockRegistry;
 import cam72cam.immersiverailroading.net.MultiblockSelectCraftPacket;
 import cam72cam.mod.block.BlockEntityTickable;
 import cam72cam.mod.energy.Energy;
@@ -26,24 +26,32 @@ public class TileMultiblock extends BlockEntityTickable {
 
     @TagField("replaced")
     private BlockInfo replaced;
+
     @TagField("offset")
     private Vec3i offset;
+
     @TagField("rotation")
     private Rotation rotation;
+
     @TagField("name")
     private String name;
+
     @TagField("craftMode")
     private CraftingMachineMode craftMode = CraftingMachineMode.STOPPED;
+
     private long ticks;
     private MultiblockInstance mb;
 
     //Crafting
     @TagField("craftProgress")
     private int craftProgress = 0;
+
     @TagField("craftItem")
     private ItemStack craftItem = ItemStack.EMPTY;
+
     @TagField
     private final ItemStackHandler container = new ItemStackHandler(0);
+
     @TagField("energyStorage")
     private final Energy energy = new Energy(0, 1000);
 
@@ -60,14 +68,14 @@ public class TileMultiblock extends BlockEntityTickable {
 
     public MultiblockInstance getMultiblock() {
         if (this.mb == null && this.isLoaded()) {
-            this.mb = MultiblockRegistry.get(this.name).instance(this.getWorld(), this.getOrigin(), this.rotation);
+            this.mb = MultiBlockRegistry.get(this.name).instance(this.getWorld(), this.getOrigin(), this.rotation);
         }
         return this.mb;
     }
 
     public boolean isLoaded() {
         //TODO FIX ME bad init
-        return this.name != null && this.name.length() != 0;
+        return this.name != null && !this.name.isEmpty();
     }
 
     public Vec3i getOrigin() {
@@ -84,7 +92,7 @@ public class TileMultiblock extends BlockEntityTickable {
     @Override
     public void onBreak() {
         try {
-            // Multiblock break
+            // MultiBlock break
             this.breakBlock();
         } catch (Exception ex) {
             ImmersiveRailroading.catching(ex);
@@ -105,9 +113,8 @@ public class TileMultiblock extends BlockEntityTickable {
 
     @Override
     public boolean onClick(Player player, Player.Hand hand, Facing facing, Vec3d hit) {
-        if (!player.hasPermission(Permissions.MACHINIST)) {
-            return false;
-        }
+        if (!player.hasPermission(Permissions.MACHINIST)) return false;
+
         return this.onBlockActivated(player, hand);
     }
 
@@ -190,6 +197,7 @@ public class TileMultiblock extends BlockEntityTickable {
         if (this.offset != null && this.getMultiblock() != null) {
             this.getMultiblock().tick(this.offset);
         } else if (this.ticks > 20) {
+            // todo: use proper logger
             System.out.println("Error in multiblock, reverting");
             this.getWorld().breakBlock(this.getPos());
         }

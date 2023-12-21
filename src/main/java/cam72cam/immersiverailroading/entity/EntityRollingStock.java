@@ -5,10 +5,7 @@ import cam72cam.immersiverailroading.ConfigSound;
 import cam72cam.immersiverailroading.IRItems;
 import cam72cam.immersiverailroading.ImmersiveRailroading;
 import cam72cam.immersiverailroading.items.ItemPaintBrush;
-import cam72cam.immersiverailroading.library.Gauge;
-import cam72cam.immersiverailroading.library.KeyTypes;
-import cam72cam.immersiverailroading.library.ModelComponentType;
-import cam72cam.immersiverailroading.library.Permissions;
+import cam72cam.immersiverailroading.library.*;
 import cam72cam.immersiverailroading.model.part.Control;
 import cam72cam.immersiverailroading.registry.DefinitionManager;
 import cam72cam.immersiverailroading.registry.EntityRollingStockDefinition;
@@ -39,37 +36,41 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class EntityRollingStock extends CustomEntity implements ITickable, IClickable, IKillable {
+
     @TagField("gauge")
-    public Gauge gauge;
+    private Gauge gauge;
+
     @TagField("tag")
     @TagSync
     public String tag = "";
-    @TagField("defID")
-    protected String defID;
+
     @TagSync
     @TagField(value = "controlPositions", mapper = ControlPositionMapper.class)
     protected Map<String, Pair<Boolean, Float>> controlPositions = new HashMap<>();
+
+    @TagField("defID")
+    private String definitionId;
+
     @TagSync
     @TagField(value = "texture", mapper = StrictTagMapper.class)
     private String texture = null;
-    private final SingleCache<Vec3d, Matrix4> modelMatrix = new SingleCache<>(v -> new Matrix4()
-            .translate(this.getPosition().x, this.getPosition().y, this.getPosition().z)
+
+    private final SingleCache<Vec3d, Matrix4> modelMatrix = new SingleCache<>(v -> new Matrix4().translate(this.getPosition().x, this.getPosition().y, this.getPosition().z)
             .rotate(Math.toRadians(180 - this.getRotationYaw()), 0, 1, 0)
             .rotate(Math.toRadians(this.getRotationPitch()), 1, 0, 0)
             .rotate(Math.toRadians(-90), 0, 1, 0)
-            .scale(this.gauge.scale(), this.gauge.scale(), this.gauge.scale())
-    );
+            .scale(this.getGauge().scale(), this.getGauge().scale(), this.getGauge().scale()));
 
-    public void setup(EntityRollingStockDefinition def, Gauge gauge, String texture) {
-        this.defID = def.defID;
-        this.gauge = gauge;
+
+    public void setup(EntityRollingStockDefinition rollingStockDefinition, Gauge gauge, String texture) {
+        this.definitionId = rollingStockDefinition.defID;
+        this.setGauge(gauge);
         this.texture = texture;
-        def.cgDefaults.forEach(this::setControlPosition);
+        rollingStockDefinition.cgDefaults.forEach(this::setControlPosition);
     }
 
     public void setControlPosition(String control, float val) {
-        val = Math.min(1, Math.max(0, val));
-        this.controlPositions.put(control, Pair.of(false, val));
+        this.controlPositions.put(control, Pair.of(false, Math.min(1, Math.max(0, val))));
     }
 
     public boolean isImmuneToFire() {
@@ -80,6 +81,10 @@ public class EntityRollingStock extends CustomEntity implements ITickable, IClic
         return 1;
     }
 
+    public boolean canBePushed() {
+        return false;
+    }
+
 
 	/* TODO?
 	@Override
@@ -88,35 +93,32 @@ public class EntityRollingStock extends CustomEntity implements ITickable, IClic
 	}
 	*/
 
-    public boolean canBePushed() {
-        return false;
-    }
-
     public boolean allowsDefaultMovement() {
         return false;
     }
 
     public String tryJoinWorld() {
-        if (DefinitionManager.getDefinition(this.defID) == null) {
-            String error = String.format("Missing definition %s, do you have all of the required resource packs?", this.defID);
+        if (DefinitionManager.getDefinition(this.definitionId) == null) {
+            String error = String.format("Missing definition %s, do you have all of the required resource packs?", this.definitionId);
             ImmersiveRailroading.error(error);
             return error;
         }
         return null;
     }
 
-    public String getDefinitionID() {
-        return this.defID;
+    public String getDefinitionId() {
+        return this.definitionId;
     }
 
     @Override
     public void onTick() {
-        if (this.getWorld().isServer && this.getTickCount() % 5 == 0) {
-            EntityRollingStockDefinition def = DefinitionManager.getDefinition(this.defID);
-            if (def == null) {
-                this.kill();
-            }
-        }
+        if (this.getWorld().isClient) return;
+        if (this.getTickCount() % 5 != 0) return;
+
+        // todo: maybe check this on entity load instead of every 5 ticks?
+        //       this just seems way too hacky
+        EntityRollingStockDefinition definition = DefinitionManager.getDefinition(this.definitionId);
+        if (definition == null) this.kill();
     }
 
     /*
@@ -126,7 +128,7 @@ public class EntityRollingStock extends CustomEntity implements ITickable, IClic
     @Override
     public ClickResult onClick(Player player, Player.Hand hand) {
         if (player.getHeldItem(hand).is(IRItems.ITEM_PAINT_BRUSH) && player.hasPermission(Permissions.PAINT_BRUSH)) {
-            ItemPaintBrush.onStockInteract(this, player, hand);
+            openPaintbrushGui(this, player, hand);
             return ClickResult.ACCEPTED;
         }
 
@@ -141,25 +143,34 @@ public class EntityRollingStock extends CustomEntity implements ITickable, IClic
         return ClickResult.PASS;
     }
 
+    private static void openPaintbrushGui(EntityRollingStock stock, Player player, Player.Hand hand) {
+        if (!player.getWorld().isClient) return;
+
+        ItemPaintBrush.Data data = new ItemPaintBrush.Data(player.getHeldItem(hand));
+        switch (data.mode) {
+            case GUI:
+                GuiTypes.PAINT_BRUSH.open(player);
+                break;
+            case RANDOM_SINGLE:
+            case RANDOM_COUPLED:
+                new ItemPaintBrush.PaintBrushPacket(stock, data.mode, null, false).sendToServer();
+                break;
+        }
+    }
+
     @Override
     public void onDamage(DamageType type, Entity source, float amount, boolean bypassesArmor) {
-        if (this.getWorld().isClient) {
-            return;
-        }
+        if (this.getWorld().isClient) return;
 
         if (type == DamageType.EXPLOSION) {
-            if (source == null || !source.isMob()) {
-                if (amount > 5 && ConfigDamage.trainMobExplosionDamage) {
-                    this.kill();
-                }
+            if ((source == null || !source.isMob()) && amount > 5 && ConfigDamage.trainMobExplosionDamage) {
+                this.kill();
             }
         }
 
         if (type == DamageType.OTHER && source != null && source.isPlayer()) {
             Player player = source.asPlayer();
-            if (player.isCrouching()) {
-                this.kill();
-            }
+            if (player.isCrouching()) this.kill();
         }
     }
 
@@ -180,20 +191,47 @@ public class EntityRollingStock extends CustomEntity implements ITickable, IClic
      * @return Stock Weight in Kg
      */
     public double getWeight() {
-        return this.getDefinition().getWeight(this.gauge);
+        return this.getDefinition().getWeight(this.getGauge());
     }
 
+    public EntityRollingStockDefinition getDefinition() {
+        return this.getDefinition(EntityRollingStockDefinition.class);
+    }
+
+    public <T extends EntityRollingStockDefinition> T getDefinition(Class<T> type) {
+        EntityRollingStockDefinition def = DefinitionManager.getDefinition(this.definitionId);
+        if (def == null) {
+            // This should not be hit, entity should be removed handled by tryJoinWorld
+            throw new RuntimeException(String.format("Definition %s has been removed!  This stock will not function!", this.definitionId));
+        }
+        return (T) def;
+    }
+
+    /*
+     * Helpers
+     */
+	/* TODO RENDER
+
+	@SideOnly(Side.CLIENT)
+	@Override
+	public boolean isInRangeToRenderDist(double distance)
+    {
+        return true;
+    }
+
+	@Override
+	public boolean shouldRenderInPass(int pass) {
+		return false;
+	}
+	*/
+
     public double getMaxWeight() {
-        return this.getDefinition().getWeight(this.gauge);
+        return this.getDefinition().getWeight(this.getGauge());
     }
 
     public ISound createSound(Identifier oggLocation, boolean repeats, double attenuationDistance, Supplier<Float> category) {
-        ISound snd = Audio.newSound(
-                oggLocation, SoundCategory.MASTER,
-                repeats,
-                (float) (attenuationDistance * ConfigSound.soundDistanceScale * this.gauge.scale()),
-                this.soundScale()
-        );
+        ISound snd = Audio.newSound(oggLocation, SoundCategory.MASTER, repeats, (float) (attenuationDistance * ConfigSound.soundDistanceScale * this.getGauge()
+                .scale()), this.soundScale());
         return new ISound() {
             @Override
             public void play(Vec3d pos) {
@@ -232,27 +270,9 @@ public class EntityRollingStock extends CustomEntity implements ITickable, IClic
         };
     }
 
-    /*
-     * Helpers
-     */
-	/* TODO RENDER
-
-	@SideOnly(Side.CLIENT)
-	@Override
-	public boolean isInRangeToRenderDist(double distance)
-    {
-        return true;
-    }
-
-	@Override
-	public boolean shouldRenderInPass(int pass) {
-		return false;
-	}
-	*/
-
     public float soundScale() {
         if (this.getDefinition().shouldScalePitch()) {
-            double scale = this.gauge.scale() * this.getDefinition().internal_model_scale;
+            double scale = this.getGauge().scale() * this.getDefinition().internal_model_scale;
             return (float) Math.sqrt(Math.sqrt(scale));
         }
         return 1;
@@ -266,19 +286,6 @@ public class EntityRollingStock extends CustomEntity implements ITickable, IClic
         if (this.getDefinition().textureNames.containsKey(variant)) {
             this.texture = variant;
         }
-    }
-
-    public EntityRollingStockDefinition getDefinition() {
-        return this.getDefinition(EntityRollingStockDefinition.class);
-    }
-
-    public <T extends EntityRollingStockDefinition> T getDefinition(Class<T> type) {
-        EntityRollingStockDefinition def = DefinitionManager.getDefinition(this.defID);
-        if (def == null) {
-            // This should not be hit, entity should be removed handled by tryJoinWorld
-            throw new RuntimeException(String.format("Definition %s has been removed!  This stock will not function!", this.defID));
-        }
-        return (T) def;
     }
 
     public boolean externalLightsEnabled() {
@@ -337,12 +344,13 @@ public class EntityRollingStock extends CustomEntity implements ITickable, IClic
         return this.controlPositions.getOrDefault(control, Pair.of(false, 0f));
     }
 
-    public void setControlPositions(ModelComponentType type, float val) {
-        this.getDefinition().getModel()
+    public void setControlPositions(ModelComponentType type, float value) {
+        this.getDefinition()
+                .getModel()
                 .getControls()
                 .stream()
-                .filter(x -> x.part.type == type)
-                .forEach(c -> this.setControlPosition(c, val));
+                .filter(control -> control.part.type == type)
+                .forEach(control -> this.setControlPosition(control, value));
     }
 
     public void setControlPosition(Control<?> control, float val) {
@@ -358,17 +366,19 @@ public class EntityRollingStock extends CustomEntity implements ITickable, IClic
         return control.part.type != ModelComponentType.INDEPENDENT_BRAKE_X || player.hasPermission(Permissions.BRAKE_CONTROL);
     }
 
+    public Gauge getGauge() {
+        return gauge;
+    }
+
+    public void setGauge(Gauge gauge) {
+        this.gauge = gauge;
+    }
+
     private static class ControlPositionMapper implements TagMapper<Map<String, Pair<Boolean, Float>>> {
         @Override
-        public TagAccessor<Map<String, Pair<Boolean, Float>>> apply(
-                Class<Map<String, Pair<Boolean, Float>>> type,
-                String fieldName,
-                TagField tag) throws SerializationException {
-            return new TagAccessor<>(
-                    (d, o) -> d.setMap(fieldName, o, Function.identity(), x -> new TagCompound().setBoolean("pressed", x.getLeft())
-                            .setFloat("pos", x.getRight())),
-                    d -> d.getMap(fieldName, Function.identity(), x -> Pair.of(x.hasKey("pressed") && x.getBoolean("pressed"), x.getFloat("pos")))
-            );
+        public TagAccessor<Map<String, Pair<Boolean, Float>>> apply(Class<Map<String, Pair<Boolean, Float>>> type, String fieldName, TagField tag) throws SerializationException {
+            return new TagAccessor<>((d, o) -> d.setMap(fieldName, o, Function.identity(), x -> new TagCompound().setBoolean("pressed", x.getLeft())
+                    .setFloat("pos", x.getRight())), d -> d.getMap(fieldName, Function.identity(), x -> Pair.of(x.hasKey("pressed") && x.getBoolean("pressed"), x.getFloat("pos"))));
         }
     }
 }

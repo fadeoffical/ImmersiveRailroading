@@ -1,8 +1,8 @@
 package cam72cam.immersiverailroading;
 
 import cam72cam.immersiverailroading.library.PressureDisplayType;
-import cam72cam.immersiverailroading.library.SpeedDisplayType;
-import cam72cam.immersiverailroading.library.TemperatureDisplayType;
+import cam72cam.immersiverailroading.library.unit.Speed;
+import cam72cam.immersiverailroading.library.unit.TemperatureUnit;
 import cam72cam.mod.config.ConfigFile.Comment;
 import cam72cam.mod.config.ConfigFile.Name;
 import cam72cam.mod.render.OptiFine;
@@ -14,9 +14,9 @@ import static cam72cam.mod.config.ConfigFile.File;
 import static cam72cam.mod.config.ConfigFile.Range;
 
 @Comment("Configuration File")
-@Name("general")
+@Name("general") // todo: why tf is the graphics config named general?
 @File("immersiverailroading_graphics.cfg")
-public class ConfigGraphics {
+public final class ConfigGraphics {
     @Comment("Enable Particles")
     public static boolean particlesEnabled = true;
 
@@ -24,19 +24,19 @@ public class ConfigGraphics {
     public static boolean trainsOnTheBrain = true;
 
     @Comment("What unit to use for speedometer. (kmh, mph or ms)")
-    public static SpeedDisplayType speedUnit = SpeedDisplayType.kmh;
+    public static Speed.SpeedUnit speedUnit = Speed.SpeedUnit.KILOMETERS_PER_HOUR;
 
     @Comment("What units to display pressure in (psi, bar)")
     public static PressureDisplayType pressureUnit = PressureDisplayType.psi;
 
     @Comment("What units to display pressure in (psi, bar)")
-    public static TemperatureDisplayType temperatureUnit = TemperatureDisplayType.celcius;
+    public static TemperatureUnit temperatureUnit = TemperatureUnit.CELSIUS;
 
     @Comment("How long to keep textures in memory after they have left the screen (higher numbers = smoother game play, lower numbers = less GPU memory used)")
     @Range(min = 0, max = 100)
     public static int textureCacheSeconds = 30;
 
-    @Comment("Show text tooltips over interactable components")
+    @Comment("Show text tooltips over interactive components")
     public static boolean interactiveComponentsOverlay = true;
 
     @Comment("Show stock variants in JEI/NEI/Creative search")
@@ -65,4 +65,6 @@ public class ConfigGraphics {
     @Comment("Mouse Scroll Speed (negative values invert it)")
     @Range(min = -10, max = 10)
     public static float ScrollSpeed = 1;
+
+    private ConfigGraphics() {}
 }

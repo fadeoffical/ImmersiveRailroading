@@ -72,9 +72,10 @@ public class ImmersiveRailroading extends ModCore.Mod {
                 EntityRegistry.register(ImmersiveRailroading.instance, CarTank::new, ImmersiveRailroading.ENTITY_SYNC_DISTANCE);
                 EntityRegistry.register(ImmersiveRailroading.instance, HandCar::new, ImmersiveRailroading.ENTITY_SYNC_DISTANCE);
                 EntityRegistry.register(ImmersiveRailroading.instance, LocomotiveDiesel::new, ImmersiveRailroading.ENTITY_SYNC_DISTANCE);
-                EntityRegistry.register(ImmersiveRailroading.instance, LocomotiveSteam::new, ImmersiveRailroading.ENTITY_SYNC_DISTANCE);
+                EntityRegistry.register(ImmersiveRailroading.instance, SteamLocomotive::new, ImmersiveRailroading.ENTITY_SYNC_DISTANCE);
                 EntityRegistry.register(ImmersiveRailroading.instance, Tender::new, ImmersiveRailroading.ENTITY_SYNC_DISTANCE);
 
+                // todo: umc: change to Packet.register(Supplier<Class<? extends Packet>>, PacketDirection)
                 Packet.register(BuildableStockSyncPacket::new, PacketDirection.ServerToClient);
                 Packet.register(ItemRailUpdatePacket::new, PacketDirection.ClientToServer);
                 Packet.register(MRSSyncPacket::new, PacketDirection.ServerToClient);
@@ -109,11 +110,11 @@ public class ImmersiveRailroading extends ModCore.Mod {
             case FINALIZE:
                 Permissions.register();
 
-                MultiblockRegistry.register(SteamHammerMultiblock.NAME, new SteamHammerMultiblock());
-                MultiblockRegistry.register(PlateRollerMultiblock.NAME, new PlateRollerMultiblock());
-                MultiblockRegistry.register(RailRollerMultiblock.NAME, new RailRollerMultiblock());
-                MultiblockRegistry.register(BoilerRollerMultiblock.NAME, new BoilerRollerMultiblock());
-                MultiblockRegistry.register(CastingMultiblock.NAME, new CastingMultiblock());
+                MultiBlockRegistry.register(SteamHammerMultiBlock.NAME, new SteamHammerMultiBlock());
+                MultiBlockRegistry.register(PlateRollerMultiBlock.NAME, new PlateRollerMultiBlock());
+                MultiBlockRegistry.register(RailRollerMultiBlock.NAME, new RailRollerMultiBlock());
+                MultiBlockRegistry.register(BoilerRollerMultiBlock.NAME, new BoilerRollerMultiBlock());
+                MultiBlockRegistry.register(CastingMultiBlock.NAME, new CastingMultiBlock());
                 IRFuzzy.applyFallbacks();
                 break;
         }
@@ -121,8 +122,8 @@ public class ImmersiveRailroading extends ModCore.Mod {
     }
 
     @Override
-    public void clientEvent(ModEvent event) {
-        switch (event) {
+    public void clientEvent(ModEvent modEvent) {
+        switch (modEvent) {
             case CONSTRUCT:
                 BlockRender.register(IRBlocks.BLOCK_RAIL, RailBaseModel::getModel, TileRail.class);
                 BlockRender.register(IRBlocks.BLOCK_RAIL_GAG, RailBaseModel::getModel, TileRailGag.class);
@@ -146,9 +147,9 @@ public class ImmersiveRailroading extends ModCore.Mod {
                 ItemRender.register(IRItems.ITEM_MANUAL, new Identifier(MODID, "items/engineerslexicon"));
                 ItemRender.register(IRItems.ITEM_TRACK_EXCHANGER, new TrackExchangerModel());
 
-                IEntityRender<EntityMoveableRollingStock> stockRender = new IEntityRender<EntityMoveableRollingStock>() {
+                IEntityRender<EntityMovableRollingStock> stockRender = new IEntityRender<EntityMovableRollingStock>() {
                     @Override
-                    public void render(EntityMoveableRollingStock entity, RenderState state, float partialTicks) {
+                    public void render(EntityMovableRollingStock entity, RenderState state, float partialTicks) {
                         StockModel<?, ?> renderer = entity.getDefinition().getModel();
                         if (renderer != null) {
                             renderer.render(entity, state, partialTicks);
@@ -156,14 +157,14 @@ public class ImmersiveRailroading extends ModCore.Mod {
                     }
 
                     @Override
-                    public void postRender(EntityMoveableRollingStock entity, RenderState state, float partialTicks) {
+                    public void postRender(EntityMovableRollingStock entity, RenderState state, float partialTicks) {
                         StockModel<?, ?> renderer = entity.getDefinition().getModel();
                         if (renderer != null) {
                             renderer.postRender(entity, state, partialTicks);
                         }
                     }
                 };
-                EntityRenderer.register(LocomotiveSteam.class, stockRender);
+                EntityRenderer.register(SteamLocomotive.class, stockRender);
                 EntityRenderer.register(LocomotiveDiesel.class, stockRender);
                 EntityRenderer.register(CarPassenger.class, stockRender);
                 EntityRenderer.register(CarFreight.class, stockRender);
@@ -197,29 +198,25 @@ public class ImmersiveRailroading extends ModCore.Mod {
                 GlobalRender.registerItemMouseover(IRItems.ITEM_TRACK_BLUEPRINT, TrackBlueprintItemModel::renderMouseover);
                 GlobalRender.registerItemMouseover(IRItems.ITEM_MANUAL, MBBlueprintRender::renderMouseover);
 
-                GlobalRender.registerOverlay((state, pt) -> {
+                GlobalRender.registerOverlay((state, partialTicks) -> {
                     Entity riding = MinecraftClient.getPlayer().getRiding();
-                    if (!(riding instanceof EntityRollingStock)) {
-                        return;
-                    }
+                    if (!(riding instanceof EntityRollingStock)) return;
+
                     EntityRollingStock stock = (EntityRollingStock) riding;
-                    if (stock.getDefinition().getOverlay() != null) {
-                        stock.getDefinition().getOverlay().render(state, stock);
-                    }
+                    GuiBuilder overlay = stock.getDefinition().getOverlay();
+                    if (overlay != null) overlay.render(state, stock);
                 });
 
-                ClientEvents.MOUSE_GUI.subscribe(evt -> {
-                    if (!MinecraftClient.isReady()) {
-                        return true;
-                    }
+                ClientEvents.MOUSE_GUI.subscribe(event -> {
+                    if (!MinecraftClient.isReady()) return true;
+
                     Entity riding = MinecraftClient.getPlayer().getRiding();
-                    if (!(riding instanceof EntityRollingStock)) {
-                        return true;
-                    }
+                    if (!(riding instanceof EntityRollingStock)) return true;
+
                     EntityRollingStock stock = (EntityRollingStock) riding;
-                    if (stock.getDefinition().getOverlay() != null) {
-                        return stock.getDefinition().getOverlay().click(evt, stock);
-                    }
+                    GuiBuilder overlay = stock.getDefinition().getOverlay();
+                    if (overlay != null) return overlay.click(event, stock);
+
                     return true;
                 });
 

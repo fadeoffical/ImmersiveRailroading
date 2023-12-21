@@ -47,20 +47,20 @@ public class TrackExchangerGui implements IScreen {
 
     @Override
     public void init(IScreenBuilder screen) {
-        this.trackSelector = new Button(screen, -100, 22, GuiText.SELECTOR_TRACK.toString(DefinitionManager.getTrack(this.track).name)) {
+        this.trackSelector = new Button(screen, -100, 22, GuiText.SELECTOR_TRACK.translate(DefinitionManager.getTrack(this.track).name)) {
             @Override
             public void onClick(Player.Hand hand) {
                 TrackExchangerGui.this.track = next(DefinitionManager.getTrackIDs(), TrackExchangerGui.this.track, hand);
-                TrackExchangerGui.this.trackSelector.setText(GuiText.SELECTOR_TRACK.toString(DefinitionManager.getTrack(TrackExchangerGui.this.track).name));
+                TrackExchangerGui.this.trackSelector.setText(GuiText.SELECTOR_TRACK.translate(DefinitionManager.getTrack(TrackExchangerGui.this.track).name));
             }
         };
-        this.bedTypeButton = new Button(screen, -100, 2 * 22, GuiText.SELECTOR_RAIL_BED.toString(getStackName(this.railBed))) {
+        this.bedTypeButton = new Button(screen, -100, 2 * 22, GuiText.SELECTOR_RAIL_BED.translate(getStackName(this.railBed))) {
             @Override
             public void onClick(Player.Hand hand) {
                 ItemPickerGUI ip = new ItemPickerGUI(TrackExchangerGui.this.oreDict, (ItemStack bed) -> {
                     if (bed != null) {
                         TrackExchangerGui.this.railBed = bed;
-                        TrackExchangerGui.this.bedTypeButton.setText(GuiText.SELECTOR_RAIL_BED.toString(getStackName(bed)));
+                        TrackExchangerGui.this.bedTypeButton.setText(GuiText.SELECTOR_RAIL_BED.translate(getStackName(bed)));
                     }
                     screen.show();
                 });
@@ -68,11 +68,11 @@ public class TrackExchangerGui implements IScreen {
                 ip.show();
             }
         };
-        this.gaugeButton = new Button(screen, -100, 3 * 22, GuiText.SELECTOR_GAUGE.toString(this.gauge)) {
+        this.gaugeButton = new Button(screen, -100, 3 * 22, GuiText.SELECTOR_GAUGE.translate(this.gauge)) {
             @Override
             public void onClick(Player.Hand hand) {
                 TrackExchangerGui.this.gauge = next(Gauge.getRegisteredGauges(), TrackExchangerGui.this.gauge, hand);
-                TrackExchangerGui.this.gaugeButton.setText(GuiText.SELECTOR_GAUGE.toString(TrackExchangerGui.this.gauge));
+                TrackExchangerGui.this.gaugeButton.setText(GuiText.SELECTOR_GAUGE.translate(TrackExchangerGui.this.gauge));
             }
         };
     }

@@ -24,7 +24,7 @@ public class StephensonValveGear extends ConnectingRodValveGear {
         this.drivingRod = drivingRod;
         this.pistonRod = pistonRod;
         this.cylinder = cylinder;
-        Vec3d center = ModelComponent.center(wheels.wheels.stream().map(x -> x.wheel).collect(Collectors.toList()));
+        Vec3d center = ModelComponent.center(wheels.wheels.stream().map(x -> x.getWheel()).collect(Collectors.toList()));
         this.reverse = pistonRod.center.x > center.x;
         // TODO this sucks, do better
         this.angleOffset = angleOffset + (this.reverse ? -90 : 0);
@@ -32,14 +32,14 @@ public class StephensonValveGear extends ConnectingRodValveGear {
 
         //noinspection OptionalGetWithoutIsPresent
         this.drivenWheel = wheels.wheels.stream()
-                .map(w -> w.wheel.center)
+                .map(w -> w.getWheel().center)
                 .min(Comparator.comparingDouble(w -> w.distanceTo(this.reverse ? drivingRod.min : drivingRod.max)))
                 .get();
         this.centerOfWheels = drivingRod.pos.equals(ModelPosition.CENTER) ? this.drivenWheel : center; // Bad hack for old TRI_WALSCHERTS code
 
         state.include(cylinder);
 
-        state.push(builder -> builder.add((ModelState.Animator) stock -> {
+        state.push(builder -> builder.animator((ModelState.Animator) stock -> {
             Matrix4 matrix = new Matrix4();
 
             Vec3d connRodMovment = this.connRodMovement(stock);
@@ -68,7 +68,7 @@ public class StephensonValveGear extends ConnectingRodValveGear {
             return matrix;
         })).include(drivingRod);
 
-        state.push(builder -> builder.add((ModelState.Animator) stock -> {
+        state.push(builder -> builder.animator((ModelState.Animator) stock -> {
             Matrix4 matrix = new Matrix4();
 
             Vec3d connRodMovment = this.connRodMovement(stock);

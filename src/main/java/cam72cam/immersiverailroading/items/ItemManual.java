@@ -2,8 +2,8 @@ package cam72cam.immersiverailroading.items;
 
 import cam72cam.immersiverailroading.ImmersiveRailroading;
 import cam72cam.immersiverailroading.library.GuiText;
-import cam72cam.immersiverailroading.multiblock.Multiblock;
-import cam72cam.immersiverailroading.multiblock.MultiblockRegistry;
+import cam72cam.immersiverailroading.multiblock.MultiBlock;
+import cam72cam.immersiverailroading.multiblock.MultiBlockRegistry;
 import cam72cam.immersiverailroading.thirdparty.CompatLoader;
 import cam72cam.immersiverailroading.util.IRFuzzy;
 import cam72cam.mod.entity.Player;
@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class ItemManual extends CustomItem {
+
     public ItemManual() {
         super(ImmersiveRailroading.MODID, "item_manual");
 
@@ -43,18 +44,18 @@ public class ItemManual extends CustomItem {
 
     @Override
     public List<String> getTooltip(ItemStack stack) {
-        Multiblock mb = new Data(stack).multiblock;
+        MultiBlock mb = new Data(stack).multiblock;
         if (mb == null) {
             return super.getTooltip(stack);
         }
-        return Collections.singletonList(GuiText.SELECTOR_TYPE.toString(mb.getName()));
+        return Collections.singletonList(GuiText.SELECTOR_TYPE.translate(mb.getName()));
     }
 
     @Override
     public ClickResult onClickBlock(Player player, World world, Vec3i pos, Player.Hand hand, Facing facing, Vec3d hit) {
         if (world.isServer) {
             ItemStack item = player.getHeldItem(hand);
-            Multiblock current = new Data(item).multiblock;
+            MultiBlock current = new Data(item).multiblock;
             if (current == null) {
                 return ClickResult.ACCEPTED;
             }
@@ -76,7 +77,7 @@ public class ItemManual extends CustomItem {
             if (world.isServer) {
                 ItemStack item = player.getHeldItem(hand);
                 Data data = new Data(item);
-                List<Multiblock> keys = MultiblockRegistry.registered();
+                List<MultiBlock> keys = MultiBlockRegistry.registered();
                 data.multiblock = keys.get((keys.indexOf(data.multiblock) + 1) % (keys.size()));
                 data.write();
                 player.sendMessage(PlayerMessage.direct("Placing: " + data.multiblock.getName()));
@@ -92,24 +93,22 @@ public class ItemManual extends CustomItem {
 
     public static class Data extends ItemDataSerializer {
         @TagField(value = "name", mapper = MBTagMapper.class)
-        public Multiblock multiblock;
+        public MultiBlock multiblock;
 
         public Data(ItemStack stack) {
             super(stack);
 
-            if (this.multiblock == null) {
-                this.multiblock = MultiblockRegistry.registered().isEmpty() ? null : MultiblockRegistry.registered().get(0);
-            }
+            this.multiblock = MultiBlockRegistry.registered().isEmpty() ? null : MultiBlockRegistry.registered().get(0);
         }
 
-        private static class MBTagMapper implements TagMapper<Multiblock> {
+        private static class MBTagMapper implements TagMapper<MultiBlock> {
             @Override
-            public TagAccessor<Multiblock> apply(Class<Multiblock> type, String fieldName, TagField tag) {
+            public TagAccessor<MultiBlock> apply(Class<MultiBlock> type, String fieldName, TagField tag) {
                 return new TagAccessor<>(
                         (d, m) -> d.setString(fieldName, m != null ? m.getName() : null),
                         d -> {
                             String name = d.getString(fieldName);
-                            return name != null ? MultiblockRegistry.get(name) : null;
+                            return name != null ? MultiBlockRegistry.get(name) : null;
                         }
                 );
             }

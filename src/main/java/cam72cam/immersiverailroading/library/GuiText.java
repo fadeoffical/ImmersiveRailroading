@@ -71,11 +71,11 @@ public enum GuiText {
         return TextUtil.translate(this.getRaw());
     }
 
-    public String getRaw() {
+    private String getRaw() {
         return "gui.immersiverailroading:" + this.value;
     }
 
-    public String toString(Object... objects) {
+    public String translate(Object... objects) {
         return TextUtil.translate(this.getRaw(), objects);
     }
 }

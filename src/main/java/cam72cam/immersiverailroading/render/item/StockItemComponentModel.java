@@ -27,17 +27,17 @@ public class StockItemComponentModel implements ItemRender.IItemModel {
         ItemRollingStockComponent.Data data = new ItemRollingStockComponent.Data(stack);
         double itemScale = data.gauge.scale();
 
-        if (data.def == null) {
+        if (data.rollingStockDefinition == null) {
             ImmersiveRailroading.error("Item %s missing definition!", stack);
             stack.setCount(0);
             return;
         }
 
-        StockModel<?, ?> model = data.def.getModel();
+        StockModel<?, ?> model = data.rollingStockDefinition.getModel();
         ArrayList<String> groups = new ArrayList<>();
 
         for (ModelComponentType r : data.componentType.render) {
-            List<ModelComponent> comp = data.def.getComponents(r);
+            List<ModelComponent> comp = data.rollingStockDefinition.getComponents(r);
             if (comp == null || r == ModelComponentType.CARGO_FILL_X || r == ModelComponentType.CARGO_FILL_POS_X) {
                 continue;
             }

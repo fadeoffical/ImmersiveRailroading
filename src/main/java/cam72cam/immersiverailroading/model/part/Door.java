@@ -1,6 +1,6 @@
 package cam72cam.immersiverailroading.model.part;
 
-import cam72cam.immersiverailroading.entity.EntityMoveableRollingStock;
+import cam72cam.immersiverailroading.entity.EntityMovableRollingStock;
 import cam72cam.immersiverailroading.entity.EntityRollingStock;
 import cam72cam.immersiverailroading.library.ModelComponentType;
 import cam72cam.immersiverailroading.library.ModelComponentType.ModelPosition;
@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public class Door<T extends EntityMoveableRollingStock> extends Control<T> {
+public class Door<T extends EntityMovableRollingStock> extends Control<T> {
     private static final Map<UUID, Integer> cooldown = new HashMap<>();
     public final Types type;
 
@@ -29,14 +29,14 @@ public class Door<T extends EntityMoveableRollingStock> extends Control<T> {
                         Types.INTERNAL;
     }
 
-    public static <T extends EntityMoveableRollingStock> List<Door<T>> get(ComponentProvider provider, ModelState state) {
+    public static <T extends EntityMovableRollingStock> List<Door<T>> get(ComponentProvider provider, ModelState state) {
         return provider.parseAll(ModelComponentType.DOOR_X)
                 .stream()
                 .map(p -> new Door<T>(p, state, provider.internal_model_scale))
                 .collect(Collectors.toList());
     }
 
-    public static <T extends EntityMoveableRollingStock> List<Door<T>> get(ComponentProvider provider, ModelState state, ModelPosition pos) {
+    public static <T extends EntityMovableRollingStock> List<Door<T>> get(ComponentProvider provider, ModelState state, ModelPosition pos) {
         return provider.parseAll(ModelComponentType.DOOR_X, pos)
                 .stream()
                 .map(p -> new Door<T>(p, state, provider.internal_model_scale))
@@ -52,7 +52,7 @@ public class Door<T extends EntityMoveableRollingStock> extends Control<T> {
             return false;
         }
         if (!this.isOpen(stock) || player.getPosition().distanceTo(stock.getPosition()) > stock.getDefinition()
-                .getLength(stock.gauge)) {
+                .getLength(stock.getGauge())) {
             return false;
         }
         Matrix4 model = stock.getModelMatrix();

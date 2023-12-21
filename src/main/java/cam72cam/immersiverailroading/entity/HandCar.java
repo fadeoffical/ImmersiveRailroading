@@ -1,14 +1,14 @@
 package cam72cam.immersiverailroading.entity;
 
+import cam72cam.immersiverailroading.library.unit.Speed;
 import cam72cam.immersiverailroading.util.FluidQuantity;
-import cam72cam.immersiverailroading.util.Speed;
 import cam72cam.mod.entity.Entity;
 import cam72cam.mod.fluid.Fluid;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-public class HandCar extends Locomotive {
+public final class HandCar extends Locomotive {
 
     // todo: Should the required hunger level be > 0 or > 6?
     //       The player can't sprint at hunger <= 6.
@@ -25,17 +25,9 @@ public class HandCar extends Locomotive {
     public void onTick() {
         super.onTick();
 
-        if (this.getWorld().isClient) {
-            return;
-        }
-
-        if (this.getTrainBrake() > 0) {
-            this.setTrainBrake(0);
-        }
-
-        if (this.getThrottle() == 0) {
-            return;
-        }
+        if (this.getWorld().isClient) return;
+        if (this.getTrainBrake() > 0) this.setTrainBrake(0);
+        if (this.getThrottle() == 0) return;
 
         if (this.getTickCount() % (int) (600 * (1.1 - this.getThrottle())) != 0) return;
 
@@ -44,17 +36,8 @@ public class HandCar extends Locomotive {
                 .filter(Entity::isPlayer)
                 .map(Entity::asPlayer)
                 .filter(player -> !player.isCreative())
-                .forEach(player -> {
-                    if (player.getFoodLevel() >= HUNGER_LEVEL_REQUIRED) {
-                        player.useFood(1);
-                    }
-                });
-    }
-
-    @Override
-    protected boolean forceLinkThrottleReverser() {
-        // Always linked
-        return true;
+                .filter(player -> player.getFoodLevel() >= HUNGER_LEVEL_REQUIRED)
+                .forEach(player -> player.useFood(1)); // todo: will this use one food per tick?
     }
 
     @Override
@@ -68,12 +51,17 @@ public class HandCar extends Locomotive {
                 .sum();
 
         // Same as diesel for now
-        double maxPower_W = this.getDefinition().getHorsePower(this.gauge) * 745.7d * passengers;
-        double speed_M_S = Math.abs(speed.metric()) / 3.6d;
+        double maxPowerWatts = this.getDefinition().getHorsePower(this.getGauge()) * 745.7d * passengers;
+        double speedMetersPerSecond = speed.as(Speed.SpeedUnit.METERS_PER_SECOND).absolute().value();
 
         // todo: this formula feels off... as per this, acceleration approaches infinity as speed approaches 0
-        double maxPowerAtSpeed = maxPower_W * HANDCAR_EFFICIENCY / Math.max(0.001, speed_M_S);
+        double maxPowerAtSpeed = maxPowerWatts * HANDCAR_EFFICIENCY / Math.max(0.001, speedMetersPerSecond);
         return maxPowerAtSpeed * this.getThrottle() * this.getReverser();
+    }
+
+    @Override
+    protected boolean forceLinkThrottleReverser() {
+        return true;
     }
 
     @Override
@@ -88,7 +76,7 @@ public class HandCar extends Locomotive {
 
     @Override
     public List<Fluid> getFluidFilter() {
-        return new ArrayList<>();
+        return Collections.emptyList();
     }
 
     @Override

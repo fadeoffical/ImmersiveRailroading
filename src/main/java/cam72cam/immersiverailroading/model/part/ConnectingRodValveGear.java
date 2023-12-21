@@ -1,6 +1,6 @@
 package cam72cam.immersiverailroading.model.part;
 
-import cam72cam.immersiverailroading.entity.EntityMoveableRollingStock;
+import cam72cam.immersiverailroading.entity.EntityMovableRollingStock;
 import cam72cam.immersiverailroading.library.ModelComponentType;
 import cam72cam.immersiverailroading.library.ModelComponentType.ModelPosition;
 import cam72cam.immersiverailroading.model.ModelState;
@@ -21,10 +21,10 @@ public class ConnectingRodValveGear extends ValveGear {
 
         this.connectingRod = connectingRod;
         this.centerOfWheels = ModelComponent.center(wheels.wheels.stream()
-                .map(x -> x.wheel)
+                .map(x -> x.getWheel())
                 .collect(Collectors.toList()));
 
-        state.push(settings -> settings.add((ModelState.Animator) stock -> {
+        state.push(settings -> settings.animator((ModelState.Animator) stock -> {
             Vec3d connRodMovment = this.connRodMovement(stock);
             return new Matrix4().translate(-this.connRodRadius(), 0, 0).translate(connRodMovment.x, connRodMovment.z, 0);
         })).include(connectingRod);
@@ -33,7 +33,7 @@ public class ConnectingRodValveGear extends ValveGear {
     /**
      * Find new connecting rod pos based on the connecting rod radius
      */
-    public Vec3d connRodMovement(EntityMoveableRollingStock stock) {
+    public Vec3d connRodMovement(EntityMovableRollingStock stock) {
         return VecUtil.fromWrongYaw(this.connRodRadius(), this.angle(stock.distanceTraveled));
     }
 

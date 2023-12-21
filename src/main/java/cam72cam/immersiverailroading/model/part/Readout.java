@@ -1,6 +1,6 @@
 package cam72cam.immersiverailroading.model.part;
 
-import cam72cam.immersiverailroading.entity.EntityMoveableRollingStock;
+import cam72cam.immersiverailroading.entity.EntityMovableRollingStock;
 import cam72cam.immersiverailroading.gui.overlay.Readouts;
 import cam72cam.immersiverailroading.library.ModelComponentType;
 import cam72cam.immersiverailroading.library.ModelComponentType.ModelPosition;
@@ -17,7 +17,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class Readout<T extends EntityMoveableRollingStock> extends Control<T> {
+public class Readout<T extends EntityMovableRollingStock> extends Control<T> {
     private final Map<UUID, Float> positions = new HashMap<>();
     private final Function<T, Float> position;
     private final float rangeMin;
@@ -41,14 +41,14 @@ public class Readout<T extends EntityMoveableRollingStock> extends Control<T> {
         this.rangeMax = max;
     }
 
-    public static <T extends EntityMoveableRollingStock> List<Readout<T>> getReadouts(ComponentProvider provider, ModelState state, ModelComponentType type, Readouts value) {
+    public static <T extends EntityMovableRollingStock> List<Readout<T>> getReadouts(ComponentProvider provider, ModelState state, ModelComponentType type, Readouts value) {
         return provider.parseAll(type)
                 .stream()
                 .map(p -> new Readout<T>(p, value::getValue, state, provider.internal_model_scale))
                 .collect(Collectors.toList());
     }
 
-    public static <T extends EntityMoveableRollingStock> List<Readout<T>> getReadouts(ComponentProvider provider, ModelState state, ModelComponentType type, ModelPosition pos, Readouts value) {
+    public static <T extends EntityMovableRollingStock> List<Readout<T>> getReadouts(ComponentProvider provider, ModelState state, ModelComponentType type, ModelPosition pos, Readouts value) {
         return provider.parseAll(type, pos)
                 .stream()
                 .map(p -> new Readout<T>(p, value::getValue, state, provider.internal_model_scale))
@@ -56,7 +56,7 @@ public class Readout<T extends EntityMoveableRollingStock> extends Control<T> {
     }
 
     @Override
-    public float getValue(EntityMoveableRollingStock stock) {
+    public float getValue(EntityMovableRollingStock stock) {
         float pos = this.positions.getOrDefault(stock.getUUID(), 0f);
         pos = Math.min(1, Math.max(0, (pos - this.rangeMin) / (this.rangeMax - this.rangeMin)));
         pos += this.offset;

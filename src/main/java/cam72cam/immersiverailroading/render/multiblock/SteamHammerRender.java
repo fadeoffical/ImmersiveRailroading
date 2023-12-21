@@ -1,6 +1,6 @@
 package cam72cam.immersiverailroading.render.multiblock;
 
-import cam72cam.immersiverailroading.multiblock.SteamHammerMultiblock.SteamHammerInstance;
+import cam72cam.immersiverailroading.multiblock.SteamHammerMultiBlock.SteamHammerInstance;
 import cam72cam.immersiverailroading.tile.TileMultiblock;
 import cam72cam.mod.model.obj.OBJModel;
 import cam72cam.mod.render.obj.OBJRender;

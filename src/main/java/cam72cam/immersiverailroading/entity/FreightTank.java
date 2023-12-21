@@ -19,52 +19,38 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 public abstract class FreightTank extends Freight {
+
     @TagField("tank")
-    public FluidTank theTank = new FluidTank(null, 0);
+    public FluidTank tank = new FluidTank(null, 0);
 
     @TagSync
     @TagField("FLUID_AMOUNT")
-    private int fluidAmount = 0;
+    private int fluidAmount;
 
     @TagSync
     @TagField(value = "FLUID_TYPE", mapper = StrictTagMapper.class)
-    private String fluidType = null;
+    private String fluidType;
 
     @Override
     public void onAssemble() {
         super.onAssemble();
-        this.theTank.setCapacity(this.getTankCapacity().asMillibuckets());
-        this.theTank.setFilter(this::getFluidFilter);
-        this.theTank.onChanged(this::onTankContentsChanged);
-        this.onTankContentsChanged();
+        this.tank.setCapacity(this.getTankCapacity().asMillibuckets());
+        this.tank.setFilter(this::getFluidFilter);
+        this.tank.onChanged(this::handleTankContentChange);
+        this.handleTankContentChange();
     }
 
-    /*
-     *
-     * Specifications
-     */
     public abstract FluidQuantity getTankCapacity();
 
-    @Nullable
-    public abstract List<Fluid> getFluidFilter();
+    public abstract @Nullable List<Fluid> getFluidFilter();
 
-    protected void onTankContentsChanged() {
-        if (this.getWorld().isClient) {
-            return;
-        }
+    private void handleTankContentChange() {
+        if (this.getWorld().isClient) return;
 
-        this.fluidAmount = this.theTank.getContents().getAmount();
-        if (this.theTank.getContents().getFluid() == null) {
-            this.fluidType = null;
-        } else {
-            this.fluidType = this.theTank.getContents().getFluid().ident;
-        }
+        this.fluidAmount = this.tank.getContents().getAmount();
+        this.fluidType = this.tank.getContents().getFluid() == null ? null : this.tank.getContents().getFluid().ident;
     }
 
-    /*
-     *
-     * Freight Specification Overrides
-     */
     @Override
     public int getInventorySize() {
         return 2;
@@ -81,43 +67,32 @@ public abstract class FreightTank extends Freight {
     @Override
     public void onDissassemble() {
         super.onDissassemble();
-        this.theTank.setCapacity(0);
-        this.onTankContentsChanged();
+        this.tank.setCapacity(0);
+        this.handleTankContentChange();
     }
 
     @Override
     public boolean openGui(Player player) {
-        if (player.hasPermission(Permissions.FREIGHT_INVENTORY)) {
-            GuiTypes.TANK.open(player, this);
-        }
+        if (player.hasPermission(Permissions.FREIGHT_INVENTORY)) GuiTypes.TANK.open(player, this);
         return true;
     }
 
-
-    /*
-     *
-     * Server functions
-     *
-     */
-
     @Override
     public double getWeight() {
-        double fLoad = super.getWeight();
-        if (this.getLiquidAmount() > 0 && this.getLiquid() != null) {
-            fLoad += this.getLiquidAmount() * this.getLiquid().getDensity() / Fluid.BUCKET_VOLUME;
+        double fluidLoad = super.getWeight();
+        if (this.getLiquid() != null && this.getLiquidAmount() > 0) {
+            // intellij is complaining about InTeGeR dIvIsIoN iN fLoAtInG pOiNt CoNtExT; cast to double to shut it up
+            fluidLoad += (double) (this.getLiquidAmount() * this.getLiquid().getDensity()) / Fluid.BUCKET_VOLUME;
         }
-        return fLoad;
+        return fluidLoad;
+    }
+
+    public Fluid getLiquid() {
+        return this.fluidType == null ? null : Fluid.getFluid(this.fluidType);
     }
 
     public int getLiquidAmount() {
         return this.fluidAmount;
-    }
-
-    public Fluid getLiquid() {
-        if (this.fluidType == null) {
-            return null;
-        }
-        return Fluid.getFluid(this.fluidType);
     }
 
     @Override
@@ -132,28 +107,19 @@ public abstract class FreightTank extends Freight {
      */
 
     public int getServerLiquidAmount() {
-        return this.theTank.getContents().getAmount();
+        return this.tank.getContents().getAmount();
     }
 
     @Override
     public void onTick() {
         super.onTick();
-        this.checkInvent();
+        this.tickInventory();
     }
 
-    protected void checkInvent() {
-
-        if (this.getWorld().isClient) {
-            return;
-        }
-
-        if (!this.isBuilt()) {
-            return;
-        }
-
-        if (this.cargoItems.getSlotCount() == 0) {
-            return;
-        }
+    private void tickInventory() {
+        if (this.getWorld().isClient) return;
+        if (!this.isBuilt()) return;
+        if (this.cargoItems.getSlotCount() == 0) return;
 
         for (int inputSlot : this.getContainerInputSlots()) {
             ItemStack input = this.cargoItems.get(inputSlot);
@@ -166,60 +132,57 @@ public abstract class FreightTank extends Freight {
                 continue;
             }
 
-            // This is kind of funky but it works
-            // WILL BE CALLED RECUSIVELY from onInventoryChanged
-            if (input.getCount() > 0) {
-                // First try to drain the container, if we can't do that we try
-                // to fill it
+            // This is kind of funky, but it works
+            // WILL BE CALLED RECURSIVELY from onInventoryChanged
+            if (input.getCount() == 0) continue;
 
-                for (Boolean doFill : new Boolean[]{false, true}) {
-                    boolean success;
-                    if (doFill) {
-                        success = this.theTank.drain(inputTank, this.theTank.getCapacity(), true) > 0;
-                    } else {
-                        success = this.theTank.fill(inputTank, this.theTank.getCapacity(), true) > 0;
-                    }
+            // First try to drain the container, if we can't do that we try
+            // to fill it
 
-                    if (success) {
-                        // We were able to drain into the container
+            // todo: this is unreadable
+            for (Boolean doFill : new Boolean[]{false, true}) {
+                boolean success;
+                if (doFill) {
+                    success = this.tank.drain(inputTank, this.tank.getCapacity(), true) > 0;
+                } else {
+                    success = this.tank.fill(inputTank, this.tank.getCapacity(), true) > 0;
+                }
 
-                        // Can we move it to an output slot?
-                        ItemStack out = inputCopy[0].copy();
-                        for (Integer slot : this.getContainertOutputSlots()) {
-                            if (this.cargoItems.insert(slot, out, true).getCount() == 0) {
-                                // Move Liquid
-                                if (doFill) {
-                                    this.theTank.drain(inputTank, this.theTank.getCapacity(), false);
-                                } else {
-                                    this.theTank.fill(inputTank, this.theTank.getCapacity(), false);
-                                }
-                                if (!ConfigDebug.debugInfiniteLiquids) {
-                                    // Decrease input
-                                    this.cargoItems.extract(inputSlot, 1, false);
+                if (success) {
+                    // We were able to drain into the container
 
-                                    // Increase output
-                                    this.cargoItems.insert(slot, out, false);
-                                    break;
-                                }
-                            }
+                    // Can we move it to an output slot?
+                    ItemStack out = inputCopy[0].copy();
+                    for (Integer slot : this.getContainerOutputSlots()) {
+                        if (this.cargoItems.insert(slot, out, true).getCount() != 0) continue;
+
+                        // Move Liquid
+                        if (doFill) {
+                            this.tank.drain(inputTank, this.tank.getCapacity(), false);
+                        } else {
+                            this.tank.fill(inputTank, this.tank.getCapacity(), false);
                         }
+
+                        // do not drain liquid if debug mode is enabled
+                        if (ConfigDebug.debugInfiniteLiquids) continue;
+
+                        // Decrease input
+                        this.cargoItems.extract(inputSlot, 1, false);
+
+                        // Increase output
+                        this.cargoItems.insert(slot, out, false);
+                        break;
                     }
                 }
             }
         }
     }
 
-    /*
-     *
-     * ITank Overrides
-     *
-     */
-
-    protected int[] getContainerInputSlots() {
+    private int[] getContainerInputSlots() {
         return new int[]{0};
     }
 
-    protected int[] getContainertOutputSlots() {
+    protected int[] getContainerOutputSlots() {
         int[] result = new int[this.getInventorySize()];
         for (int i = 0; i < this.getInventorySize(); i++) {
             result[i] = i;

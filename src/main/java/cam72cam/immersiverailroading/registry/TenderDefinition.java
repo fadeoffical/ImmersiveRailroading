@@ -38,7 +38,7 @@ public class TenderDefinition extends CarTankDefinition {
     @Override
     public List<String> getTooltip(Gauge gauge) {
         List<String> tips = super.getTooltip(gauge);
-        tips.add(GuiText.FREIGHT_CAPACITY_TOOLTIP.toString(this.getInventorySize(gauge)));
+        tips.add(GuiText.FREIGHT_CAPACITY_TOOLTIP.translate(this.getInventorySize(gauge)));
         return tips;
     }
 

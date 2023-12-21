@@ -33,7 +33,7 @@ public class CarFreightDefinition extends FreightDefinition {
     public List<String> getTooltip(Gauge gauge) {
         List<String> tips = super.getTooltip(gauge);
         if (this.numSlots > 0) {
-            tips.add(GuiText.FREIGHT_CAPACITY_TOOLTIP.toString(this.getInventorySize(gauge)));
+            tips.add(GuiText.FREIGHT_CAPACITY_TOOLTIP.translate(this.getInventorySize(gauge)));
         }
         return tips;
     }

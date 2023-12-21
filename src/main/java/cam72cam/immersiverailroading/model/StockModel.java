@@ -2,10 +2,11 @@ package cam72cam.immersiverailroading.model;
 
 import cam72cam.immersiverailroading.ConfigGraphics;
 import cam72cam.immersiverailroading.ConfigSound;
-import cam72cam.immersiverailroading.entity.EntityMoveableRollingStock;
+import cam72cam.immersiverailroading.entity.EntityMovableRollingStock;
 import cam72cam.immersiverailroading.gui.overlay.Readouts;
 import cam72cam.immersiverailroading.library.ModelComponentType;
 import cam72cam.immersiverailroading.library.ModelComponentType.ModelPosition;
+import cam72cam.immersiverailroading.library.unit.Speed;
 import cam72cam.immersiverailroading.model.animation.StockAnimation;
 import cam72cam.immersiverailroading.model.components.ComponentProvider;
 import cam72cam.immersiverailroading.model.components.ModelComponent;
@@ -21,27 +22,35 @@ import cam72cam.mod.render.opengl.RenderState;
 import util.Matrix4;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class StockModel<ENTITY extends EntityMoveableRollingStock, DEFINITION extends EntityRollingStockDefinition> extends OBJModel {
+public class StockModel<ENTITY extends EntityMovableRollingStock, DEFINITION extends EntityRollingStockDefinition> extends OBJModel {
+
     public static final int LOD_LARGE = 1024;
     public static final int LOD_SMALL = 512;
+
     public final List<ModelComponent> allComponents;
+
     protected final List<Door<ENTITY>> doors;
     protected final List<Control<ENTITY>> controls;
     protected final List<Readout<ENTITY>> gauges;
     protected final List<Seat<ENTITY>> seats;
-    private final DEFINITION def;
+
+    private final DEFINITION definition;
+
     private final TrackFollowers frontTrackers;
     private final TrackFollowers rearTrackers;
+
     private final List<StockAnimation> animations;
     private final float sndRand;
     private final PartSound wheel_sound;
     private final PartSound slidingSound;
     private final FlangeSound flangeSound;
     private final SwaySimulator sway;
+    private final ModelComponent remaining;
     protected ModelState base;
     protected ModelState rocking;
     protected ModelState front;
@@ -53,19 +62,19 @@ public class StockModel<ENTITY extends EntityMoveableRollingStock, DEFINITION ex
     protected Bogey bogeyRear;
     protected List<LightFlare<ENTITY>> headlights;
     private ModelComponent shell;
-    private final ModelComponent remaining;
+
     private int lod_level = LOD_LARGE;
     private int lod_tick = 0;
 
-    public StockModel(DEFINITION def) throws Exception {
-        super(def.modelLoc, def.darken, def.internal_model_scale, def.textureNames.keySet(), ConfigGraphics.textureCacheSeconds, i -> {
+    public StockModel(DEFINITION definition) throws Exception {
+        super(definition.modelLoc, definition.darken, definition.internal_model_scale, definition.textureNames.keySet(), ConfigGraphics.textureCacheSeconds, i -> {
             List<Integer> lodSizes = new ArrayList<>();
             lodSizes.add(LOD_LARGE);
             lodSizes.add(LOD_SMALL);
             return lodSizes;
         });
 
-        this.def = def;
+        this.definition = definition;
         boolean hasInterior = this.groups().stream().anyMatch(x -> x.contains("INTERIOR"));
 
         this.doors = new ArrayList<>();
@@ -76,7 +85,7 @@ public class StockModel<ENTITY extends EntityMoveableRollingStock, DEFINITION ex
 
         ModelState.LightState base = new ModelState.LightState(null, null, null, hasInterior);
 
-        float interiorLight = def.interiorLightLevel();
+        float interiorLight = definition.interiorLightLevel();
         ModelState.Lighter interiorLit = stock -> {
             if (!stock.internalLightsEnabled()) {
                 return base;
@@ -88,9 +97,9 @@ public class StockModel<ENTITY extends EntityMoveableRollingStock, DEFINITION ex
         };
 
         this.animations = new ArrayList<>();
-        for (EntityRollingStockDefinition.AnimationDefinition animDef : def.animations) {
+        for (EntityRollingStockDefinition.AnimationDefinition animDef : definition.animations) {
             if (animDef.valid()) {
-                this.animations.add(new StockAnimation(animDef, def.internal_model_scale));
+                this.animations.add(new StockAnimation(animDef, definition.internal_model_scale));
             }
         }
         ModelState.GroupAnimator animators = (stock, group) -> {
@@ -107,18 +116,18 @@ public class StockModel<ENTITY extends EntityMoveableRollingStock, DEFINITION ex
             }
             return m;
         };
-        this.base = ModelState.construct(settings -> settings.add(animators).add(interiorLit));
+        this.base = ModelState.construct(settings -> settings.groupAnimator(animators).lighter(interiorLit));
 
-        ComponentProvider provider = new ComponentProvider(this, def.internal_model_scale);
+        ComponentProvider provider = new ComponentProvider(this, definition.internal_model_scale);
         this.initStates();
-        this.parseControllable(provider, def);
+        this.parseControllable(provider, definition);
 
         // Shay Hack...
         // A proper dependency tree would be ideal...
         this.bogeyFront = Bogey.get(provider, this.front, this.unifiedBogies(), ModelPosition.FRONT);
         this.bogeyRear = Bogey.get(provider, this.rear, this.unifiedBogies(), ModelPosition.REAR);
 
-        this.parseComponents(provider, def);
+        this.parseComponents(provider, definition);
         provider.parse(ModelComponentType.IMMERSIVERAILROADING_BASE_COMPONENT);
         this.remaining = provider.parse(ModelComponentType.REMAINING);
         this.rocking.include(this.remaining);
@@ -128,17 +137,17 @@ public class StockModel<ENTITY extends EntityMoveableRollingStock, DEFINITION ex
         this.rearTrackers = new TrackFollowers(s -> new TrackFollower(s, this.bogeyRear != null ? this.bogeyRear.bogey : null, this.bogeyRear != null ? this.bogeyRear.wheels : null, false));
 
         this.sndRand = (float) Math.random() / 10;
-        this.wheel_sound = new PartSound(new SoundDefinition(def.wheel_sound), true, 40, ConfigSound.SoundCategories.RollingStock::wheel);
-        this.slidingSound = new PartSound(new SoundDefinition(def.sliding_sound), true, 40, ConfigSound.SoundCategories.RollingStock::sliding);
-        this.flangeSound = new FlangeSound(def.flange_sound, true, 40);
+        this.wheel_sound = new PartSound(new SoundDefinition(definition.wheel_sound), true, 40, ConfigSound.SoundCategories.RollingStock::wheel);
+        this.slidingSound = new PartSound(new SoundDefinition(definition.sliding_sound), true, 40, ConfigSound.SoundCategories.RollingStock::sliding);
+        this.flangeSound = new FlangeSound(definition.flange_sound, true, 40);
         this.sway = new SwaySimulator();
     }
 
     protected void initStates() {
         this.rocking = this.addRoll(this.base);
-        this.front = this.base.push(settings -> settings.add(this::getFrontBogeyMatrix));
+        this.front = this.base.push(settings -> settings.animator(this::getFrontBogeyMatrix));
         this.frontRocking = this.addRoll(this.front);
-        this.rear = this.base.push(settings -> settings.add(this::getRearBogeyMatrix));
+        this.rear = this.base.push(settings -> settings.animator(this::getRearBogeyMatrix));
         this.rearRocking = this.addRoll(this.rear);
     }
 
@@ -178,16 +187,15 @@ public class StockModel<ENTITY extends EntityMoveableRollingStock, DEFINITION ex
     }
 
     public ModelState addRoll(ModelState state) {
-        return state.push(builder -> builder.add((ModelState.Animator) stock ->
-                new Matrix4().rotate(Math.toRadians(this.sway.getRollDegrees(stock)), 1, 0, 0)));
+        return state.push(builder -> builder.animator((ModelState.Animator) stock -> new Matrix4().rotate(Math.toRadians(this.sway.getRollDegrees(stock)), 1, 0, 0)));
     }
 
     // TODO invert -> reinvert sway
-    private Matrix4 getFrontBogeyMatrix(EntityMoveableRollingStock stock) {
+    private Matrix4 getFrontBogeyMatrix(EntityMovableRollingStock stock) {
         return this.frontTrackers.get(stock).getMatrix();
     }
 
-    private Matrix4 getRearBogeyMatrix(EntityMoveableRollingStock stock) {
+    private Matrix4 getRearBogeyMatrix(EntityMovableRollingStock stock) {
         return this.rearTrackers.get(stock).getMatrix();
     }
 
@@ -219,7 +227,7 @@ public class StockModel<ENTITY extends EntityMoveableRollingStock, DEFINITION ex
         this.headlights.addAll(LightFlare.get(def, provider, this.rocking, type));
     }
 
-    public final void onClientTick(EntityMoveableRollingStock stock) {
+    public final void onClientTick(EntityMovableRollingStock stock) {
         this.effects((ENTITY) stock);
     }
 
@@ -231,21 +239,27 @@ public class StockModel<ENTITY extends EntityMoveableRollingStock, DEFINITION ex
         this.animations.forEach(c -> c.effects(stock));
 
 
-        float adjust = (float) Math.abs(stock.getCurrentSpeed().metric()) / 300;
+        float adjust = (float) stock.getCurrentSpeed()
+                .as(Speed.SpeedUnit.KILOMETERS_PER_HOUR)
+                .absolute()
+                .value() / 300;
         float pitch = adjust + 0.7f;
         if (stock.getDefinition().shouldScalePitch()) {
             // TODO this is probably wrong...
-            pitch /= stock.gauge.scale();
+            pitch /= stock.getGauge().scale();
         }
         float volume = 0.01f + adjust;
 
-        this.wheel_sound.effects(stock, Math.abs(stock.getCurrentSpeed().metric()) > 1 ? volume : 0, pitch + this.sndRand);
+        this.wheel_sound.effects(stock, stock.getCurrentSpeed()
+                .as(Speed.SpeedUnit.KILOMETERS_PER_HOUR)
+                .absolute()
+                .value() > 1 ? volume : 0, pitch + this.sndRand);
         this.slidingSound.effects(stock, stock.sliding ? Math.min(1, adjust * 4) : 0);
         this.flangeSound.effects(stock);
         this.sway.effects(stock);
     }
 
-    public final void onClientRemoved(EntityMoveableRollingStock stock) {
+    public final void onClientRemoved(EntityMovableRollingStock stock) {
         this.removed((ENTITY) stock);
     }
 
@@ -262,18 +276,18 @@ public class StockModel<ENTITY extends EntityMoveableRollingStock, DEFINITION ex
         this.sway.removed(stock);
     }
 
-    public final void render(EntityMoveableRollingStock stock, RenderState state, float partialTicks) {
+    public final void render(EntityMovableRollingStock stock, RenderState state, float partialTicks) {
         List<ModelComponentType> available = stock.isBuilt() ? null : stock.getItemComponents()
-                .stream().flatMap(x -> x.render.stream())
+                .stream()
+                .flatMap(x -> x.render.stream())
                 .collect(Collectors.toList());
 
         state.lighting(true)
                 .cull_face(false)
                 .rescale_normal(true)
-                .scale(stock.gauge.scale(), stock.gauge.scale(), stock.gauge.scale());
+                .scale(stock.getGauge().scale(), stock.getGauge().scale(), stock.getGauge().scale());
 
-        if ((ConfigGraphics.OptifineEntityShaderOverrideAll || !this.normals.isEmpty() || !this.speculars.isEmpty()) &&
-                ConfigGraphics.OptiFineEntityShader != OptiFine.Shaders.Entities) {
+        if ((ConfigGraphics.OptifineEntityShaderOverrideAll || !this.normals.isEmpty() || !this.speculars.isEmpty()) && ConfigGraphics.OptiFineEntityShader != OptiFine.Shaders.Entities) {
             state = state.shader(ConfigGraphics.OptiFineEntityShader);
         }
 
@@ -284,7 +298,7 @@ public class StockModel<ENTITY extends EntityMoveableRollingStock, DEFINITION ex
             double playerDistanceSq = stock.getWorld()
                     .getEntities(stock.getClass())
                     .stream()
-                    .filter(x -> Objects.equals(x.getDefinitionID(), stock.getDefinitionID()) && Objects.equals(x.getTexture(), stock.getTexture()))
+                    .filter(x -> Objects.equals(x.getDefinitionId(), stock.getDefinitionId()) && Objects.equals(x.getTexture(), stock.getTexture()))
                     .mapToDouble(x -> x.getPosition().distanceToSquared(MinecraftClient.getPlayer().getPosition()))
                     .min()
                     .orElse(0);
@@ -299,16 +313,14 @@ public class StockModel<ENTITY extends EntityMoveableRollingStock, DEFINITION ex
         }
 
         Binder binder = this.binder().texture(stock.getTexture()).lod(this.lod_level);
-        try (
-                OBJRender.Binding bound = binder.bind(state)
-        ) {
+        try (OBJRender.Binding bound = binder.bind(state)) {
             double backup = stock.distanceTraveled;
 
             if (!stock.isSliding()) {
-                stock.distanceTraveled += stock.getCurrentSpeed()
-                        .minecraft() * stock.getTickSkew() * partialTicks * 1.1;
+                double speed = stock.getCurrentSpeed().as(Speed.SpeedUnit.METERS_PER_TICK).value();
+                stock.distanceTraveled += speed * stock.getTickSkew() * partialTicks * 1.1;
             }
-            stock.distanceTraveled /= stock.gauge.scale();
+            stock.distanceTraveled /= stock.getGauge().scale();
 
 
             this.base.render(bound, stock, available);
@@ -317,12 +329,12 @@ public class StockModel<ENTITY extends EntityMoveableRollingStock, DEFINITION ex
         }
     }
 
-    public void postRender(EntityMoveableRollingStock stock, RenderState state, float partialTicks) {
+    public void postRender(EntityMovableRollingStock stock, RenderState state, float partialTicks) {
         this.postRender((ENTITY) stock, state);
     }
 
     protected void postRender(ENTITY stock, RenderState state) {
-        state.scale(stock.gauge.scale(), stock.gauge.scale(), stock.gauge.scale());
+        state.scale(stock.getGauge().scale(), stock.getGauge().scale(), stock.getGauge().scale());
         state.rotate(this.sway.getRollDegrees(stock), 1, 0, 0);
         this.controls.forEach(c -> c.postRender(stock, state));
         this.doors.forEach(c -> c.postRender(stock, state));
@@ -330,36 +342,41 @@ public class StockModel<ENTITY extends EntityMoveableRollingStock, DEFINITION ex
         this.headlights.forEach(x -> x.postRender(stock, state));
     }
 
-    public float getFrontYaw(EntityMoveableRollingStock stock) {
+    public float getFrontYaw(EntityMovableRollingStock stock) {
         return this.frontTrackers.get(stock).getYawReadout();
     }
 
-    public float getRearYaw(EntityMoveableRollingStock stock) {
+    public float getRearYaw(EntityMovableRollingStock stock) {
         return this.rearTrackers.get(stock).getYawReadout();
     }
 
     public List<Control<ENTITY>> getControls() {
-        return this.controls;
+        return Collections.unmodifiableList(this.controls);
     }
 
     public List<Door<ENTITY>> getDoors() {
-        return this.doors;
+        return Collections.unmodifiableList(this.doors);
     }
 
-    public List<Interactable<ENTITY>> getInteractable() {
-        List<Interactable<ENTITY>> interactable = new ArrayList<>(this.getDraggable());
-        interactable.addAll(this.seats);
-        return interactable;
+    public List<Interactable<ENTITY>> getInteractive() {
+        int initialCapacity = this.getDraggable().size() + this.seats.size();
+        List<Interactable<ENTITY>> interactiveElements = new ArrayList<>(initialCapacity);
+
+        interactiveElements.addAll(this.getDraggable());
+        interactiveElements.addAll(this.seats);
+        return interactiveElements;
     }
 
     public List<Control<ENTITY>> getDraggable() {
-        List<Control<ENTITY>> draggable = new ArrayList<>();
+        int initialCapacity = this.controls.size() + this.doors.size();
+        List<Control<ENTITY>> draggable = new ArrayList<>(initialCapacity);
+
         draggable.addAll(this.controls);
         draggable.addAll(this.doors);
         return draggable;
     }
 
     public List<Seat<ENTITY>> getSeats() {
-        return this.seats;
+        return Collections.unmodifiableList(this.seats);
     }
 }

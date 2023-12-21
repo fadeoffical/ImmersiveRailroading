@@ -13,6 +13,7 @@ public abstract class FreightDefinition extends EntityRollingStockDefinition {
         super(type, defID, data);
     }
 
+    @Override
     public void loadData(DataBlock data) throws Exception {
         super.loadData(data);
         this.showCurrentLoadOnly = data.getValue("show_current_load_only").asBoolean();

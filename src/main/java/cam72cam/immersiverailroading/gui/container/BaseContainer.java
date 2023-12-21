@@ -5,6 +5,7 @@ import cam72cam.mod.gui.container.IContainer;
 import cam72cam.mod.gui.container.IContainerBuilder;
 
 public abstract class BaseContainer implements IContainer {
+
     protected void drawName(IContainerBuilder container, EntityRollingStock stock) {
         String name = stock.getDefinition().name();
         if (stock.tag != null && !stock.tag.isEmpty()) {

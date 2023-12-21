@@ -1,9 +1,10 @@
 package cam72cam.immersiverailroading.model.part;
 
-import cam72cam.immersiverailroading.entity.EntityMoveableRollingStock;
+import cam72cam.immersiverailroading.entity.EntityMovableRollingStock;
 import cam72cam.immersiverailroading.entity.EntityRollingStock;
 import cam72cam.immersiverailroading.library.ModelComponentType;
 import cam72cam.immersiverailroading.library.ModelComponentType.ModelPosition;
+import cam72cam.immersiverailroading.library.unit.Speed;
 import cam72cam.immersiverailroading.model.ModelState;
 import cam72cam.immersiverailroading.model.components.ComponentProvider;
 import cam72cam.immersiverailroading.model.components.ModelComponent;
@@ -29,7 +30,7 @@ import java.util.stream.Collectors;
 
 import static cam72cam.immersiverailroading.model.ModelState.lcgPattern;
 
-public class LightFlare<T extends EntityMoveableRollingStock> {
+public class LightFlare<T extends EntityMovableRollingStock> {
     private static final Pattern rgb = Pattern.compile(String.format(".*_0[xX](%s%<s)(%<s%<s)(%<s%<s).*", "[0-9A-Fa-f]"));
     private final ModelComponent component;
     private final boolean forward;
@@ -104,7 +105,7 @@ public class LightFlare<T extends EntityMoveableRollingStock> {
         }
 
         ModelState mystate = state.push(builder -> builder
-                .add((ModelState.Lighter) (stock) ->
+                .lighter((ModelState.Lighter) (stock) ->
                         new ModelState.LightState(null, null, this.blinkFullBright ? !this.isBlinkOff(stock) : !this.isLightOff(stock), null)
                 )
         );
@@ -120,11 +121,11 @@ public class LightFlare<T extends EntityMoveableRollingStock> {
         return !stock.externalLightsEnabled() || (this.controlGroup != null && stock.getControlPosition(this.controlGroup) == (this.invert ? 1 : 0));
     }
 
-    public static <T extends EntityMoveableRollingStock> List<LightFlare<T>> get(EntityRollingStockDefinition def, ComponentProvider provider, ModelState state, ModelComponentType type) {
+    public static <T extends EntityMovableRollingStock> List<LightFlare<T>> get(EntityRollingStockDefinition def, ComponentProvider provider, ModelState state, ModelComponentType type) {
         return provider.parseAll(type).stream().map(c -> new LightFlare<T>(def, state, c)).collect(Collectors.toList());
     }
 
-    public static <T extends EntityMoveableRollingStock> List<LightFlare<T>> get(EntityRollingStockDefinition def, ComponentProvider provider, ModelState state, ModelComponentType type, ModelPosition pos) {
+    public static <T extends EntityMovableRollingStock> List<LightFlare<T>> get(EntityRollingStockDefinition def, ComponentProvider provider, ModelState state, ModelComponentType type, ModelPosition pos) {
         return provider.parseAll(type, pos)
                 .stream()
                 .map(c -> new LightFlare<T>(def, state, c))
@@ -134,7 +135,7 @@ public class LightFlare<T extends EntityMoveableRollingStock> {
     public void postRender(T stock, RenderState state) {
         //GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
         //GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
-        boolean reverse = stock.getCurrentSpeed().minecraft() < 0;
+        boolean reverse = stock.getCurrentSpeed().as(Speed.SpeedUnit.METERS_PER_TICK).value() < 0;
         float red = reverse ? this.redReverse : this.red;
         float green = reverse ? this.greenReverse : this.green;
         float blue = reverse ? this.blueReverse : this.blue;
@@ -162,7 +163,7 @@ public class LightFlare<T extends EntityMoveableRollingStock> {
 
         int viewAngle = 45;
         float intensity = 1 - Math.abs(Math.max(-viewAngle, Math.min(viewAngle, VecUtil.toWrongYaw(playerOffset) - 90))) / viewAngle;
-        intensity *= Math.abs(playerOffset.x / (50 * stock.gauge.scale()));
+        intensity *= Math.abs(playerOffset.x / (50 * stock.getGauge().scale()));
         intensity = Math.min(intensity, 1.5f);
 
         state = state.clone()
@@ -220,9 +221,10 @@ public class LightFlare<T extends EntityMoveableRollingStock> {
             return;
         }
 
-        int lightDistance = (int) (15 * stock.gauge.scale());
+        int lightDistance = (int) (15 * stock.getGauge().scale());
         if (!this.castLights.containsKey(stock.getUUID())) {
-            Vec3d flareOffset = new Vec3d(-this.component.min.x, (this.component.min.y + this.component.max.y) / 2, (this.component.min.z + this.component.max.z) / 2).scale(stock.gauge.scale());
+            Vec3d flareOffset = new Vec3d(-this.component.min.x, (this.component.min.y + this.component.max.y) / 2, (this.component.min.z + this.component.max.z) / 2).scale(stock.getGauge()
+                    .scale());
 
             this.castLights.put(stock.getUUID(), new ArrayList<>());
             this.castPositions.put(stock.getUUID(), new ArrayList<>());

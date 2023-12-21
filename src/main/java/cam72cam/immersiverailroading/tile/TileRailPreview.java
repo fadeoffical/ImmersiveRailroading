@@ -158,13 +158,13 @@ public class TileRailPreview extends BlockEntityTickable {
                 case TURN:
                     settings = settings.with(b -> {
                         double length = (lx + lz) / 2 + 1;
-                        length *= 90 / b.degrees;
-                        b.length = (int) Math.round(length);
+                        length *= 90 / b.getDegrees();
+                        b.setLength((int) Math.round(length));
                     });
                     break;
                 case STRAIGHT:
                 case SLOPE:
-                    settings = settings.with(b -> b.length = (int) Math.round(Math.max(lx, lz) + 1));
+                    settings = settings.with(b -> b.setLength((int) Math.round(Math.max(lx, lz) + 1)));
             }
 
             settings.write(this.item);

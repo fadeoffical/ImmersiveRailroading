@@ -2,6 +2,7 @@ package cam72cam.immersiverailroading.gui.overlay;
 
 import cam72cam.immersiverailroading.entity.*;
 import cam72cam.immersiverailroading.entity.EntityCoupleableRollingStock.CouplerType;
+import cam72cam.immersiverailroading.library.unit.Speed;
 import cam72cam.immersiverailroading.model.LocomotiveModel;
 import cam72cam.immersiverailroading.model.StockModel;
 
@@ -40,22 +41,27 @@ public enum Readouts {
             case LIQUID:
                 return stock instanceof FreightTank ? ((FreightTank) stock).getPercentLiquidFull() / 100f : 0;
             case SPEED:
-                return (float) Math.abs(((EntityMoveableRollingStock) stock).getCurrentSpeed().metric() /
-                        (stock instanceof Locomotive ? ((Locomotive) stock).getDefinition()
-                                .getMaxSpeed(stock.gauge)
-                                .metric() : 200));
+                EntityMovableRollingStock movableRollingStock = (EntityMovableRollingStock) stock;
+                Locomotive locomotive = stock instanceof Locomotive ? (Locomotive) stock : null;
+                double currentSpeed = movableRollingStock.getCurrentSpeed()
+                        .as(Speed.SpeedUnit.KILOMETERS_PER_HOUR)
+                        .value();
+                double maxSpeed = locomotive != null ? locomotive.getDefinition()
+                        .getMaxSpeed(stock.getGauge())
+                        .as(Speed.SpeedUnit.KILOMETERS_PER_HOUR).value() : 200;
+                return (float) Math.abs(currentSpeed / maxSpeed);
             case TEMPERATURE:
-                if (stock instanceof LocomotiveSteam) {
-                    return ((LocomotiveSteam) stock).getBoilerTemperature() / 100f;
+                if (stock instanceof SteamLocomotive) {
+                    return ((SteamLocomotive) stock).getBoilerTemperature() / 100f;
                 }
                 if (stock instanceof LocomotiveDiesel) {
                     return ((LocomotiveDiesel) stock).getEngineTemperature() / 150f;
                 }
                 return 0;
             case BOILER_PRESSURE:
-                return stock instanceof LocomotiveSteam ?
-                        ((LocomotiveSteam) stock).getBoilerPressure() / ((LocomotiveSteam) stock).getDefinition()
-                                .getMaxPSI(stock.gauge) : 0;
+                return stock instanceof SteamLocomotive ?
+                        ((SteamLocomotive) stock).getBoilerPressure() / ((SteamLocomotive) stock).getDefinition()
+                                .getMaxPSI(stock.getGauge()) : 0;
             case THROTTLE:
                 return stock instanceof Locomotive ? ((Locomotive) stock).getThrottle() : 0;
             case REVERSER:
@@ -65,9 +71,9 @@ public enum Readouts {
             case TRAIN_BRAKE_LEVER:
                 return stock.getDefinition().isLinearBrakeControl() ? TRAIN_BRAKE.getValue(stock) : lever;
             case INDEPENDENT_BRAKE:
-                return stock instanceof EntityMoveableRollingStock ? ((EntityMoveableRollingStock) stock).getIndependentBrake() : 0;
+                return stock instanceof EntityMovableRollingStock ? ((EntityMovableRollingStock) stock).getIndependentBrake() : 0;
             case BRAKE_PRESSURE:
-                return stock instanceof EntityMoveableRollingStock ? ((EntityMoveableRollingStock) stock).getBrakePressure() : 0;
+                return stock instanceof EntityMovableRollingStock ? ((EntityMovableRollingStock) stock).getBrakePressure() : 0;
             case COUPLER_FRONT:
                 return stock instanceof EntityCoupleableRollingStock ? ((EntityCoupleableRollingStock) stock).isCouplerEngaged(CouplerType.FRONT) ? 1 : 0 : 0;
             case COUPLER_REAR:
@@ -86,19 +92,19 @@ public enum Readouts {
             case FRONT_BOGEY_ANGLE:
                 return this.yawToPercent(stock.getDefinition()
                         .getModel()
-                        .getFrontYaw((EntityMoveableRollingStock) stock), 90);
+                        .getFrontYaw((EntityMovableRollingStock) stock), 90);
             case REAR_BOGEY_ANGLE:
                 return this.yawToPercent(stock.getDefinition()
                         .getModel()
-                        .getRearYaw((EntityMoveableRollingStock) stock), 90);
+                        .getRearYaw((EntityMovableRollingStock) stock), 90);
             case FRONT_LOCOMOTIVE_ANGLE:
                 StockModel<?, ?> front = stock.getDefinition().getModel();
-                return front instanceof LocomotiveModel ? this.yawToPercent(((LocomotiveModel<?, ?>) front).getFrontLocomotiveYaw((EntityMoveableRollingStock) stock), 90) : 0.5f;
+                return front instanceof LocomotiveModel ? this.yawToPercent(((LocomotiveModel<?, ?>) front).getFrontLocomotiveYaw((EntityMovableRollingStock) stock), 90) : 0.5f;
             case REAR_LOCOMOTIVE_ANGLE:
                 StockModel<?, ?> rear = stock.getDefinition().getModel();
-                return rear instanceof LocomotiveModel ? this.yawToPercent(((LocomotiveModel<?, ?>) rear).getRearLocomotiveYaw((EntityMoveableRollingStock) stock), 90) : 0.5f;
+                return rear instanceof LocomotiveModel ? this.yawToPercent(((LocomotiveModel<?, ?>) rear).getRearLocomotiveYaw((EntityMovableRollingStock) stock), 90) : 0.5f;
             case CYLINDER_DRAIN:
-                return stock instanceof LocomotiveSteam && ((LocomotiveSteam) stock).cylinderDrainsEnabled() ? 1 : 0;
+                return stock instanceof SteamLocomotive && ((SteamLocomotive) stock).cylinderDrainsEnabled() ? 1 : 0;
         }
         return 0;
     }
@@ -143,7 +149,7 @@ public enum Readouts {
                 }
                 break;
             case INDEPENDENT_BRAKE:
-                if (stock instanceof EntityMoveableRollingStock) {
+                if (stock instanceof EntityMovableRollingStock) {
                     ((Locomotive) stock).setIndependentBrake(value);
                 }
                 break;
@@ -178,8 +184,8 @@ public enum Readouts {
                 }
                 break;
             case CYLINDER_DRAIN:
-                if (stock instanceof LocomotiveSteam) {
-                    ((LocomotiveSteam) stock).setCylinderDrains(value > 0.9);
+                if (stock instanceof SteamLocomotive) {
+                    ((SteamLocomotive) stock).setCylinderDrains(value > 0.9);
                 }
                 break;
         }

@@ -2,7 +2,7 @@ package cam72cam.immersiverailroading.entity.physics;
 
 import cam72cam.immersiverailroading.Config;
 import cam72cam.immersiverailroading.ImmersiveRailroading;
-import cam72cam.immersiverailroading.util.Speed;
+import cam72cam.immersiverailroading.library.unit.Speed;
 import cam72cam.mod.math.Vec3d;
 import cam72cam.mod.math.Vec3i;
 import cam72cam.mod.serialization.TagCompound;
@@ -288,7 +288,7 @@ public class Consist {
 
             this.mass_Kg = state.config.massKg;
             this.position_M = this.initial_position_M = 0; // Updated by Linkage
-            this.velocity_M_S = Speed.fromMinecraft(state.velocity).metric() / 3.6 * this.direction;
+            this.velocity_M_S = Speed.fromUnit(state.velocity, Speed.SpeedUnit.METERS_PER_TICK).as(Speed.SpeedUnit.METERS_PER_SECOND).value() * this.direction;
             this.force_KgM_S_S = state.forcesNewtons() * this.direction;
             this.friction_KgM_S_S = state.frictionNewtons();
         }
@@ -456,10 +456,10 @@ public class Consist {
 
 
         public SimulationState applyToState(List<Vec3i> blocksAlreadyBroken) {
-            double velocityMPT = Speed.fromMetric(this.velocity_M_S * 3.6).minecraft(); // per 1 tick
+            double velocityMetersPerTick = Speed.fromUnit(this.velocity_M_S, Speed.SpeedUnit.METERS_PER_SECOND).as(Speed.SpeedUnit.METERS_PER_TICK).value(); // per 1 tick
 
             // Calculate the applied velocity from this particle.  This should not include the coupler adjustment speed/distance below
-            this.state.velocity = velocityMPT * this.direction;
+            this.state.velocity = velocityMetersPerTick * this.direction;
 
             SimulationState future = this.state.next((this.position_M - this.initial_position_M) * this.direction, blocksAlreadyBroken);
 

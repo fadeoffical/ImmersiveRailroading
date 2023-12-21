@@ -21,7 +21,7 @@ public class BuilderSwitch extends BuilderBase implements IIterableTrack {
     public BuilderSwitch(RailInfo info, World world, Vec3i pos) {
         super(info, world, pos);
 
-        RailInfo turnInfo = info.withSettings(b -> b.type = info.customInfo.placementPosition.equals(info.placementInfo.placementPosition) ? TrackItems.TURN : TrackItems.CUSTOM);
+        RailInfo turnInfo = info.withSettings(b -> b.setType(info.customInfo.placementPosition.equals(info.placementInfo.placementPosition) ? TrackItems.TURN : TrackItems.CUSTOM));
         RailInfo straightInfo = info;
 
         {
@@ -39,13 +39,13 @@ public class BuilderSwitch extends BuilderBase implements IIterableTrack {
                 }
 
                 maxOverlap *= 1.2;
-                b.length = (int) Math.ceil(maxOverlap) + 3;
+                b.setLength((int) Math.ceil(maxOverlap) + 3);
             });
         }
 
 
         this.straightBuilder = new BuilderStraight(straightInfo, world, pos, true);
-        this.straightBuilderReal = new BuilderStraight(straightInfo.withSettings(b -> b.type = TrackItems.STRAIGHT), world, pos, true);
+        this.straightBuilderReal = new BuilderStraight(straightInfo.withSettings(b -> b.setType(TrackItems.STRAIGHT)), world, pos, true);
 
         this.turnBuilder.overrideFlexible = true;
 

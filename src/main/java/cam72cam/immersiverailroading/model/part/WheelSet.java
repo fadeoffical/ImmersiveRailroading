@@ -10,7 +10,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class WheelSet {
+
     protected final List<Wheel> wheels;
+
     private final float angleOffset;
 
     public WheelSet(ModelState state, List<ModelComponent> wheels, float angleOffset) {

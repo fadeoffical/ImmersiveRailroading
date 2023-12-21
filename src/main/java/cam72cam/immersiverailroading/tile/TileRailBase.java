@@ -12,10 +12,11 @@ import cam72cam.immersiverailroading.entity.physics.SimulationState;
 import cam72cam.immersiverailroading.items.ItemRailAugment;
 import cam72cam.immersiverailroading.items.ItemTrackExchanger;
 import cam72cam.immersiverailroading.library.*;
+import cam72cam.immersiverailroading.library.unit.Speed;
 import cam72cam.immersiverailroading.model.part.Door;
 import cam72cam.immersiverailroading.physics.MovementTrack;
 import cam72cam.immersiverailroading.thirdparty.trackapi.BlockEntityTrackTickable;
-import cam72cam.immersiverailroading.thirdparty.trackapi.ITrack;
+import cam72cam.immersiverailroading.thirdparty.trackapi.Track;
 import cam72cam.immersiverailroading.util.MathUtil;
 import cam72cam.immersiverailroading.util.RailInfo;
 import cam72cam.immersiverailroading.util.SwitchUtil;
@@ -37,6 +38,7 @@ import cam72cam.mod.text.PlayerMessage;
 import cam72cam.mod.util.Facing;
 import cam72cam.mod.util.SingleCache;
 import org.apache.commons.lang3.ArrayUtils;
+import trackapi.lib.Gauges;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -82,7 +84,7 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
     private Gauge augmentGauge;
     @TagField("stockTag")
     private String stockTag;
-    private EntityMoveableRollingStock overhead;
+    private EntityMovableRollingStock overhead;
     @TagField("pushPull")
     private boolean pushPull = true;
     private Collection<TileRail> tiles = null;
@@ -241,9 +243,9 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
             Gauge gauge = stackData.gauge;
             if (!track.equals(tileRail.info.settings.track) || !railBed.equals(tileRail.info.settings.railBed) || !gauge.equals(tileRail.info.settings.gauge)) {
                 RailInfo info = tileRail.info.withSettings(b -> {
-                    b.track = track;
-                    b.railBed = railBed;
-                    b.gauge = gauge;
+                    b.setTrack(track);
+                    b.setRailBed(railBed);
+                    b.setGauge(gauge);
                 });
                 Audio.playSound(this.getWorld(), this.getPos(), StandardSound.BLOCK_ANVIL_PLACE, SoundCategory.BLOCKS, 0.3f, 0.2f);
                 if (!player.isCreative()) {
@@ -367,7 +369,7 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
                 for (Facing facing : horiz) {
                     Vec3i ph = this.getWorld().getPrecipitationHeight(this.getPos().offset(facing, i));
                     for (int j = 0; j < 3; j++) {
-                        if (this.getWorld().isAir(ph) && !ITrack.isRail(this.getWorld(), ph.down())) {
+                        if (this.getWorld().isAir(ph) && !Track.isRail(this.getWorld(), ph.down())) {
                             this.getWorld().setSnowLevel(ph, snowDown);
                             return;
                         }
@@ -485,7 +487,7 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
         if (this.overhead == null) {
             return null;
         }
-        if (this.augmentFilterID != null && !this.augmentFilterID.equals(this.overhead.getDefinitionID())) {
+        if (this.augmentFilterID != null && !this.augmentFilterID.equals(this.overhead.getDefinitionId())) {
             return null;
         }
         if (this.stockTag != null && this.stockTag.equals(this.overhead.tag)) {
@@ -504,7 +506,7 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
                     if (this.canOperate()) {
                         FreightTank stock = this.getStockNearBy(FreightTank.class);
                         if (stock != null) {
-                            return stock.theTank;
+                            return stock.tank;
                         }
                     }
                     // placeholder for connections
@@ -599,11 +601,11 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
             // Accessing TEs (parent) in chunks that are currently loading can cause problems
             return this.boundingBox.get(this.getFullHeight() + 0.1);
         }
-        return this.boundingBox.get(this.getFullHeight() + 0.1 * (this.getTrackGauge() / Gauge.STANDARD));
+        return this.boundingBox.get(this.getFullHeight() + 0.1 * (this.getTrackGauge() / Gauges.STANDARD));
     }
 
     public float getFullHeight() {
-        return this.bedHeight + this.snowLayers / 8.0f;
+        return this.bedHeight + this.snowLayers / 8f;
     }
 
     @Override
@@ -857,7 +859,7 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
                         for (Facing side : Facing.values()) {
                             List<ITank> tanks = this.getWorld().getTank(this.getPos().offset(side));
                             if (tanks != null) {
-                                tanks.forEach(tank -> stock.theTank.drain(tank, 100, false));
+                                tanks.forEach(tank -> stock.tank.drain(tank, 100, false));
                             }
                         }
                     }
@@ -871,7 +873,7 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
                         for (Facing side : Facing.values()) {
                             List<ITank> tanks = this.getWorld().getTank(this.getPos().offset(side));
                             if (tanks != null) {
-                                tanks.forEach(tank -> stock.theTank.fill(tank, 100, false));
+                                tanks.forEach(tank -> stock.tank.fill(tank, 100, false));
                             }
                         }
                     }
@@ -918,7 +920,7 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
                 }
                 break;
                 case DETECTOR: {
-                    EntityMoveableRollingStock stock = this.getStockNearBy(EntityMoveableRollingStock.class);
+                    EntityMovableRollingStock stock = this.getStockNearBy(EntityMovableRollingStock.class);
                     int currentRedstone = this.redstoneLevel;
                     int newRedstone = 0;
 
@@ -927,20 +929,18 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
                             newRedstone = stock != null ? 15 : 0;
                             break;
                         case SPEED:
-                            newRedstone = stock != null ? (int) Math.floor(Math.abs(stock.getCurrentSpeed()
-                                    .metric()) / 10) : 0;
+                            // todo: speed / maxSpeed / 15?
+                            newRedstone = stock != null ? (int) Math.floor(stock.getCurrentSpeed().as(Speed.SpeedUnit.KILOMETERS_PER_HOUR).absolute().value() / 10) : 0;
                             break;
                         case PASSENGERS:
                             newRedstone = stock != null ? Math.min(15, stock.getPassengerCount()) : 0;
                             break;
                         case CARGO:
-                            newRedstone = 0;
                             if (stock instanceof Freight) {
                                 newRedstone = ((Freight) stock).getPercentCargoFull() * 15 / 100;
                             }
                             break;
                         case LIQUID:
-                            newRedstone = 0;
                             if (stock instanceof FreightTank) {
                                 newRedstone = ((FreightTank) stock).getPercentLiquidFull() * 15 / 100;
                             }
@@ -977,9 +977,9 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
                     EntityRollingStock stock = this.getStockNearBy(EntityRollingStock.class);
                     if (stock != null) {
                         float value = this.getWorld().getRedstone(this.getPos()) / 15f;
-                        for (Door d : stock.getDefinition().getModel().getDoors()) {
-                            if (d.type == Door.Types.EXTERNAL) {
-                                stock.setControlPosition(d, value);
+                        for (Door<?> door : stock.getDefinition().getModel().getDoors()) {
+                            if (door.type == Door.Types.EXTERNAL) {
+                                stock.setControlPosition(door, value);
                             }
                         }
                     }
@@ -1084,7 +1084,7 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
         return this.ticksExisted;
     }
 
-    public void stockOverhead(EntityMoveableRollingStock stock) {
+    public void stockOverhead(EntityMovableRollingStock stock) {
         this.overhead = stock;
     }
 }

@@ -22,14 +22,14 @@ import java.util.List;
 import java.util.UUID;
 
 public class ItemConductorWhistle extends CustomItem {
+
     private static final HashMap<UUID, Integer> cooldown = new HashMap<>();
 
     public ItemConductorWhistle() {
         super(ImmersiveRailroading.MODID, "item_conductor_whistle");
 
         Fuzzy gold = Fuzzy.GOLD_INGOT;
-        Recipes.shapedRecipe(this, 2,
-                gold, gold, gold, gold, gold, gold);
+        Recipes.shapedRecipe(this, 2, gold, gold, gold, gold, gold, gold);
     }
 
     @Override
@@ -44,74 +44,74 @@ public class ItemConductorWhistle extends CustomItem {
 
     @Override
     public void onClickAir(Player player, World world, Player.Hand hand) {
-        if (world.isServer && player.hasPermission(Permissions.CONDUCTOR)) {
-            if (cooldown.containsKey(player.getUUID())) {
-                int newtime = cooldown.get(player.getUUID());
-                if (newtime < player.getTickCount() || newtime > player.getTickCount() + 40) {
-                    cooldown.remove(player.getUUID());
-                } else {
-                    return;
+        if (!world.isServer || !player.hasPermission(Permissions.CONDUCTOR)) return;
+
+        int playerTicks = player.getTickCount();
+        UUID playerUniqueId = player.getUUID();
+        if (cooldown.containsKey(playerUniqueId)) {
+            int cooldownTime = cooldown.get(playerUniqueId);
+            if (cooldownTime < playerTicks || cooldownTime > playerTicks + 40) cooldown.remove(playerUniqueId);
+            else return;
+        }
+
+        cooldown.put(playerUniqueId, playerTicks + 40);
+
+        double conductorDistance = Config.ConfigBalance.villagerConductorDistance;
+        double soundDistance = conductorDistance * 1.2f;
+        Vec3d playerPosition = player.getPosition();
+        SoundPacket packet = new SoundPacket(new Identifier(ImmersiveRailroading.MODID, "sounds/conductor_whistle.ogg"), playerPosition, Vec3d.ZERO, 0.7f, (float) (Math.random() / 4 + 0.75), (int) (soundDistance), 1, SoundPacket.PacketSoundCategory.WHISTLE);
+        packet.sendToAllAround(world, playerPosition, soundDistance);
+
+        // todo: shouldn't this be a sphere or at least cylinder? current implementation is a cube which feels weird
+        //       also the config description implies it's a sphere
+        IBoundingBox boundingBox = player.getBounds().grow(new Vec3d(conductorDistance, 4, conductorDistance));
+        EntityCoupleableRollingStock closestRollingStockToPlayer = getClosestRollingStockToPlayer(world, boundingBox, playerPosition);
+        if (closestRollingStockToPlayer == null) return;
+
+        if (player.isCrouching()) {
+            closestRollingStockToPlayer.getTrain()
+                    .stream()
+                    .filter(car -> car.getPosition().distanceTo(playerPosition) < conductorDistance)
+                    .map(EntityCoupleableRollingStock::getPassengers)
+                    .flatMap(List::stream)
+                    .forEach(car -> car.getPassengers()
+                            .stream()
+                            .filter(Entity::isVillager)
+                            .forEach(car::removePassenger));
+            return;
+        }
+
+        world.getEntities(villager -> boundingBox.intersects(villager.getBounds()), Entity.class).forEach(villager -> {
+            EntityCoupleableRollingStock closest = null;
+            for (EntityCoupleableRollingStock rollingStock : closestRollingStockToPlayer.getTrain()) {
+                if (!rollingStock.getDefinition().acceptsPassengers()) continue;
+                if (!rollingStock.canFitPassenger(villager)) continue;
+
+                Vec3d villagerPosition = villager.getPosition();
+                if (closest == null || closest.getPosition().distanceTo(villagerPosition) > rollingStock.getPosition()
+                        .distanceTo(villagerPosition)) {
+                    closest = rollingStock;
                 }
             }
+            if (closest != null) closest.addPassenger(villager);
+        });
 
-            cooldown.put(player.getUUID(), player.getTickCount() + 40);
+    }
 
-            SoundPacket packet = new SoundPacket(
-                    new Identifier(ImmersiveRailroading.MODID, "sounds/conductor_whistle.ogg"),
-                    player.getPosition(), Vec3d.ZERO,
-                    0.7f, (float) (Math.random() / 4 + 0.75),
-                    (int) (Config.ConfigBalance.villagerConductorDistance * 1.2f),
-                    1,
-                    SoundPacket.PacketSoundCategory.WHISTLE
-            );
-            packet.sendToAllAround(world, player.getPosition(), Config.ConfigBalance.villagerConductorDistance * 1.2f);
-
-            IBoundingBox bb = player.getBounds()
-                    .grow(new Vec3d(Config.ConfigBalance.villagerConductorDistance, 4, Config.ConfigBalance.villagerConductorDistance));
-            List<EntityCoupleableRollingStock> carsNearby = world.getEntities((EntityCoupleableRollingStock stock) -> bb.intersects(stock.getBounds()), EntityCoupleableRollingStock.class);
-            EntityCoupleableRollingStock closestToPlayer = null;
-            for (EntityCoupleableRollingStock car : carsNearby) {
-                if (closestToPlayer == null) {
-                    closestToPlayer = car;
-                    continue;
-                }
-                if (closestToPlayer.getPosition().distanceTo(player.getPosition()) > car.getPosition()
-                        .distanceTo(player.getPosition())) {
-                    closestToPlayer = car;
-                }
+    private static EntityCoupleableRollingStock getClosestRollingStockToPlayer(World world, IBoundingBox boundingBox, Vec3d playerPosition) {
+        List<EntityCoupleableRollingStock> nearbyRollingStock = world.getEntities(stock -> boundingBox.intersects(stock.getBounds()), EntityCoupleableRollingStock.class);
+        EntityCoupleableRollingStock closestRollingStockToPlayer = null;
+        for (EntityCoupleableRollingStock currentRollingStock : nearbyRollingStock) {
+            if (closestRollingStockToPlayer == null) {
+                closestRollingStockToPlayer = currentRollingStock;
+                continue;
             }
-
-            if (closestToPlayer != null) {
-                if (!player.isCrouching()) {
-                    List<Entity> villagers = world.getEntities(x -> x.isVillager() && bb.intersects(x.getBounds()), Entity.class);
-                    for (Entity villager : villagers) {
-                        EntityCoupleableRollingStock closest = null;
-                        for (EntityCoupleableRollingStock car : closestToPlayer.getTrain()) {
-                            if (car.canFitPassenger(villager) && car.getDefinition().acceptsPassengers()) {
-                                if (closest == null || closest.getPosition()
-                                        .distanceTo(villager.getPosition()) > car.getPosition()
-                                        .distanceTo(villager.getPosition())) {
-                                    closest = car;
-                                }
-                            }
-                        }
-                        if (closest != null) {
-                            closest.addPassenger(villager);
-                        }
-                    }
-                } else {
-                    for (EntityCoupleableRollingStock car : closestToPlayer.getTrain()) {
-                        if (car.getPosition()
-                                .distanceTo(player.getPosition()) < Config.ConfigBalance.villagerConductorDistance) {
-                            for (Entity passenger : car.getPassengers()) {
-                                if (passenger.isVillager()) {
-                                    car.removePassenger(passenger);
-                                }
-                            }
-                        }
-                    }
-                }
+            Vec3d closestPosition = closestRollingStockToPlayer.getPosition();
+            if (closestPosition.distanceTo(playerPosition) > currentRollingStock.getPosition()
+                    .distanceTo(playerPosition)) {
+                closestRollingStockToPlayer = currentRollingStock;
             }
         }
+        return closestRollingStockToPlayer;
     }
 }

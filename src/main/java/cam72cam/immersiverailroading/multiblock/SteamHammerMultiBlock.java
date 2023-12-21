@@ -16,13 +16,13 @@ import cam72cam.mod.sound.SoundCategory;
 import cam72cam.mod.sound.StandardSound;
 import cam72cam.mod.world.World;
 
-public class SteamHammerMultiblock extends Multiblock {
+public class SteamHammerMultiBlock extends MultiBlock {
     public static final String NAME = "STEAM_HAMMER";
     private static final Vec3i center = new Vec3i(2, 0, 0);
     private static final Vec3i power = new Vec3i(2, 5, 0);
     private static final FuzzyProvider piston = () -> Fuzzy.PISTON;
 
-    public SteamHammerMultiblock() {
+    public SteamHammerMultiBlock() {
         super(NAME, new FuzzyProvider[][][]{ // Z
                 { // Y
                         { //X

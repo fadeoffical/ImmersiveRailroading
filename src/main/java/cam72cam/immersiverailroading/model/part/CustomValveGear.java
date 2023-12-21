@@ -29,7 +29,7 @@ public class CustomValveGear extends ValveGear {
             throw new RuntimeException(e);
         }
 
-        state.push(settings -> settings.add((ModelState.GroupAnimator) (stock, group) -> this.animation.getMatrix(
+        state.push(settings -> settings.groupAnimator((ModelState.GroupAnimator) (stock, group) -> this.animation.getMatrix(
                 group,
                 stock instanceof Locomotive ? ((Locomotive) stock).getReverser() : 0.0f,
                 this.angle(stock.distanceTraveled) / 360,

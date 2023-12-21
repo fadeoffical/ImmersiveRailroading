@@ -109,7 +109,7 @@ public class DieselLocomotiveModel extends LocomotiveModel<LocomotiveDiesel, Loc
 
         this.rocking.include(this.components);
 
-        this.exhaust = DieselExhaust.get(provider);
+        this.exhaust = DieselExhaust.create(provider);
         this.horn = Horn.get(provider, this.rocking, def.horn, def.getHornSus());
 
         super.parseComponents(provider, def);

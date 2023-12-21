@@ -7,11 +7,13 @@ import cam72cam.mod.item.CreativeTab;
 import cam72cam.mod.item.CustomItem;
 import cam72cam.mod.item.ItemStack;
 import cam72cam.mod.serialization.TagField;
+import trackapi.lib.Gauges;
 
 import java.util.Collections;
 import java.util.List;
 
 public class ItemCastRail extends CustomItem {
+
     public ItemCastRail() {
         super(ImmersiveRailroading.MODID, "item_cast_rail");
     }
@@ -28,7 +30,7 @@ public class ItemCastRail extends CustomItem {
 
     @Override
     public List<String> getTooltip(ItemStack stack) {
-        return Collections.singletonList(GuiText.GAUGE_TOOLTIP.toString(new Data(stack).gauge));
+        return Collections.singletonList(GuiText.GAUGE_TOOLTIP.translate(new Data(stack).gauge));
     }
 
     public static class Data extends ItemDataSerializer {
@@ -37,9 +39,7 @@ public class ItemCastRail extends CustomItem {
 
         public Data(ItemStack stack) {
             super(stack);
-            if (this.gauge == null) {
-                this.gauge = Gauge.getClosestGauge(Gauge.STANDARD);
-            }
+            this.gauge = Gauge.getClosestGauge(Gauges.STANDARD);
         }
     }
 }

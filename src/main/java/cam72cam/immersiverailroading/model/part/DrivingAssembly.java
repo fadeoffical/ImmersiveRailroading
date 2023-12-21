@@ -1,6 +1,6 @@
 package cam72cam.immersiverailroading.model.part;
 
-import cam72cam.immersiverailroading.entity.EntityMoveableRollingStock;
+import cam72cam.immersiverailroading.entity.EntityMovableRollingStock;
 import cam72cam.immersiverailroading.library.ModelComponentType;
 import cam72cam.immersiverailroading.library.ModelComponentType.ModelPosition;
 import cam72cam.immersiverailroading.library.ValveGearConfig;
@@ -61,7 +61,7 @@ public class DrivingAssembly {
         return new DrivingAssembly(wheels, right, inner_right, center, inner_left, left, steamChest);
     }
 
-    public boolean isEndStroke(EntityMoveableRollingStock stock) {
+    public boolean isEndStroke(EntityMovableRollingStock stock) {
         boolean isEndStroke = this.right != null && this.right.isEndStroke(stock);
         isEndStroke |= this.inner_right != null && this.inner_right.isEndStroke(stock);
         isEndStroke |= this.center != null && this.center.isEndStroke(stock);
@@ -70,7 +70,7 @@ public class DrivingAssembly {
         return isEndStroke;
     }
 
-    public void effects(EntityMoveableRollingStock stock) {
+    public void effects(EntityMovableRollingStock stock) {
         if (this.right != null) {
             this.right.effects(stock);
         }
@@ -88,7 +88,7 @@ public class DrivingAssembly {
         }
     }
 
-    public void removed(EntityMoveableRollingStock stock) {
+    public void removed(EntityMovableRollingStock stock) {
         if (this.right != null) {
             this.right.removed(stock);
         }

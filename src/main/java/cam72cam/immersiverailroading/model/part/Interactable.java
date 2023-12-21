@@ -1,12 +1,12 @@
 package cam72cam.immersiverailroading.model.part;
 
-import cam72cam.immersiverailroading.entity.EntityMoveableRollingStock;
+import cam72cam.immersiverailroading.entity.EntityMovableRollingStock;
 import cam72cam.immersiverailroading.entity.EntityRollingStock;
 import cam72cam.immersiverailroading.model.components.ModelComponent;
 import cam72cam.mod.entity.boundingbox.IBoundingBox;
 import cam72cam.mod.math.Vec3d;
 
-public class Interactable<T extends EntityMoveableRollingStock> {
+public class Interactable<T extends EntityMovableRollingStock> {
     public final ModelComponent part;
     public long lookedAt;
 

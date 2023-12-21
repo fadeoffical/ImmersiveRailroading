@@ -1,6 +1,6 @@
 package cam72cam.immersiverailroading.model.part;
 
-import cam72cam.immersiverailroading.entity.EntityMoveableRollingStock;
+import cam72cam.immersiverailroading.entity.EntityMovableRollingStock;
 import cam72cam.immersiverailroading.registry.EntityRollingStockDefinition.SoundDefinition;
 import cam72cam.immersiverailroading.render.ExpireableMap;
 import cam72cam.mod.sound.ISound;
@@ -27,11 +27,11 @@ public class PartSound {
         this.category = category;
     }
 
-    public void effects(EntityMoveableRollingStock stock, boolean enabled) {
+    public void effects(EntityMovableRollingStock stock, boolean enabled) {
         this.effects(stock, enabled ? 1 : 0, 1);
     }
 
-    public void effects(EntityMoveableRollingStock stock, float volume, float pitch) {
+    public void effects(EntityMovableRollingStock stock, float volume, float pitch) {
         if (this.def == null) {
             return;
         }
@@ -137,11 +137,11 @@ public class PartSound {
         }
     }
 
-    public void effects(EntityMoveableRollingStock stock, float volume) {
+    public void effects(EntityMovableRollingStock stock, float volume) {
         this.effects(stock, volume, 1);
     }
 
-    public void removed(EntityMoveableRollingStock stock) {
+    public void removed(EntityMovableRollingStock stock) {
         this.entitySounds.remove(stock.getUUID());
     }
 
@@ -158,7 +158,7 @@ public class PartSound {
         final ISound stop;
         SoundState state;
 
-        public Sounds(EntityMoveableRollingStock stock) {
+        public Sounds(EntityMovableRollingStock stock) {
             this.state = SoundState.STOPPED;
             float distance = PartSound.this.def.distance != null ? PartSound.this.def.distance : PartSound.this.attenuationDistance;
             this.start = PartSound.this.def.start != null ? stock.createSound(PartSound.this.def.start, false, distance, PartSound.this.category) : null;

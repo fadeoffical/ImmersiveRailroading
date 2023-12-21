@@ -1,7 +1,7 @@
 package cam72cam.immersiverailroading.model.animation;
 
 import cam72cam.immersiverailroading.ConfigSound;
-import cam72cam.immersiverailroading.entity.EntityMoveableRollingStock;
+import cam72cam.immersiverailroading.entity.EntityMovableRollingStock;
 import cam72cam.immersiverailroading.entity.EntityRollingStock;
 import cam72cam.immersiverailroading.model.part.PartSound;
 import cam72cam.immersiverailroading.registry.EntityRollingStockDefinition.AnimationDefinition;
@@ -115,7 +115,7 @@ public class StockAnimation {
         return value;
     }
 
-    public <ENTITY extends EntityMoveableRollingStock> void effects(ENTITY stock) {
+    public <ENTITY extends EntityMovableRollingStock> void effects(ENTITY stock) {
         if (this.sound != null) {
             float volume = 0;
             float pitch = 1;
@@ -140,7 +140,7 @@ public class StockAnimation {
         }
     }
 
-    public <ENTITY extends EntityMoveableRollingStock> void removed(ENTITY stock) {
+    public <ENTITY extends EntityMovableRollingStock> void removed(ENTITY stock) {
         if (this.sound != null) {
             this.sound.removed(stock);
         }

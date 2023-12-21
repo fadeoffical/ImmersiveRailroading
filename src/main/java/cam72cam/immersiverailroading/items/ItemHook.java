@@ -10,9 +10,9 @@ import java.util.Collections;
 import java.util.List;
 
 public class ItemHook extends CustomItem {
+
     public ItemHook() {
         super(ImmersiveRailroading.MODID, "item_hook");
-
 
         Fuzzy steel = Fuzzy.STEEL_INGOT;
         IRFuzzy.registerSteelRecipe(this, 2,

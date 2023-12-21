@@ -45,8 +45,8 @@ public class EntityBuildableRollingStock extends EntityRollingStock implements I
         } else {
             this.onDissassemble();
         }
-        if (this instanceof EntityMoveableRollingStock) {
-            ((EntityMoveableRollingStock) this).clearHeightMap();
+        if (this instanceof EntityMovableRollingStock) {
+            ((EntityMovableRollingStock) this).clearHeightMap();
         }
     }
 
@@ -143,8 +143,8 @@ public class EntityBuildableRollingStock extends EntityRollingStock implements I
             ItemStack found = player.getInventory().get(i);
             if (found.is(IRItems.ITEM_ROLLING_STOCK_COMPONENT)) {
                 ItemRollingStockComponent.Data data = new ItemRollingStockComponent.Data(found);
-                if (data.def.equals(this.getDefinition())) {
-                    if ((player.isCreative() || data.gauge == this.gauge) && !data.requiresHammering()) {
+                if (data.rollingStockDefinition.equals(this.getDefinition())) {
+                    if ((player.isCreative() || data.gauge == this.getGauge()) && !data.requiresHammering()) {
                         if (toAdd.contains(data.componentType)) {
                             this.addComponent(data.componentType);
                             player.getInventory().extract(i, 1, false);
@@ -163,9 +163,9 @@ public class EntityBuildableRollingStock extends EntityRollingStock implements I
         for (int i = 0; i < player.getInventory().getSlotCount(); i++) {
             ItemStack found = player.getInventory().get(i);
             if (found.is(IRItems.ITEM_PLATE)) {
-                ItemPlate.Data data = new ItemPlate.Data(found);
-                if (data.gauge == this.gauge) {
-                    switch (data.type) {
+                ItemPlate.ItemPlateData data = new ItemPlate.ItemPlateData(found);
+                if (data.gauge == this.getGauge()) {
+                    switch (data.plateType) {
                         case LARGE:
                             largePlates += found.getCount();
                             break;
@@ -187,7 +187,7 @@ public class EntityBuildableRollingStock extends EntityRollingStock implements I
 
         for (ItemComponentType type : toAdd) {
             if (type.isWooden(this.getDefinition())) {
-                int woodUsed = type.getWoodCost(this.gauge, this.getDefinition());
+                int woodUsed = type.getWoodCost(this.getGauge(), this.getDefinition());
                 if (wood < woodUsed) {
                     continue;
                 }
@@ -231,7 +231,7 @@ public class EntityBuildableRollingStock extends EntityRollingStock implements I
                     continue;
             }
 
-            platesUsed = type.getPlateCost(this.gauge, this.getDefinition());
+            platesUsed = type.getPlateCost(this.getGauge(), this.getDefinition());
             if (platesStart < platesUsed) {
                 continue;
             }
@@ -239,9 +239,9 @@ public class EntityBuildableRollingStock extends EntityRollingStock implements I
             for (int i = 0; i < player.getInventory().getSlotCount(); i++) {
                 ItemStack found = player.getInventory().get(i);
                 if (found.is(IRItems.ITEM_PLATE)) {
-                    ItemPlate.Data data = new ItemPlate.Data(found);
-                    if (data.gauge == this.gauge) {
-                        if (data.type == type.getPlateType()) {
+                    ItemPlate.ItemPlateData data = new ItemPlate.ItemPlateData(found);
+                    if (data.gauge == this.getGauge()) {
+                        if (data.plateType == type.getPlateType()) {
                             ItemStack itemUsed = player.getInventory().extract(i, platesUsed, false);
 
                             platesUsed -= itemUsed.getCount();
@@ -280,13 +280,13 @@ public class EntityBuildableRollingStock extends EntityRollingStock implements I
                     case PLATE_LARGE:
                     case PLATE_MEDIUM:
                     case PLATE_SMALL:
-                        str += String.format(" (%d x %s)", component.getPlateCost(this.gauge, this.getDefinition()) * addMap.get(component), component.getPlateType());
+                        str += String.format(" (%d x %s)", component.getPlateCost(this.getGauge(), this.getDefinition()) * addMap.get(component), component.getPlateType());
                         break;
                     default:
                         break;
                 }
             } else {
-                str += String.format(" (%d x %s)", component.getWoodCost(this.gauge, this.getDefinition()), ChatText.WOOD_PLANKS);
+                str += String.format(" (%d x %s)", component.getWoodCost(this.getGauge(), this.getDefinition()), ChatText.WOOD_PLANKS);
             }
             player.sendMessage(PlayerMessage.direct(str));
         }
@@ -299,7 +299,7 @@ public class EntityBuildableRollingStock extends EntityRollingStock implements I
 
         this.isBuilt = false;
         if (this.builtItems.size() <= 1) {
-            player.sendMessage(ChatText.STOCK_DISSASEMBLED.getMessage(this.getDefinition().name()));
+            player.sendMessage(ChatText.STOCK_DISASSEMBLED.getMessage(this.getDefinition().name()));
             return null;
         }
 
@@ -326,14 +326,14 @@ public class EntityBuildableRollingStock extends EntityRollingStock implements I
 
         ItemStack item = new ItemStack(IRItems.ITEM_ROLLING_STOCK_COMPONENT, 1);
         ItemRollingStockComponent.Data data = new ItemRollingStockComponent.Data(item);
-        data.def = this.getDefinition();
-        data.gauge = this.gauge;
+        data.rollingStockDefinition = this.getDefinition();
+        data.gauge = this.getGauge();
         data.componentType = toRemove;
         data.write();
         this.getWorld().dropItem(item, player.getBlockPosition());
 
-        if (this instanceof EntityMoveableRollingStock) {
-            ((EntityMoveableRollingStock) this).clearHeightMap();
+        if (this instanceof EntityMovableRollingStock) {
+            ((EntityMovableRollingStock) this).clearHeightMap();
         }
 
         return toRemove;
@@ -345,8 +345,8 @@ public class EntityBuildableRollingStock extends EntityRollingStock implements I
         if (this.isBuilt) {
             this.onAssemble();
         }
-        if (this instanceof EntityMoveableRollingStock) {
-            ((EntityMoveableRollingStock) this).clearHeightMap();
+        if (this instanceof EntityMovableRollingStock) {
+            ((EntityMovableRollingStock) this).clearHeightMap();
         }
         new BuildableStockSyncPacket(this).sendToObserving(this);
     }
@@ -363,8 +363,8 @@ public class EntityBuildableRollingStock extends EntityRollingStock implements I
             if (this.isBuilt) {
                 ItemStack item = new ItemStack(IRItems.ITEM_ROLLING_STOCK, 1);
                 ItemRollingStock.Data data = new ItemRollingStock.Data(item);
-                data.def = this.getDefinition();
-                data.gauge = this.gauge;
+                data.rollingStockDefinition = this.getDefinition();
+                data.gauge = this.getGauge();
                 data.texture = this.getTexture();
                 data.write();
                 this.getWorld().dropItem(item, source != null ? source.getBlockPosition() : this.getBlockPosition());
@@ -372,8 +372,8 @@ public class EntityBuildableRollingStock extends EntityRollingStock implements I
                 for (ItemComponentType component : this.builtItems) {
                     ItemStack item = new ItemStack(IRItems.ITEM_ROLLING_STOCK_COMPONENT, 1);
                     ItemRollingStockComponent.Data data = new ItemRollingStockComponent.Data(item);
-                    data.def = this.getDefinition();
-                    data.gauge = this.gauge;
+                    data.rollingStockDefinition = this.getDefinition();
+                    data.gauge = this.getGauge();
                     data.componentType = component;
                     data.write();
                     System.out.println(component);

@@ -5,7 +5,6 @@ import cam72cam.immersiverailroading.library.CraftingType;
 import cam72cam.immersiverailroading.library.GuiText;
 import cam72cam.immersiverailroading.library.ItemComponentType;
 import cam72cam.immersiverailroading.registry.DefinitionManager;
-import cam72cam.immersiverailroading.registry.EntityRollingStockDefinition;
 import cam72cam.mod.entity.Player;
 import cam72cam.mod.item.ClickResult;
 import cam72cam.mod.item.CreativeTab;
@@ -19,7 +18,6 @@ import cam72cam.mod.world.World;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
 
 public class ItemRollingStockComponent extends BaseItemRollingStock {
@@ -30,24 +28,19 @@ public class ItemRollingStockComponent extends BaseItemRollingStock {
 
     @Override
     public List<CreativeTab> getCreativeTabs() {
-        return Collections.EMPTY_LIST;
-    }
-
-    @Override
-    public int getStackSize() {
-        return 64;
+        return Collections.emptyList();
     }
 
     @Override
     public List<ItemStack> getItemVariants(CreativeTab tab) {
-        return Collections.EMPTY_LIST;
+        return Collections.emptyList();
     }
 
     @Override
     public List<String> getTooltip(ItemStack stack) {
         List<String> tooltip = new ArrayList<>();
         Data data = new Data(stack);
-        tooltip.add(GuiText.GAUGE_TOOLTIP.toString(data.gauge));
+        tooltip.add(GuiText.GAUGE_TOOLTIP.translate(data.gauge));
         if (data.requiresHammering()) {
             tooltip.add(TextColor.RED.wrap(GuiText.RAW_CAST_TOOLTIP.toString()));
         }
@@ -70,33 +63,30 @@ public class ItemRollingStockComponent extends BaseItemRollingStock {
 
     public List<ItemStack> getItemVariants() {
         List<ItemStack> items = new ArrayList<>();
-        for (EntityRollingStockDefinition def : DefinitionManager.getDefinitions()) {
-            for (ItemComponentType item : new LinkedHashSet<>(def.getItemComponents())) {
-                ItemStack stack = new ItemStack(this, 1);
-                Data data = new Data(stack);
-                data.def = def;
-                data.gauge = def.recommended_gauge;
-                data.componentType = item;
-                data.write();
-                items.add(stack);
-            }
-        }
+        DefinitionManager.getDefinitions().forEach(rollingStockDefinition -> rollingStockDefinition.getItemComponents().forEach(item -> {
+            ItemStack stack = new ItemStack(this, 1);
+            Data data = new Data(stack);
+            data.rollingStockDefinition = rollingStockDefinition;
+            data.gauge = rollingStockDefinition.recommended_gauge;
+            data.componentType = item;
+            data.write();
+            items.add(stack);
+        }));
         return items;
     }
 
     public static class Data extends BaseItemRollingStock.Data {
+
         @TagField("componentType")
         public ItemComponentType componentType;
+
         @TagField("raw_cast")
         public boolean rawCast;
 
         public Data(ItemStack stack) {
             super(stack);
-            if (this.componentType == null) {
-                this.componentType = ItemComponentType.FRAME;
-            }
+            this.componentType = ItemComponentType.FRAME;
         }
-
 
         public boolean requiresHammering() {
             return this.componentType.crafting == CraftingType.CASTING_HAMMER && this.rawCast;

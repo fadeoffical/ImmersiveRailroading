@@ -56,7 +56,7 @@ public class ItemSwitchKey extends CustomItem {
         } else {
             return Arrays.asList(
                     GuiText.SWITCH_KEY_TOOLTIP.toString(),
-                    GuiText.SWITCH_KEY_DATA_TOOLTIP.toString(
+                    GuiText.SWITCH_KEY_DATA_TOOLTIP.translate(
                             data.lastUsedOn.toString(),
                             data.forcedIntoState.toString())
             );

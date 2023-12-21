@@ -5,45 +5,27 @@ import cam72cam.immersiverailroading.ImmersiveRailroading;
 import cam72cam.mod.item.CreativeTab;
 import cam72cam.mod.item.ItemStack;
 
-import java.util.List;
+public final class ItemTabs {
 
-public class ItemTabs {
-
-    public static CreativeTab MAIN_TAB;
+    public static final CreativeTab MAIN_TAB = new CreativeTab(ImmersiveRailroading.MODID + ".main", () -> new ItemStack(IRItems.ITEM_LARGE_WRENCH, 1));
     public static CreativeTab LOCOMOTIVE_TAB;
     public static CreativeTab STOCK_TAB;
     public static CreativeTab PASSENGER_TAB;
-    //public static CreativeTab COMPONENT_TAB;
+    // public static CreativeTab COMPONENT_TAB;
 
     static {
-        MAIN_TAB = new CreativeTab(ImmersiveRailroading.MODID + ".main", () -> new ItemStack(IRItems.ITEM_LARGE_WRENCH, 1));
-        LOCOMOTIVE_TAB = new CreativeTab(ImmersiveRailroading.MODID + ".locomotive", () -> {
-            List<ItemStack> items = IRItems.ITEM_ROLLING_STOCK.getItemVariants(LOCOMOTIVE_TAB);
-            if (items.size() == 0) {
-                return new ItemStack(IRItems.ITEM_LARGE_WRENCH, 1);
-            }
-            return items.get(0);
-        });
-        STOCK_TAB = new CreativeTab(ImmersiveRailroading.MODID + ".stock", () -> {
-            List<ItemStack> items = IRItems.ITEM_ROLLING_STOCK.getItemVariants(STOCK_TAB);
-            if (items.size() == 0) {
-                return new ItemStack(IRItems.ITEM_LARGE_WRENCH, 1);
-            }
-            return items.get(0);
-        });
-        PASSENGER_TAB = new CreativeTab(ImmersiveRailroading.MODID + ".passenger", () -> {
-            List<ItemStack> items = IRItems.ITEM_ROLLING_STOCK.getItemVariants(PASSENGER_TAB);
-            if (items.size() == 0) {
-                return new ItemStack(IRItems.ITEM_LARGE_WRENCH, 1);
-            }
-            return items.get(0);
-        });
-		/*COMPONENT_TAB = new CreativeTab(ImmersiveRailroading.MODID + ".components", () -> {
-			List<ItemStack> items = IRItems.ITEM_ROLLING_STOCK_COMPONENT.getItemVariants(COMPONENT_TAB);
-			if (items.size() == 0) {
-				return new ItemStack(IRItems.ITEM_LARGE_WRENCH, 1);
-			}
-			return items.get(0);
-		});*/
+        LOCOMOTIVE_TAB = new CreativeTab(ImmersiveRailroading.MODID + ".locomotive", () -> getIcon(LOCOMOTIVE_TAB));
+        STOCK_TAB = new CreativeTab(ImmersiveRailroading.MODID + ".stock", () -> getIcon(STOCK_TAB));
+        PASSENGER_TAB = new CreativeTab(ImmersiveRailroading.MODID + ".passenger", () -> getIcon(PASSENGER_TAB));
+        // COMPONENT_TAB = new CreativeTab(ImmersiveRailroading.MODID + ".components", () -> getIcon(COMPONENT_TAB));
+    }
+
+    private ItemTabs() {}
+
+    private static ItemStack getIcon(CreativeTab tab) {
+        return IRItems.ITEM_ROLLING_STOCK.getItemVariants(tab)
+                .stream()
+                .findFirst()
+                .orElse(new ItemStack(IRItems.ITEM_LARGE_WRENCH, 1));
     }
 }

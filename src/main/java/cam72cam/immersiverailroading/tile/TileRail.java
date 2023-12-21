@@ -122,11 +122,11 @@ public class TileRail extends TileRailBase {
         }
 
         if (this.tracks == null) {
-            this.tracks = (this.info.settings.type == TrackItems.SWITCH ? this.info.withSettings(b -> b.type = TrackItems.STRAIGHT) : this.info).getBuilder(this.getWorld(), new Vec3i(this.info.placementInfo.placementPosition).add(this.getPos()))
+            this.tracks = (this.info.settings.type == TrackItems.SWITCH ? this.info.withSettings(b -> b.setType(TrackItems.STRAIGHT)) : this.info).getBuilder(this.getWorld(), new Vec3i(this.info.placementInfo.placementPosition).add(this.getPos()))
                     .getTracksForFloating();
             // This is just terrible
             Vec3i offset = this.getPos().subtract(this.tracks.get(0).getPos());
-            this.tracks = (this.info.settings.type == TrackItems.SWITCH ? this.info.withSettings(b -> b.type = TrackItems.STRAIGHT) : this.info).getBuilder(this.getWorld(), new Vec3i(this.info.placementInfo.placementPosition).add(this.getPos().add(offset)))
+            this.tracks = (this.info.settings.type == TrackItems.SWITCH ? this.info.withSettings(b -> b.setType(TrackItems.STRAIGHT)) : this.info).getBuilder(this.getWorld(), new Vec3i(this.info.placementInfo.placementPosition).add(this.getPos().add(offset)))
                     .getTracksForFloating();
         }
 

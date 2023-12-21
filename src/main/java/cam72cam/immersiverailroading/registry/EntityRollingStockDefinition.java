@@ -5,7 +5,7 @@ import cam72cam.immersiverailroading.ConfigSound;
 import cam72cam.immersiverailroading.ImmersiveRailroading;
 import cam72cam.immersiverailroading.entity.EntityBuildableRollingStock;
 import cam72cam.immersiverailroading.entity.EntityCoupleableRollingStock.CouplerType;
-import cam72cam.immersiverailroading.entity.EntityMoveableRollingStock;
+import cam72cam.immersiverailroading.entity.EntityMovableRollingStock;
 import cam72cam.immersiverailroading.entity.EntityRollingStock;
 import cam72cam.immersiverailroading.gui.overlay.GuiBuilder;
 import cam72cam.immersiverailroading.gui.overlay.Readouts;
@@ -30,9 +30,11 @@ import trackapi.lib.Gauges;
 
 import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -204,13 +206,14 @@ public abstract class EntityRollingStockDefinition {
         this.darken = data.getValue("darken_model").asFloat();
         this.internal_model_scale = 1;
         this.internal_inv_scale = 1;
-        // TODO Gauge.from(Gauge.STANDARD).value() what happens when != Gauge.STANDARD
+
         this.recommended_gauge = Gauge.getClosestGauge(Gauges.STANDARD);
         Double model_gauge_m = data.getValue("model_gauge_m").asDouble();
         if (model_gauge_m != null) {
             this.recommended_gauge = Gauge.getClosestGauge(model_gauge_m);
             this.internal_model_scale = Gauges.STANDARD / model_gauge_m;
         }
+
         Double recommended_gauge_m = data.getValue("recommended_gauge_m").asDouble();
         if (recommended_gauge_m != null) {
             this.recommended_gauge = Gauge.getClosestGauge(recommended_gauge_m);
@@ -229,22 +232,15 @@ public abstract class EntityRollingStockDefinition {
         try {
             List<DataBlock> alternates = new ArrayList<>();
 
-            Identifier alt_textures = new Identifier(ImmersiveRailroading.MODID, this.defID.replace(".caml", ".json")
-                    .replace(".json", "_variants.json"));
+            Identifier alt_textures = new Identifier(ImmersiveRailroading.MODID, this.defID.replace(".caml", ".json").replace(".json", "_variants.json"));
             List<InputStream> alts = alt_textures.getResourceStreamAll();
-            for (InputStream input : alts) {
-                alternates.add(JSON.parse(input));
-            }
+            for (InputStream input : alts) alternates.add(JSON.parse(input));
 
             alt_textures = new Identifier(alt_textures.getDomain(), alt_textures.getPath().replace(".json", ".caml"));
             alts = alt_textures.getResourceStreamAll();
-            for (InputStream input : alts) {
-                alternates.add(CAML.parse(input));
-            }
-            for (DataBlock alternate : alternates) {
-                alternate.getValueMap().forEach((key, value) -> this.textureNames.put(value.asString(), key));
-            }
-        } catch (java.io.FileNotFoundException ex) {
+            for (InputStream input : alts) alternates.add(CAML.parse(input));
+            for (DataBlock alternate : alternates) alternate.getValueMap().forEach((key, value) -> this.textureNames.put(value.asString(), key));
+        } catch (FileNotFoundException ex) {
             ImmersiveRailroading.catching(ex);
         }
 
@@ -374,19 +370,19 @@ public abstract class EntityRollingStockDefinition {
     }
 
     public Vec3d correctPassengerBounds(Gauge gauge, Vec3d pos, boolean shouldSit) {
-        double gs = gauge.scale();
-        Vec3d passengerCenter = this.passengerCenter.scale(gs);
+        double gaugeScale = gauge.scale();
+        Vec3d passengerCenter = this.passengerCenter.scale(gaugeScale);
         pos = pos.subtract(passengerCenter);
-        if (pos.z > this.passengerCompartmentLength * gs) {
-            pos = new Vec3d(pos.x, pos.y, this.passengerCompartmentLength * gs);
+        if (pos.z > this.passengerCompartmentLength * gaugeScale) {
+            pos = new Vec3d(pos.x, pos.y, this.passengerCompartmentLength * gaugeScale);
         }
 
-        if (pos.z < -this.passengerCompartmentLength * gs) {
-            pos = new Vec3d(pos.x, pos.y, -this.passengerCompartmentLength * gs);
+        if (pos.z < -this.passengerCompartmentLength * gaugeScale) {
+            pos = new Vec3d(pos.x, pos.y, -this.passengerCompartmentLength * gaugeScale);
         }
 
-        if (Math.abs(pos.x) > this.passengerCompartmentWidth / 2 * gs) {
-            pos = new Vec3d(Math.copySign(this.passengerCompartmentWidth / 2 * gs, pos.x), pos.y, pos.z);
+        if (Math.abs(pos.x) > this.passengerCompartmentWidth / 2 * gaugeScale) {
+            pos = new Vec3d(Math.copySign(this.passengerCompartmentWidth / 2 * gaugeScale, pos.x), pos.y, pos.z);
         }
 
         pos = new Vec3d(pos.x, passengerCenter.y - (shouldSit ? 0.75 : 0), pos.z + passengerCenter.z);
@@ -395,17 +391,19 @@ public abstract class EntityRollingStockDefinition {
     }
 
     public boolean isAtFront(Gauge gauge, Vec3d pos) {
-        pos = pos.subtract(this.passengerCenter.scale(gauge.scale()));
-        return pos.z >= this.passengerCompartmentLength * gauge.scale();
+        double gaugeScale = gauge.scale();
+        pos = pos.subtract(this.passengerCenter.scale(gaugeScale));
+        return pos.z >= this.passengerCompartmentLength * gaugeScale;
     }
 
     public boolean isAtRear(Gauge gauge, Vec3d pos) {
-        pos = pos.subtract(this.passengerCenter.scale(gauge.scale()));
-        return pos.z <= -this.passengerCompartmentLength * gauge.scale();
+        double gaugeScale = gauge.scale();
+        pos = pos.subtract(this.passengerCenter.scale(gaugeScale));
+        return pos.z <= -this.passengerCompartmentLength * gaugeScale;
     }
 
     public List<ItemComponentType> getItemComponents() {
-        return this.itemComponents;
+        return Collections.unmodifiableList(this.itemComponents);
     }
 
     public float getBogeyFront(Gauge gauge) {
@@ -427,9 +425,8 @@ public abstract class EntityRollingStockDefinition {
     }
 
     public double getCouplerSlack(CouplerType coupler, Gauge gauge) {
-        if (!Config.ImmersionConfig.slackEnabled) {
-            return 0;
-        }
+        if (!Config.ImmersionConfig.slackEnabled) return 0;
+
         switch (coupler) {
             default:
             case FRONT:
@@ -489,9 +486,7 @@ public abstract class EntityRollingStockDefinition {
 
                     for (List<ModelComponent> rcl : this.renderComponents.values()) {
                         for (ModelComponent rc : rcl) {
-                            if (!rc.type.collisionsEnabled) {
-                                continue;
-                            }
+                            if (!rc.type.collisionsEnabled) continue;
 
                             if (availComponents.contains(rc.type)) {
                                 availComponents.remove(rc.type);
@@ -534,17 +529,17 @@ public abstract class EntityRollingStockDefinition {
     }
 
     public String name() {
-        String[] sp = this.defID.replaceAll(".json", "").split("/");
-        String localStr = String.format("%s:entity.%s.%s", ImmersiveRailroading.MODID, sp[sp.length - 2], sp[sp.length - 1]);
+        String[] split = this.defID.replaceAll(".json", "").split("/");
+        String localStr = String.format("%s:entity.%s.%s", ImmersiveRailroading.MODID, split[split.length - 2], split[split.length - 1]);
         String transStr = TextUtil.translate(localStr);
         return !localStr.equals(transStr) ? transStr : this.name;
     }
 
     public List<String> getTooltip(Gauge gauge) {
         List<String> tips = new ArrayList<>();
-        tips.add(GuiText.WEIGHT_TOOLTIP.toString(this.getWeight(gauge)));
-        tips.add(GuiText.MODELER_TOOLTIP.toString(this.modelerName));
-        tips.add(GuiText.PACK_TOOLTIP.toString(this.packName));
+        tips.add(GuiText.WEIGHT_TOOLTIP.translate(this.getWeight(gauge)));
+        tips.add(GuiText.MODELER_TOOLTIP.translate(this.modelerName));
+        tips.add(GuiText.PACK_TOOLTIP.translate(this.packName));
         return tips;
     }
 
@@ -817,7 +812,7 @@ public abstract class EntityRollingStockDefinition {
             this.sounds.computeIfAbsent(stock.getUUID(), k -> new ArrayList<>()).add(snd);
         }
 
-        public <T extends EntityMoveableRollingStock> void removed(T stock) {
+        public <T extends EntityMovableRollingStock> void removed(T stock) {
             List<ISound> removed = this.sounds.remove(stock.getUUID());
             if (removed != null) {
                 for (ISound sound : removed) {
@@ -898,10 +893,9 @@ public abstract class EntityRollingStockDefinition {
     static class TagMapper implements cam72cam.mod.serialization.TagMapper<EntityRollingStockDefinition> {
         @Override
         public TagAccessor<EntityRollingStockDefinition> apply(Class<EntityRollingStockDefinition> type, String fieldName, TagField tag) {
-            return new TagAccessor<>(
-                    (d, o) -> d.setString(fieldName, o == null ? null : o.defID),
-                    d -> DefinitionManager.getDefinition(d.getString(fieldName))
-            );
+            BiConsumer<TagCompound, EntityRollingStockDefinition> serializer = (nbt, rollingStockDefinition) -> nbt.setString(fieldName, rollingStockDefinition == null ? null : rollingStockDefinition.defID);
+            Function<TagCompound, EntityRollingStockDefinition> deserializer = nbt -> DefinitionManager.getDefinition(nbt.getString(fieldName));
+            return new TagAccessor<>(serializer, deserializer);
         }
     }
 

@@ -24,7 +24,7 @@ import cam72cam.mod.world.World.ParticleType;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CastingMultiblock extends Multiblock {
+public class CastingMultiBlock extends MultiBlock {
     public static final String NAME = "CASTING";
     public static final double max_volume = 5 * 4 * 4.5 * 9;
     private static final Vec3i render = new Vec3i(3, 3, 7);
@@ -35,7 +35,7 @@ public class CastingMultiblock extends Multiblock {
     private static final FuzzyProvider STONE = () -> Fuzzy.STONE_BRICK;
     private static final FuzzyProvider SAND = () -> Fuzzy.SAND;
 
-    public CastingMultiblock() {
+    public CastingMultiBlock() {
         super(NAME, cast_blueprint());
     }
 

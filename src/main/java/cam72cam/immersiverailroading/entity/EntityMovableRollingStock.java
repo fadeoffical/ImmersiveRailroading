@@ -8,12 +8,12 @@ import cam72cam.immersiverailroading.library.Augment;
 import cam72cam.immersiverailroading.library.KeyTypes;
 import cam72cam.immersiverailroading.library.ModelComponentType;
 import cam72cam.immersiverailroading.library.Permissions;
+import cam72cam.immersiverailroading.library.unit.Speed;
 import cam72cam.immersiverailroading.model.part.Control;
 import cam72cam.immersiverailroading.net.SoundPacket;
 import cam72cam.immersiverailroading.physics.TickPos;
 import cam72cam.immersiverailroading.tile.TileRailBase;
 import cam72cam.immersiverailroading.util.RealBB;
-import cam72cam.immersiverailroading.util.Speed;
 import cam72cam.mod.entity.Entity;
 import cam72cam.mod.entity.Player;
 import cam72cam.mod.entity.custom.ICollision;
@@ -27,30 +27,43 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public abstract class EntityMoveableRollingStock extends EntityRidableRollingStock implements ICollision {
+public abstract class EntityMovableRollingStock extends EntityRidableRollingStock implements ICollision {
 
-    public static final String DAMAGE_SOURCE_HIT = "immersiverailroading:hitByTrain";
-    public static final String DAMAGE_SOURCE_HIT_IN_DARKNESS = "immersiverailroading:hitByTrainInDarkness";
+    private static final String DAMAGE_SOURCE_HIT = "immersiverailroading:hitByTrain";
+    private static final String DAMAGE_SOURCE_HIT_IN_DARKNESS = "immersiverailroading:hitByTrainInDarkness";
+
     @TagField("distanceTraveled")
-    public double distanceTraveled = 0;
+    public double distanceTraveled;
+
     @TagField(value = "positions", mapper = TickPos.ListTagMapper.class)
     public List<TickPos> positions = new ArrayList<>();
+
     public List<SimulationState> states = new ArrayList<>();
+
     @TagSync
     @TagField("SLIDING")
-    public boolean sliding = false;
-    public long lastCollision = 0;
-    public boolean newlyPlaced = false;
+    public boolean sliding;
+
+    public long lastCollision;
+
+    public boolean newlyPlaced;
+
     @TagField("frontYaw")
     private Float frontYaw;
+
     @TagField("rearYaw")
     private Float rearYaw;
+
     private Speed currentSpeed;
+
     private RealBB boundingBox;
+
     private float[][] heightMapCache;
+
     @TagSync
     @TagField("IND_BRAKE")
     private float independentBrake = 0;
+
     @TagSync
     @TagField("BRAKE_PRESSURE")
     private float trainBrakePressure = 0;
@@ -94,12 +107,11 @@ public abstract class EntityMoveableRollingStock extends EntityRidableRollingSto
                 this.positions.clear();
             } else {
                 int tickID = (int) Math.floor(ChronoState.getState(this.getWorld()).getTickID());
-                List<Integer> newIds = newPositions.stream().map(p -> p.tickID).collect(Collectors.toList());
+                List<Integer> newIds = newPositions.stream().map(p -> p.tickId).collect(Collectors.toList());
                 this.positions.removeAll(this.positions.stream()
                         // old OR far in the future OR to be replaced
-                        .filter(p -> p.tickID < tickID - 30 || p.tickID > tickID + 60 || newIds.contains(p.tickID))
-                        .collect(Collectors.toList())
-                );
+                        .filter(p -> p.tickId < tickID - 30 || p.tickId > tickID + 60 || newIds.contains(p.tickId))
+                        .collect(Collectors.toList()));
             }
             // unordered
             this.positions.addAll(newPositions);
@@ -121,7 +133,8 @@ public abstract class EntityMoveableRollingStock extends EntityRidableRollingSto
         if (this.getWorld().isServer) {
             if (this.getDefinition().hasIndependentBrake()) {
                 for (Control<?> control : this.getDefinition().getModel().getControls()) {
-                    if (!this.getDefinition().isLinearBrakeControl() && control.part.type == ModelComponentType.INDEPENDENT_BRAKE_X) {
+                    if (!this.getDefinition()
+                            .isLinearBrakeControl() && control.part.type == ModelComponentType.INDEPENDENT_BRAKE_X) {
                         this.setIndependentBrake(Math.max(0, Math.min(1, this.getIndependentBrake() + (this.getControlPosition(control) - 0.5f) / 8)));
                     }
                 }
@@ -134,10 +147,8 @@ public abstract class EntityMoveableRollingStock extends EntityRidableRollingSto
 
                 if (state.collided > 0.1 && this.getTickCount() - this.lastCollision > 20) {
                     this.lastCollision = this.getTickCount();
-                    new SoundPacket(this.getDefinition().collision_sound,
-                            this.getPosition(), this.getVelocity(),
-                            (float) Math.min(1.0, state.collided), 1, (int) (100 * this.gauge.scale()), this.soundScale(), SoundPacket.PacketSoundCategory.COLLISION)
-                            .sendToObserving(this);
+                    new SoundPacket(this.getDefinition().collision_sound, this.getPosition(), this.getVelocity(), (float) Math.min(1.0, state.collided), 1, (int) (100 * this.getGauge()
+                            .scale()), this.soundScale(), SoundPacket.PacketSoundCategory.COLLISION).sendToObserving(this);
                 }
 
                 for (Vec3i bp : state.blocksToBreak) {
@@ -177,7 +188,8 @@ public abstract class EntityMoveableRollingStock extends EntityRidableRollingSto
         this.currentSpeed = currentPos.speed;
 
         if (!this.sliding) {
-            this.distanceTraveled += (float) this.currentSpeed.minecraft() * this.getTickSkew();
+            this.distanceTraveled += (float) this.currentSpeed.as(Speed.SpeedUnit.METERS_PER_TICK)
+                    .value() * this.getTickSkew();
             this.distanceTraveled %= 32000;// Wrap around to prevent double float issues
         }
 
@@ -188,18 +200,19 @@ public abstract class EntityMoveableRollingStock extends EntityRidableRollingSto
             this.clearPositionCache();
         }
 
-        if (Math.abs(this.getCurrentSpeed().metric()) > 1) {
-            List<Entity> entitiesWithin = this.getWorld().getEntities((Entity entity) -> (entity.isLiving() || entity.isPlayer()) && this.getCollision()
-                    .intersects(entity.getBounds()), Entity.class);
+        if (this.getCurrentSpeed().as(Speed.SpeedUnit.KILOMETERS_PER_HOUR).absolute().value() > 1) {
+            List<Entity> entitiesWithin = this.getWorld()
+                    .getEntities((Entity entity) -> (entity.isLiving() || entity.isPlayer()) && this.getCollision()
+                            .intersects(entity.getBounds()), Entity.class);
             for (Entity entity : entitiesWithin) {
-                if (entity instanceof EntityMoveableRollingStock) {
+                if (entity instanceof EntityMovableRollingStock) {
                     // rolling stock collisions handled by looking at the front and
                     // rear coupler offsets
                     continue;
                 }
 
-                if (entity.getRiding() instanceof EntityMoveableRollingStock) {
-                    // Don't apply bb to passengers
+                if (entity.getRiding() instanceof EntityMovableRollingStock) {
+                    // Don't apply realBoundingBox to passengers
                     continue;
                 }
 
@@ -225,27 +238,38 @@ public abstract class EntityMoveableRollingStock extends EntityRidableRollingSto
                 // Force update
                 //TODO entity.onUpdate();
 
-                double speedDamage = Math.abs(this.getCurrentSpeed().metric()) / Config.ConfigDamage.entitySpeedDamage;
+                double speedDamage = this.getCurrentSpeed()
+                        .as(Speed.SpeedUnit.KILOMETERS_PER_HOUR)
+                        .absolute()
+                        .value() / Config.ConfigDamage.entitySpeedDamage;
+
                 if (speedDamage > 1) {
-                    boolean isDark = Math.max(this.getWorld().getSkyLightLevel(entity.getBlockPosition()), this.getWorld().getBlockLightLevel(entity.getBlockPosition())) < 8.0F;
-                    entity.directDamage(isDark ? DAMAGE_SOURCE_HIT_IN_DARKNESS : DAMAGE_SOURCE_HIT, speedDamage);
+                    Vec3i entityPosition = entity.getBlockPosition();
+                    // todo: add World#getLightLevel(BlockPos) to UMC with this logic
+                    float skyLightLevel = this.getWorld().getSkyLightLevel(entityPosition);
+                    float blockLightLevel = this.getWorld().getBlockLightLevel(entityPosition);
+                    boolean isDark = Math.max(skyLightLevel, blockLightLevel) < 8.0F;
+
+                    String damageSource = isDark ? DAMAGE_SOURCE_HIT_IN_DARKNESS : DAMAGE_SOURCE_HIT;
+                    entity.directDamage(damageSource, speedDamage);
                 }
             }
 
             // Riding on top of cars
-            final RealBB bb = this.getCollision().offset(new Vec3d(0, this.gauge.scale() * 2, 0));
-            List<Entity> entitiesAbove = this.getWorld().getEntities((Entity entity) -> (entity.isLiving() || entity.isPlayer()) && bb.intersects(entity.getBounds()), Entity.class);
+            final RealBB realBoundingBox = this.getCollision().offset(new Vec3d(0, this.getGauge().scale() * 2, 0));
+            List<Entity> entitiesAbove = this.getWorld()
+                    .getEntities((Entity entity) -> (entity.isLiving() || entity.isPlayer()) && realBoundingBox.intersects(entity.getBounds()), Entity.class);
             for (Entity entity : entitiesAbove) {
-                if (entity instanceof EntityMoveableRollingStock) {
+                if (entity instanceof EntityMovableRollingStock) {
                     continue;
                 }
-                if (entity.getRiding() instanceof EntityMoveableRollingStock) {
+                if (entity.getRiding() instanceof EntityMovableRollingStock) {
                     continue;
                 }
 
                 // Chunk.getEntitiesOfTypeWithinAABB() does a reverse aabb intersect
                 // We need to do a forward lookup
-                if (!bb.intersects(entity.getBounds())) {
+                if (!realBoundingBox.intersects(entity.getBounds())) {
                     // miss
                     continue;
                 }
@@ -259,26 +283,25 @@ public abstract class EntityMoveableRollingStock extends EntityRidableRollingSto
         }
 
         if (this.getWorld().isServer) {
-            this.setControlPosition("MOVINGFORWARD", this.getCurrentSpeed().minecraft() > 0 ? 1 : 0);
-            this.setControlPosition("NOTMOVING", this.getCurrentSpeed().minecraft() == 0 ? 1 : 0);
-            this.setControlPosition("MOVINGBACKWARD", this.getCurrentSpeed().minecraft() < 0 ? 1 : 0);
+            double speed = this.getCurrentSpeed().value();
+            this.setControlPosition("MOVINGFORWARD", speed > 0 ? 1 : 0);
+            this.setControlPosition("NOTMOVING", speed == 0 ? 1 : 0);
+            this.setControlPosition("MOVINGBACKWARD", speed < 0 ? 1 : 0);
         }
+    }
+
+    public float getIndependentBrake() {
+        return this.getDefinition().hasIndependentBrake() ? this.independentBrake : 0;
     }
 
     public SimulationState getCurrentState() {
         int tickID = ServerChronoState.getState(this.getWorld()).getServerTickID();
-        for (SimulationState state : this.states) {
-            if (state.tickID == tickID) {
-                return state;
-            }
-        }
-        return null;
+        return this.states.stream().filter(state -> state.tickID == tickID).findFirst().orElse(null);
     }
 
     public TickPos getTickPos() {
-        if (ChronoState.getState(this.getWorld()) == null) {
-            return null;
-        }
+        if (ChronoState.getState(this.getWorld()) == null) return null;
+
         double tick = ChronoState.getState(this.getWorld()).getTickID();
         int currentTickID = (int) Math.floor(tick);
         int nextTickID = (int) Math.ceil(tick);
@@ -286,10 +309,10 @@ public abstract class EntityMoveableRollingStock extends EntityRidableRollingSto
         TickPos next = null;
 
         for (TickPos position : this.positions) {
-            if (position.tickID == currentTickID) {
+            if (position.tickId == currentTickID) {
                 current = position;
             }
-            if (position.tickID == nextTickID) {
+            if (position.tickId == nextTickID) {
                 next = position;
             }
             if (current != null && next != null) {
@@ -320,7 +343,7 @@ public abstract class EntityMoveableRollingStock extends EntityRidableRollingSto
             if (Float.isNaN(speed)) {
                 speed = 0;
             }
-            this.currentSpeed = Speed.fromMinecraft(speed);
+            this.currentSpeed = Speed.fromUnit(speed, Speed.SpeedUnit.METERS_PER_TICK);
         }
         return this.currentSpeed;
     }
@@ -329,11 +352,11 @@ public abstract class EntityMoveableRollingStock extends EntityRidableRollingSto
     public RealBB getCollision() {
         if (this.boundingBox == null) {
             this.boundingBox = this.getDefinition()
-                    .getBounds(this.getRotationYaw(), this.gauge)
+                    .getBounds(this.getRotationYaw(), this.getGauge())
                     .offset(this.getPosition())
                     .withHeightMap(this.getHeightMap())
-                    .contract(new Vec3d(0, 0.5 * this.gauge.scale(), 0))
-                    .offset(new Vec3d(0, 0.5 * this.gauge.scale(), 0));
+                    .contract(new Vec3d(0, 0.5 * this.getGauge().scale(), 0))
+                    .offset(new Vec3d(0, 0.5 * this.getGauge().scale(), 0));
         }
         return this.boundingBox;
     }
@@ -349,6 +372,21 @@ public abstract class EntityMoveableRollingStock extends EntityRidableRollingSto
         this.currentSpeed = newSpeed;
     }
 
+    public void setIndependentBrake(float newIndependentBrake) {
+        newIndependentBrake = Math.min(1, Math.max(0, newIndependentBrake));
+        if (this.getIndependentBrake() != newIndependentBrake && this.getDefinition().hasIndependentBrake()) {
+            if (this.getDefinition().isLinearBrakeControl()) {
+                this.setControlPositions(ModelComponentType.INDEPENDENT_BRAKE_X, newIndependentBrake);
+            }
+            this.independentBrake = newIndependentBrake;
+        }
+    }
+
+    /*
+     *
+     * Client side render guessing
+     */
+
     public float getFrontYaw() {
         if (this.frontYaw != null) {
             return this.frontYaw;
@@ -359,11 +397,6 @@ public abstract class EntityMoveableRollingStock extends EntityRidableRollingSto
     public void setFrontYaw(float frontYaw) {
         this.frontYaw = frontYaw;
     }
-
-    /*
-     *
-     * Client side render guessing
-     */
 
     public float getRearYaw() {
         if (this.rearYaw != null) {
@@ -433,22 +466,9 @@ public abstract class EntityMoveableRollingStock extends EntityRidableRollingSto
     @Override
     public void onDragRelease(Control<?> control) {
         super.onDragRelease(control);
-        if (!this.getDefinition().isLinearBrakeControl() && control.part.type == ModelComponentType.INDEPENDENT_BRAKE_X) {
+        if (!this.getDefinition()
+                .isLinearBrakeControl() && control.part.type == ModelComponentType.INDEPENDENT_BRAKE_X) {
             this.setControlPosition(control, 0.5f);
-        }
-    }
-
-    public float getIndependentBrake() {
-        return this.getDefinition().hasIndependentBrake() ? this.independentBrake : 0;
-    }
-
-    public void setIndependentBrake(float newIndependentBrake) {
-        newIndependentBrake = Math.min(1, Math.max(0, newIndependentBrake));
-        if (this.getIndependentBrake() != newIndependentBrake && this.getDefinition().hasIndependentBrake()) {
-            if (this.getDefinition().isLinearBrakeControl()) {
-                this.setControlPositions(ModelComponentType.INDEPENDENT_BRAKE_X, newIndependentBrake);
-            }
-            this.independentBrake = newIndependentBrake;
         }
     }
 

@@ -6,7 +6,6 @@ import cam72cam.immersiverailroading.entity.EntityCoupleableRollingStock;
 import cam72cam.immersiverailroading.entity.EntityRollingStock;
 import cam72cam.immersiverailroading.library.ChatText;
 import cam72cam.immersiverailroading.library.GuiText;
-import cam72cam.immersiverailroading.library.GuiTypes;
 import cam72cam.immersiverailroading.library.PaintBrushMode;
 import cam72cam.mod.entity.Player;
 import cam72cam.mod.item.*;
@@ -27,21 +26,6 @@ public class ItemPaintBrush extends CustomItem {
 
         Recipes.shapedRecipe(this, 1,
                 Fuzzy.WOOL_BLOCK, Fuzzy.IRON_INGOT, Fuzzy.WOOD_STICK);
-    }
-
-    public static void onStockInteract(EntityRollingStock stock, Player player, Player.Hand hand) {
-        if (player.getWorld().isClient) {
-            Data data = new Data(player.getHeldItem(hand));
-            switch (data.mode) {
-                case GUI:
-                    GuiTypes.PAINT_BRUSH.open(player);
-                    break;
-                case RANDOM_SINGLE:
-                case RANDOM_COUPLED:
-                    new PaintBrushPacket(stock, data.mode, null, false).sendToServer();
-                    break;
-            }
-        }
     }
 
     public static String nextRandomTexture(EntityRollingStock stock, String current) {
@@ -66,7 +50,7 @@ public class ItemPaintBrush extends CustomItem {
     public List<String> getTooltip(ItemStack stack) {
         PaintBrushMode pbm = new Data(stack).mode;
         List<String> tips = new ArrayList<>();
-        tips.add(GuiText.PAINT_BRUSH_MODE_TOOLTIP.toString(pbm.toTranslatedString()));
+        tips.add(GuiText.PAINT_BRUSH_MODE_TOOLTIP.translate(pbm.toTranslatedString()));
         tips.add(GuiText.PAINT_BRUSH_DESCRIPTION_TOOLTIP.toString());
         return tips;
     }
@@ -95,7 +79,7 @@ public class ItemPaintBrush extends CustomItem {
         @TagField("variant")
         public String variant;
 
-        @TagField
+        @TagField("gui_connected")
         public boolean gui_connected;
 
         public PaintBrushPacket(EntityRollingStock stock, PaintBrushMode mode, String variant, boolean gui_connected) {
@@ -138,15 +122,14 @@ public class ItemPaintBrush extends CustomItem {
                     break;
             }
 
-            if (this.mode != PaintBrushMode.RANDOM_COUPLED) {
-                if (this.stock.getDefinition().textureNames.size() == 0) {
-                    this.getPlayer().sendMessage(ChatText.BRUSH_NO_VARIANTS.getMessage());
-                } else if (Config.ConfigDebug.debugPaintBrush) {
-                    //This is a debug log so use the untranslated Mode name
-                    this.getPlayer().sendMessage(ChatText.BRUSH_NEXT.getMessage(
-                            this.stock.getDefinition().textureNames.getOrDefault(this.stock.getTexture(), "Unknown"),
-                            this.mode.toTranslatedString()));
-                }
+            if (this.mode == PaintBrushMode.RANDOM_COUPLED) return;
+            if (this.stock.getDefinition().textureNames.isEmpty()) {
+                this.getPlayer().sendMessage(ChatText.BRUSH_NO_VARIANTS.getMessage());
+            } else if (Config.ConfigDebug.debugPaintBrush) {
+                //This is a debug log so use the untranslated Mode name
+                this.getPlayer().sendMessage(ChatText.BRUSH_NEXT.getMessage(
+                        this.stock.getDefinition().textureNames.getOrDefault(this.stock.getTexture(), "Unknown"),
+                        this.mode.toTranslatedString()));
             }
         }
     }
@@ -163,5 +146,4 @@ public class ItemPaintBrush extends CustomItem {
             }
         }
     }
-
 }

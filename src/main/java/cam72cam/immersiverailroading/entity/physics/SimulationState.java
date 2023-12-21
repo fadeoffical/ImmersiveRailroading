@@ -9,10 +9,10 @@ import cam72cam.immersiverailroading.library.Gauge;
 import cam72cam.immersiverailroading.library.PhysicalMaterials;
 import cam72cam.immersiverailroading.library.TrackItems;
 import cam72cam.immersiverailroading.physics.MovementTrack;
-import cam72cam.immersiverailroading.thirdparty.trackapi.ITrack;
+import cam72cam.immersiverailroading.thirdparty.trackapi.Track;
 import cam72cam.immersiverailroading.tile.TileRailBase;
 import cam72cam.immersiverailroading.util.BlockUtil;
-import cam72cam.immersiverailroading.util.Speed;
+import cam72cam.immersiverailroading.library.unit.Speed;
 import cam72cam.immersiverailroading.util.VecUtil;
 import cam72cam.mod.entity.boundingbox.IBoundingBox;
 import cam72cam.mod.math.Vec3d;
@@ -109,8 +109,8 @@ public class SimulationState {
         Vec3d positionFront = this.couplerPositionFront = this.position.add(bogeyFront);
         Vec3d positionRear = this.couplerPositionRear = this.position.add(bogeyRear);
 
-        ITrack trackFront = MovementTrack.findTrack(this.config.world, positionFront, this.yaw, this.config.gauge.getRailDistance());
-        ITrack trackRear = MovementTrack.findTrack(this.config.world, positionRear, this.yaw, this.config.gauge.getRailDistance());
+        Track trackFront = MovementTrack.findTrack(this.config.world, positionFront, this.yaw, this.config.gauge.getRailDistance());
+        Track trackRear = MovementTrack.findTrack(this.config.world, positionRear, this.yaw, this.config.gauge.getRailDistance());
 
         if (trackFront != null && trackRear != null) {
             Vec3d couplerVecFront = VecUtil.fromWrongYaw(this.config.couplerDistanceFront - this.config.offsetFront, this.yawFront);
@@ -223,8 +223,8 @@ public class SimulationState {
         Vec3d positionRear = VecUtil.fromWrongYawPitch(this.config.offsetRear, this.yaw, this.pitch).add(this.position);
 
         // Find tracks
-        ITrack trackFront = MovementTrack.findTrack(this.config.world, positionFront, this.yawFront, this.config.gauge.getRailDistance());
-        ITrack trackRear = MovementTrack.findTrack(this.config.world, positionRear, this.yawRear, this.config.gauge.getRailDistance());
+        Track trackFront = MovementTrack.findTrack(this.config.world, positionFront, this.yawFront, this.config.gauge.getRailDistance());
+        Track trackRear = MovementTrack.findTrack(this.config.world, positionRear, this.yawRear, this.config.gauge.getRailDistance());
         if (trackFront == null || trackRear == null) {
             return;
         }
@@ -307,7 +307,7 @@ public class SimulationState {
 
     public double forcesNewtons() {
         double gradeForceNewtons = this.config.massKg * -9.8 * Math.sin(Math.toRadians(this.pitch)) * Config.ConfigBalance.slopeMultiplier;
-        return this.config.tractiveEffortNewtons(Speed.fromMinecraft(this.velocity)) + gradeForceNewtons;
+        return this.config.tractiveEffortNewtons(Speed.fromUnit(this.velocity, Speed.SpeedUnit.METERS_PER_TICK)) + gradeForceNewtons;
     }
 
     public double frictionNewtons() {
@@ -364,7 +364,7 @@ public class SimulationState {
 
         public Configuration(EntityCoupleableRollingStock stock) {
             this.id = stock.getUUID();
-            this.gauge = stock.gauge;
+            this.gauge = stock.getGauge();
             this.world = stock.getWorld();
 
             this.width = stock.getDefinition().getWidth(this.gauge);

@@ -1,7 +1,7 @@
 package cam72cam.immersiverailroading.gui;
 
 import cam72cam.immersiverailroading.Config;
-import cam72cam.immersiverailroading.gui.components.ListSelector;
+import cam72cam.immersiverailroading.gui.component.ListSelector;
 import cam72cam.immersiverailroading.items.nbt.RailSettings;
 import cam72cam.immersiverailroading.library.*;
 import cam72cam.immersiverailroading.net.ItemRailUpdatePacket;
@@ -32,7 +32,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static cam72cam.immersiverailroading.gui.ClickListHelper.next;
-import static cam72cam.immersiverailroading.gui.components.GuiUtils.fitString;
+import static cam72cam.immersiverailroading.gui.component.GuiUtils.fitString;
 
 public class TrackGui implements IScreen {
     private final List<ItemStack> oreDict;
@@ -87,7 +87,7 @@ public class TrackGui implements IScreen {
         int ytop = -GUIHelpers.getScreenHeight() / 4;
 
         this.lengthInput = new TextField(screen, xtop, ytop, width - 1, height);
-        this.lengthInput.setText("" + this.settings.length);
+        this.lengthInput.setText("" + this.settings.getLength());
         this.lengthInput.setValidator(s -> {
             if (s == null || s.length() == 0) {
                 return true;
@@ -99,11 +99,11 @@ public class TrackGui implements IScreen {
                 return false;
             }
             int max = 1000;
-            if (this.settings.type == TrackItems.TURNTABLE) {
-                max = BuilderTurnTable.maxLength(this.settings.gauge);
+            if (this.settings.getType() == TrackItems.TURNTABLE) {
+                max = BuilderTurnTable.maxLength(this.settings.getGauge());
             }
             if (val > 0 && val <= max) {
-                this.settings.length = val;
+                this.settings.setLength(val);
                 return true;
             }
             return false;
@@ -111,21 +111,21 @@ public class TrackGui implements IScreen {
         this.lengthInput.setFocused(true);
         ytop += height;
 
-        this.gaugeSelector = new ListSelector<Gauge>(screen, width, 100, height, this.settings.gauge,
+        this.gaugeSelector = new ListSelector<Gauge>(screen, width, 100, height, this.settings.getGauge(),
                 Gauge.getRegisteredGauges()
                         .stream()
                         .collect(Collectors.toMap(Gauge::toString, g -> g, (u, v) -> u, LinkedHashMap::new))
         ) {
             @Override
             public void onClick(Gauge gauge) {
-                TrackGui.this.settings.gauge = gauge;
-                TrackGui.this.gaugeButton.setText(GuiText.SELECTOR_GAUGE.toString(TrackGui.this.settings.gauge));
-                if (TrackGui.this.settings.type == TrackItems.TURNTABLE) {
-                    TrackGui.this.lengthInput.setText("" + Math.min(Integer.parseInt(TrackGui.this.lengthInput.getText()), BuilderTurnTable.maxLength(TrackGui.this.settings.gauge))); // revalidate
+                TrackGui.this.settings.setGauge(gauge);
+                TrackGui.this.gaugeButton.setText(GuiText.SELECTOR_GAUGE.translate(TrackGui.this.settings.getGauge()));
+                if (TrackGui.this.settings.getType() == TrackItems.TURNTABLE) {
+                    TrackGui.this.lengthInput.setText("" + Math.min(Integer.parseInt(TrackGui.this.lengthInput.getText()), BuilderTurnTable.maxLength(TrackGui.this.settings.getGauge()))); // revalidate
                 }
             }
         };
-        this.gaugeButton = new Button(screen, xtop, ytop, width, height, GuiText.SELECTOR_GAUGE.toString(this.settings.gauge)) {
+        this.gaugeButton = new Button(screen, xtop, ytop, width, height, GuiText.SELECTOR_GAUGE.translate(this.settings.getGauge())) {
             @Override
             public void onClick(Player.Hand hand) {
                 TrackGui.this.showSelector(TrackGui.this.gaugeSelector);
@@ -133,25 +133,25 @@ public class TrackGui implements IScreen {
         };
         ytop += height;
 
-        this.typeSelector = new ListSelector<TrackItems>(screen, width, 100, height, this.settings.type,
+        this.typeSelector = new ListSelector<TrackItems>(screen, width, 100, height, this.settings.getType(),
                 Arrays.stream(TrackItems.values())
                         .filter(i -> i != TrackItems.CROSSING)
                         .collect(Collectors.toMap(TrackItems::toString, g -> g, (u, v) -> u, LinkedHashMap::new))
         ) {
             @Override
             public void onClick(TrackItems option) {
-                TrackGui.this.settings.type = option;
-                TrackGui.this.typeButton.setText(GuiText.SELECTOR_TYPE.toString(TrackGui.this.settings.type));
-                TrackGui.this.degreesSlider.setVisible(TrackGui.this.settings.type.hasQuarters());
-                TrackGui.this.curvositySlider.setVisible(TrackGui.this.settings.type.hasCurvosity());
-                TrackGui.this.smoothingButton.setVisible(TrackGui.this.settings.type.hasSmoothing());
-                TrackGui.this.directionButton.setVisible(TrackGui.this.settings.type.hasDirection());
-                if (TrackGui.this.settings.type == TrackItems.TURNTABLE) {
-                    TrackGui.this.lengthInput.setText("" + Math.min(Integer.parseInt(TrackGui.this.lengthInput.getText()), BuilderTurnTable.maxLength(TrackGui.this.settings.gauge))); // revalidate
+                TrackGui.this.settings.setType(option);
+                TrackGui.this.typeButton.setText(GuiText.SELECTOR_TYPE.translate(TrackGui.this.settings.getType()));
+                TrackGui.this.degreesSlider.setVisible(TrackGui.this.settings.getType().hasQuarters());
+                TrackGui.this.curvositySlider.setVisible(TrackGui.this.settings.getType().hasCurvosity());
+                TrackGui.this.smoothingButton.setVisible(TrackGui.this.settings.getType().hasSmoothing());
+                TrackGui.this.directionButton.setVisible(TrackGui.this.settings.getType().hasDirection());
+                if (TrackGui.this.settings.getType() == TrackItems.TURNTABLE) {
+                    TrackGui.this.lengthInput.setText("" + Math.min(Integer.parseInt(TrackGui.this.lengthInput.getText()), BuilderTurnTable.maxLength(TrackGui.this.settings.getGauge()))); // revalidate
                 }
             }
         };
-        this.typeButton = new Button(screen, xtop, ytop, width, height, GuiText.SELECTOR_TYPE.toString(this.settings.type)) {
+        this.typeButton = new Button(screen, xtop, ytop, width, height, GuiText.SELECTOR_TYPE.translate(this.settings.getType())) {
             @Override
             public void onClick(Player.Hand hand) {
                 TrackGui.this.showSelector(TrackGui.this.typeSelector);
@@ -159,52 +159,52 @@ public class TrackGui implements IScreen {
         };
         ytop += height;
 
-        this.smoothingButton = new Button(screen, xtop, ytop, width, height, GuiText.SELECTOR_SMOOTHING.toString(this.settings.smoothing)) {
+        this.smoothingButton = new Button(screen, xtop, ytop, width, height, GuiText.SELECTOR_SMOOTHING.translate(this.settings.getSmoothing())) {
             @Override
             public void onClick(Player.Hand hand) {
-                TrackGui.this.settings.smoothing = next(TrackGui.this.settings.smoothing, hand);
-                TrackGui.this.smoothingButton.setText(GuiText.SELECTOR_SMOOTHING.toString(TrackGui.this.settings.smoothing));
+                TrackGui.this.settings.setSmoothing(next(TrackGui.this.settings.getSmoothing(), hand));
+                TrackGui.this.smoothingButton.setText(GuiText.SELECTOR_SMOOTHING.translate(TrackGui.this.settings.getSmoothing()));
             }
         };
-        this.smoothingButton.setVisible(this.settings.type.hasSmoothing());
+        this.smoothingButton.setVisible(this.settings.getType().hasSmoothing());
         ytop += height;
 
-        this.directionButton = new Button(screen, xtop, ytop, width, height, GuiText.SELECTOR_DIRECTION.toString(this.settings.direction)) {
+        this.directionButton = new Button(screen, xtop, ytop, width, height, GuiText.SELECTOR_DIRECTION.translate(this.settings.getDirection())) {
             @Override
             public void onClick(Player.Hand hand) {
-                TrackGui.this.settings.direction = next(TrackGui.this.settings.direction, hand);
-                TrackGui.this.directionButton.setText(GuiText.SELECTOR_DIRECTION.toString(TrackGui.this.settings.direction));
+                TrackGui.this.settings.setDirection(next(TrackGui.this.settings.getDirection(), hand));
+                TrackGui.this.directionButton.setText(GuiText.SELECTOR_DIRECTION.translate(TrackGui.this.settings.getDirection()));
             }
         };
-        this.directionButton.setVisible(this.settings.type.hasDirection());
+        this.directionButton.setVisible(this.settings.getType().hasDirection());
         ytop += height;
 
 
-        this.degreesSlider = new Slider(screen, 25 + xtop, ytop, "", 1, Config.ConfigBalance.AnglePlacementSegmentation, this.settings.degrees / 90 * Config.ConfigBalance.AnglePlacementSegmentation, false) {
+        this.degreesSlider = new Slider(screen, 25 + xtop, ytop, "", 1, Config.ConfigBalance.AnglePlacementSegmentation, this.settings.getDegrees() / 90 * Config.ConfigBalance.AnglePlacementSegmentation, false) {
             @Override
             public void onSlider() {
-                TrackGui.this.settings.degrees = TrackGui.this.degreesSlider.getValueInt() * (90F / Config.ConfigBalance.AnglePlacementSegmentation);
-                TrackGui.this.degreesSlider.setText(GuiText.SELECTOR_QUARTERS.toString(this.getValueInt() * (90.0 / Config.ConfigBalance.AnglePlacementSegmentation)));
+                TrackGui.this.settings.setDegrees(TrackGui.this.degreesSlider.getValueInt() * (90F / Config.ConfigBalance.AnglePlacementSegmentation));
+                TrackGui.this.degreesSlider.setText(GuiText.SELECTOR_QUARTERS.translate(this.getValueInt() * (90.0 / Config.ConfigBalance.AnglePlacementSegmentation)));
             }
         };
         this.degreesSlider.onSlider();
         ytop += height;
 
 
-        this.curvositySlider = new Slider(screen, 25 + xtop, ytop, "", 0.25, 1.5, this.settings.curvosity, true) {
+        this.curvositySlider = new Slider(screen, 25 + xtop, ytop, "", 0.25, 1.5, this.settings.getCurvosity(), true) {
             @Override
             public void onSlider() {
-                TrackGui.this.settings.curvosity = (float) this.getValue();
-                TrackGui.this.curvositySlider.setText(GuiText.SELECTOR_CURVOSITY.toString(String.format("%.2f", TrackGui.this.settings.curvosity)));
+                TrackGui.this.settings.setCurvosity((float) this.getValue());
+                TrackGui.this.curvositySlider.setText(GuiText.SELECTOR_CURVOSITY.translate(String.format("%.2f", TrackGui.this.settings.getCurvosity())));
             }
         };
         this.curvositySlider.onSlider();
         ytop += height;
 
-        this.directionButton.setVisible(this.settings.type.hasDirection());
-        this.degreesSlider.setVisible(this.settings.type.hasQuarters());
-        this.curvositySlider.setVisible(this.settings.type.hasCurvosity());
-        this.smoothingButton.setVisible(this.settings.type.hasSmoothing());
+        this.directionButton.setVisible(this.settings.getType().hasDirection());
+        this.degreesSlider.setVisible(this.settings.getType().hasQuarters());
+        this.curvositySlider.setVisible(this.settings.getType().hasCurvosity());
+        this.smoothingButton.setVisible(this.settings.getType().hasSmoothing());
 
 
         // Bottom Pane
@@ -215,17 +215,17 @@ public class TrackGui implements IScreen {
         ytop = (int) (GUIHelpers.getScreenHeight() * 0.75 - height * 6);
 
         this.trackSelector = new ListSelector<TrackDefinition>(screen, width, 250, height,
-                DefinitionManager.getTrack(this.settings.track),
+                DefinitionManager.getTrack(this.settings.getTrack()),
                 DefinitionManager.getTracks()
                         .stream()
                         .collect(Collectors.toMap(t -> t.name, g -> g, (u, v) -> u, LinkedHashMap::new))) {
             @Override
             public void onClick(TrackDefinition track) {
-                TrackGui.this.settings.track = track.trackID;
-                TrackGui.this.trackButton.setText(GuiText.SELECTOR_TRACK.toString(fitString(DefinitionManager.getTrack(TrackGui.this.settings.track).name, 24)));
+                TrackGui.this.settings.setTrack(track.trackID);
+                TrackGui.this.trackButton.setText(GuiText.SELECTOR_TRACK.translate(fitString(DefinitionManager.getTrack(TrackGui.this.settings.getTrack()).name, 24)));
             }
         };
-        this.trackButton = new Button(screen, xtop, ytop, width, height, GuiText.SELECTOR_TRACK.toString(fitString(DefinitionManager.getTrack(this.settings.track).name, 24))) {
+        this.trackButton = new Button(screen, xtop, ytop, width, height, GuiText.SELECTOR_TRACK.translate(fitString(DefinitionManager.getTrack(this.settings.getTrack()).name, 24))) {
             @Override
             public void onClick(Player.Hand hand) {
                 TrackGui.this.showSelector(TrackGui.this.trackSelector);
@@ -233,17 +233,17 @@ public class TrackGui implements IScreen {
         };
         ytop += height;
 
-        this.railBedSelector = new ListSelector<ItemStack>(screen, width, 250, height, this.settings.railBed,
+        this.railBedSelector = new ListSelector<ItemStack>(screen, width, 250, height, this.settings.getRailBed(),
                 this.oreDict.stream()
                         .collect(Collectors.toMap(TrackGui::getStackName, g -> g, (u, v) -> u, LinkedHashMap::new))
         ) {
             @Override
             public void onClick(ItemStack option) {
-                TrackGui.this.settings.railBed = option;
-                TrackGui.this.bedTypeButton.setText(GuiText.SELECTOR_RAIL_BED.toString(getStackName(TrackGui.this.settings.railBed)));
+                TrackGui.this.settings.setRailBed(option);
+                TrackGui.this.bedTypeButton.setText(GuiText.SELECTOR_RAIL_BED.translate(getStackName(TrackGui.this.settings.getRailBed())));
             }
         };
-        this.bedTypeButton = new Button(screen, xtop, ytop, width, height, GuiText.SELECTOR_RAIL_BED.toString(getStackName(this.settings.railBed))) {
+        this.bedTypeButton = new Button(screen, xtop, ytop, width, height, GuiText.SELECTOR_RAIL_BED.translate(getStackName(this.settings.getRailBed()))) {
             @Override
             public void onClick(Player.Hand hand) {
                 TrackGui.this.showSelector(TrackGui.this.railBedSelector);
@@ -251,17 +251,17 @@ public class TrackGui implements IScreen {
         };
         ytop += height;
 
-        this.railBedFillSelector = new ListSelector<ItemStack>(screen, width, 250, height, this.settings.railBedFill,
+        this.railBedFillSelector = new ListSelector<ItemStack>(screen, width, 250, height, this.settings.getRailBedFill(),
                 this.oreDict.stream()
                         .collect(Collectors.toMap(TrackGui::getStackName, g -> g, (u, v) -> u, LinkedHashMap::new))
         ) {
             @Override
             public void onClick(ItemStack option) {
-                TrackGui.this.settings.railBedFill = option;
-                TrackGui.this.bedFillButton.setText(GuiText.SELECTOR_RAIL_BED_FILL.toString(getStackName(TrackGui.this.settings.railBedFill)));
+                TrackGui.this.settings.setRailBedFill(option);
+                TrackGui.this.bedFillButton.setText(GuiText.SELECTOR_RAIL_BED_FILL.translate(getStackName(TrackGui.this.settings.getRailBedFill())));
             }
         };
-        this.bedFillButton = new Button(screen, xtop, ytop, width, height, GuiText.SELECTOR_RAIL_BED_FILL.toString(getStackName(this.settings.railBedFill))) {
+        this.bedFillButton = new Button(screen, xtop, ytop, width, height, GuiText.SELECTOR_RAIL_BED_FILL.translate(getStackName(this.settings.getRailBedFill()))) {
             @Override
             public void onClick(Player.Hand hand) {
                 TrackGui.this.showSelector(TrackGui.this.railBedFillSelector);
@@ -269,27 +269,27 @@ public class TrackGui implements IScreen {
         };
         ytop += height;
 
-        this.posTypeButton = new Button(screen, xtop, ytop, width, height, GuiText.SELECTOR_POSITION.toString(this.settings.posType)) {
+        this.posTypeButton = new Button(screen, xtop, ytop, width, height, GuiText.SELECTOR_POSITION.translate(this.settings.getPosType())) {
             @Override
             public void onClick(Player.Hand hand) {
-                TrackGui.this.settings.posType = next(TrackGui.this.settings.posType, hand);
-                TrackGui.this.posTypeButton.setText(GuiText.SELECTOR_POSITION.toString(TrackGui.this.settings.posType));
+                TrackGui.this.settings.setPosType(next(TrackGui.this.settings.getPosType(), hand));
+                TrackGui.this.posTypeButton.setText(GuiText.SELECTOR_POSITION.translate(TrackGui.this.settings.getPosType()));
             }
         };
         ytop += height;
 
-        this.isPreviewCB = new CheckBox(screen, xtop + 2, ytop + 2, GuiText.SELECTOR_PLACE_BLUEPRINT.toString(), this.settings.isPreview) {
+        this.isPreviewCB = new CheckBox(screen, xtop + 2, ytop + 2, GuiText.SELECTOR_PLACE_BLUEPRINT.toString(), this.settings.isPreview()) {
             @Override
             public void onClick(Player.Hand hand) {
-                TrackGui.this.settings.isPreview = TrackGui.this.isPreviewCB.isChecked();
+                TrackGui.this.settings.setPreview(TrackGui.this.isPreviewCB.isChecked());
             }
         };
         ytop += height;
 
-        this.isGradeCrossingCB = new CheckBox(screen, xtop + 2, ytop + 2, GuiText.SELECTOR_GRADE_CROSSING.toString(), this.settings.isGradeCrossing) {
+        this.isGradeCrossingCB = new CheckBox(screen, xtop + 2, ytop + 2, GuiText.SELECTOR_GRADE_CROSSING.toString(), this.settings.isGradeCrossing()) {
             @Override
             public void onClick(Player.Hand hand) {
-                TrackGui.this.settings.isGradeCrossing = TrackGui.this.isGradeCrossingCB.isChecked();
+                TrackGui.this.settings.setGradeCrossing(TrackGui.this.isGradeCrossingCB.isChecked());
             }
         };
         ytop += height;
@@ -346,12 +346,12 @@ public class TrackGui implements IScreen {
 
         if (this.gaugeSelector.isVisible()) {
             double textScale = 1.5;
-            GUIHelpers.drawCenteredString(GuiText.SELECTOR_GAUGE.toString(this.settings.gauge.toString()), (int) ((300 + (GUIHelpers.getScreenWidth() - 300) / 2) / textScale), (int) (10 / textScale), 0xFFFFFF, new Matrix4().scale(textScale, textScale, textScale));
+            GUIHelpers.drawCenteredString(GuiText.SELECTOR_GAUGE.translate(this.settings.getGauge().toString()), (int) ((300 + (GUIHelpers.getScreenWidth() - 300) / 2) / textScale), (int) (10 / textScale), 0xFFFFFF, new Matrix4().scale(textScale, textScale, textScale));
 
             RailInfo info = new RailInfo(
                     this.settings.immutable().with(rendered -> {
-                        rendered.length = 5;
-                        rendered.type = TrackItems.STRAIGHT;
+                        rendered.setLength(5);
+                        rendered.setType(TrackItems.STRAIGHT);
                     }),
                     new PlacementInfo(new Vec3d(0.5, 0, 0.5), TrackDirection.NONE, 0, null),
                     null, SwitchState.NONE, SwitchState.NONE, 0, true);
@@ -381,16 +381,16 @@ public class TrackGui implements IScreen {
 
 
             double textScale = 1.5;
-            String str = this.trackSelector.isVisible() ? GuiText.SELECTOR_TRACK.toString(DefinitionManager.getTrack(this.settings.track).name) :
-                    this.railBedSelector.isVisible() ? GuiText.SELECTOR_RAIL_BED.toString(getStackName(this.settings.railBed)) :
-                            GuiText.SELECTOR_RAIL_BED_FILL.toString(getStackName(this.settings.railBedFill));
+            String str = this.trackSelector.isVisible() ? GuiText.SELECTOR_TRACK.translate(DefinitionManager.getTrack(this.settings.getTrack()).name) :
+                    this.railBedSelector.isVisible() ? GuiText.SELECTOR_RAIL_BED.translate(getStackName(this.settings.getRailBed())) :
+                            GuiText.SELECTOR_RAIL_BED_FILL.translate(getStackName(this.settings.getRailBedFill()));
 
             GUIHelpers.drawCenteredString(str, (int) ((450 + (GUIHelpers.getScreenWidth() - 450) / 2) / textScale), (int) (10 / textScale), 0xFFFFFF, new Matrix4().scale(textScale, textScale, textScale));
 
             RailInfo info = new RailInfo(
                     this.settings.immutable().with(rendered -> {
-                        rendered.length = 3;
-                        rendered.type = TrackItems.STRAIGHT;
+                        rendered.setLength(3);
+                        rendered.setType(TrackItems.STRAIGHT);
                     }),
                     new PlacementInfo(new Vec3d(0.5, 0, 0.5), TrackDirection.NONE, 0, null),
                     null, SwitchState.NONE, SwitchState.NONE, 0, true);
@@ -433,21 +433,21 @@ public class TrackGui implements IScreen {
         // This could be more efficient...
         RailInfo info = new RailInfo(
                 this.settings.immutable().with(b -> {
-                    int length = b.length;
+                    int length = b.getLength();
                     if (length < 5) {
                         length = 5;
                     }
-                    if (this.settings.type == TrackItems.TURNTABLE) {
+                    if (this.settings.getType() == TrackItems.TURNTABLE) {
                         length = Math.min(25, Math.max(10, length));
                     }
-                    b.length = length;
+                    b.setLength(length);
                 }),
-                new PlacementInfo(new Vec3d(0.5, 0, 0.5), this.settings.direction, 0, null),
-                null, SwitchState.NONE, SwitchState.NONE, this.settings.type == TrackItems.TURNTABLE ? (this.frame / 2.0) % 360 : 0, true);
+                new PlacementInfo(new Vec3d(0.5, 0, 0.5), this.settings.getDirection(), 0, null),
+                null, SwitchState.NONE, SwitchState.NONE, this.settings.getType() == TrackItems.TURNTABLE ? (this.frame / 2.0) % 360 : 0, true);
 
         int length = info.settings.length;
         double scale = (GUIHelpers.getScreenWidth() / (length * 2.25)) * this.zoom;
-        if (this.settings.type == TrackItems.TURNTABLE) {
+        if (this.settings.getType() == TrackItems.TURNTABLE) {
             scale /= 2;
         }
 
@@ -455,8 +455,8 @@ public class TrackGui implements IScreen {
         state.rotate(90, 1, 0, 0);
         state.scale(-scale, scale, scale);
         state.translate(0, 0, 1);
-        if (this.settings.type.hasDirection()) {
-            switch (this.settings.direction) {
+        if (this.settings.getType().hasDirection()) {
+            switch (this.settings.getDirection()) {
                 case LEFT:
                     state.translate(length / 2.0, 0, 0);
                     break;
@@ -466,7 +466,7 @@ public class TrackGui implements IScreen {
                     break;
             }
         }
-        if (this.settings.type == TrackItems.CUSTOM) {
+        if (this.settings.getType() == TrackItems.CUSTOM) {
             state.translate(-length / 2.0, 0, 0);
         }
         RailRender.get(info).renderRailModel(state);
