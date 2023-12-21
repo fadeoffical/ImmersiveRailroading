@@ -94,6 +94,5 @@ public final class Speed implements TagMapper<Speed> {
         public @NotNull String getDisplayString() {
             return this.unit;
         }
-
     }
 }
