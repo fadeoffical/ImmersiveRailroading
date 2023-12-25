@@ -17,10 +17,12 @@ import cam72cam.mod.item.CustomItem;
 import cam72cam.mod.item.ItemStack;
 import cam72cam.mod.math.Vec3d;
 import cam72cam.mod.math.Vec3i;
+import cam72cam.mod.resource.Identifier;
 import cam72cam.mod.serialization.TagField;
 import cam72cam.mod.text.TextUtil;
 import cam72cam.mod.util.Facing;
 import cam72cam.mod.world.World;
+import org.jetbrains.annotations.NotNull;
 import trackapi.lib.Gauges;
 
 import java.util.Collections;
@@ -50,7 +52,7 @@ public class ItemRailAugment extends CustomItem {
         return AugmentRegistry.getAugments().keySet().stream().map(augmentId -> {
             ItemStack stack = new ItemStack(this, 1);
             Data data = new Data(stack);
-            data.setAugment(AugmentRegistry.getNewAugment(augmentId)); // I don't like this
+            data.setAugmentId(augmentId);
             data.write();
             return stack;
         }).collect(Collectors.toList());
@@ -72,15 +74,18 @@ public class ItemRailAugment extends CustomItem {
         ItemStack stack = player.getHeldItem(hand);
         Data data = new Data(stack);
         if (tileRailBase.getAugment() != null) return ClickResult.REJECTED;
-        if (!player.isCreative() && Gauge.getClosestGauge(tileRailBase.getTrackGauge()) != data.getGauge()) return ClickResult.REJECTED;
+        if (!player.isCreative() && Gauge.getClosestGauge(tileRailBase.getTrackGauge()) != data.getGauge())
+            return ClickResult.REJECTED;
 
         TileRail parent = tileRailBase.getParentTile();
         if (parent == null) return ClickResult.REJECTED;
 
-        if (!data.getAugment().canApplyAugment(tileRailBase)) return ClickResult.REJECTED;
+        Augment augment = AugmentRegistry.getNewAugment(data.getAugmentId());
+        if (augment == null) return ClickResult.REJECTED;
+
+        if (!augment.canApplyAugment(tileRailBase)) return ClickResult.REJECTED;
 
         if (world.isServer) {
-            Augment augment = AugmentRegistry.getNewAugment(data.getAugment().getId());
             tileRailBase.setAugment(augment);
             if (!player.isCreative()) stack.setCount(stack.getCount() - 1);
         }
@@ -89,7 +94,7 @@ public class ItemRailAugment extends CustomItem {
 
     @Override
     public String getCustomName(ItemStack stack) {
-        return TextUtil.translate("item.immersiverailroading:item_augment." + new Data(stack).getAugment().getId() + ".name");
+        return TextUtil.translate("item.immersiverailroading:item_augment." + new Data(stack).getAugmentId().getPath() + ".name");
     }
 
     public static class Data extends ItemDataSerializer {
@@ -98,12 +103,24 @@ public class ItemRailAugment extends CustomItem {
         private Gauge gauge;
 
         @TagField("augmentId")
-        private Augment augment;
+        private String augmentId;
 
         public Data(ItemStack stack) {
             super(stack);
-            this.setGauge(Gauge.getClosestGauge(Gauges.STANDARD));
-            this.setAugment(AugmentRegistry.getNewAugment(DetectorAugment.ID));
+            this.defaultGauge(Gauge.getClosestGauge(Gauges.STANDARD));
+            this.defaultAugmentId(DetectorAugment.ID);
+        }
+
+        private void defaultGauge(@NotNull Gauge gauge) {
+            if (this.gauge == null) {
+                this.gauge = gauge;
+            }
+        }
+
+        private void defaultAugmentId(@NotNull Identifier augmentId) {
+            if (this.augmentId == null) {
+                this.augmentId = augmentId.toString();
+            }
         }
 
         public Gauge getGauge() {
@@ -114,12 +131,12 @@ public class ItemRailAugment extends CustomItem {
             this.gauge = gauge;
         }
 
-        public Augment getAugment() {
-            return this.augment;
+        public Identifier getAugmentId() {
+            return new Identifier(this.augmentId);
         }
 
-        public void setAugment(Augment augment) {
-            this.augment = augment;
+        public void setAugmentId(Identifier augmentId) {
+            this.augmentId = augmentId.toString();
         }
     }
 }

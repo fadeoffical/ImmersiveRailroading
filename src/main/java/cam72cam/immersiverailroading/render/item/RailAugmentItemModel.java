@@ -1,6 +1,5 @@
 package cam72cam.immersiverailroading.render.item;
 
-import cam72cam.immersiverailroading.items.ItemRailAugment;
 import cam72cam.mod.item.ItemStack;
 import cam72cam.mod.render.Color;
 import cam72cam.mod.render.ItemRender;
@@ -20,7 +19,8 @@ public final class RailAugmentItemModel implements ItemRender.IItemModel {
 
     @Override
     public StandardModel getModel(World world, ItemStack stack) {
-        Color color = new ItemRailAugment.Data(stack).getAugment().getColor();
+//        Color color = new ItemRailAugment.Data(stack).getAugment().getColor();
+        Color color = Color.WHITE;
         Matrix4 model = new Matrix4().translate(0, HEIGHT, 0).scale(1, HEIGHT / 2, 1);
         return new StandardModel().addColorBlock(color, model);
     }

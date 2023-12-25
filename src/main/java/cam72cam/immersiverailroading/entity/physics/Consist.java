@@ -620,7 +620,7 @@ public class Consist {
         }
     }
 
-    public static class TagMapper implements cam72cam.mod.serialization.TagMapper<Consist> {
+    public static final class TagMapper implements cam72cam.mod.serialization.TagMapper<Consist> {
         @Override
         public TagAccessor<Consist> apply(Class<Consist> type, String fieldName, TagField tag) {
             return new TagAccessor<Consist>(

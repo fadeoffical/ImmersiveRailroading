@@ -7,16 +7,15 @@ import cam72cam.immersiverailroading.model.part.Door;
 import cam72cam.immersiverailroading.tile.TileRailBase;
 import cam72cam.mod.render.Color;
 import cam72cam.mod.resource.Identifier;
+import cam72cam.mod.serialization.TagMapped;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
+@TagMapped(ActuatorAugment.class)
 public final class ActuatorAugment extends Augment {
 
     public static final @NotNull Identifier ID = new Identifier(ImmersiveRailroading.MOD_ID, "actuator");
 
     private static final int MAX_REDSTONE = 15;
-
-    private @Nullable String filterDefinitionId;
 
     public ActuatorAugment() {
         super(ID, Color.LIME);

@@ -53,7 +53,7 @@ public class ItemLargeWrench extends CustomItem {
                 if (world.isServer && player.hasPermission(Permissions.AUGMENT_TRACK)) {
                     ItemStack stack = new ItemStack(IRItems.ITEM_AUGMENT, 1);
                     ItemRailAugment.Data data = new ItemRailAugment.Data(stack);
-                    data.setAugment(augment);
+                    data.setAugmentId(augment.getId());
                     data.setGauge(Gauge.getClosestGauge(tileRailBase.getTrackGauge()));
                     data.write();
                     world.dropItem(stack, pos);

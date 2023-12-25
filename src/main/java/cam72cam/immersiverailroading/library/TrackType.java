@@ -2,7 +2,6 @@ package cam72cam.immersiverailroading.library;
 
 import cam72cam.mod.text.TextUtil;
 
-// todo: rename to smth better like TrackType or smthn
 public enum TrackType {
     STRAIGHT("straight", false, false, false, false),
     CROSSING("crossing", false, false, false, false),

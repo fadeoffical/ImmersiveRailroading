@@ -34,8 +34,8 @@ public final class AugmentRegistry {
             return augmentClass.newInstance();
         } catch (InstantiationException | IllegalAccessException exception) {
             ImmersiveRailroading.catching(exception);
-            return null;
         }
+        return null;
     }
 
     private AugmentRegistry() {}

@@ -10,16 +10,21 @@ import cam72cam.mod.item.ItemStack;
 import cam72cam.mod.math.Vec3d;
 import cam72cam.mod.render.Color;
 import cam72cam.mod.resource.Identifier;
+import cam72cam.mod.serialization.SerializationException;
+import cam72cam.mod.serialization.TagField;
+import cam72cam.mod.serialization.TagMapper;
 import cam72cam.mod.text.PlayerMessage;
 import cam72cam.mod.util.Facing;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Arrays;
 import java.util.Locale;
 
 public final class CouplerAugment extends Augment {
 
     public static final @NotNull Identifier ID = new Identifier(ImmersiveRailroading.MOD_ID, "coupler");
 
+    @TagField("Mode")
     private @NotNull Mode mode;
 
     public CouplerAugment() {
@@ -27,13 +32,21 @@ public final class CouplerAugment extends Augment {
         this.mode = Mode.ENGAGE;
     }
 
-    public @NotNull Mode getMode() {
-        return this.mode;
-    }
-
     @Override
     public boolean doesNotFilter() {
         return true;
+    }
+
+    @Override
+    public boolean onClick(@NotNull TileRailBase rail, @NotNull Player player, Player.@NotNull Hand hand, @NotNull Facing facing, @NotNull Vec3d hit) {
+        ItemStack heldItem = player.getHeldItem(hand);
+        if (heldItem.is(Fuzzy.PISTON)) {
+            this.mode = this.mode.next();
+            PlayerMessage message = PlayerMessage.translate(this.mode.getTranslationString());
+            if (rail.getWorld().isServer) player.sendMessage(message);
+            return true;
+        }
+        return super.onClick(rail, player, hand, facing, hit);
     }
 
     @Override
@@ -56,22 +69,11 @@ public final class CouplerAugment extends Augment {
         stock.setCouplerEngaged(EntityCoupleableRollingStock.CouplerType.BACK, engage);
     }
 
-    @Override
-    public boolean onClick(@NotNull TileRailBase rail, @NotNull Player player, Player.@NotNull Hand hand, @NotNull Facing facing, @NotNull Vec3d hit) {
-        if (super.onClick(rail, player, hand, facing, hit)) return true;
-
-        ItemStack heldItem = player.getHeldItem(hand);
-        if (heldItem.is(Fuzzy.PISTON)) {
-            this.mode = this.mode.next();
-            PlayerMessage message = PlayerMessage.translate(this.mode.toString());
-            if (rail.getWorld().isServer) player.sendMessage(message);
-            return true;
-        }
-
-        return false;
+    public @NotNull Mode getMode() {
+        return this.mode;
     }
 
-    public enum Mode {
+    public enum Mode implements TagMapper<Mode> {
         ENGAGE("engage"),
         DISENGAGE("disengage");
 
@@ -81,17 +83,36 @@ public final class CouplerAugment extends Augment {
             this.name = name;
         }
 
-        public @NotNull String getName() {
-            return this.name;
-        }
-
-        @Override
-        public String toString() {
+        private String getTranslationString() {
             return "immersiverailroading:coupler_augment_mode." + super.toString().toLowerCase(Locale.ROOT);
         }
 
         private @NotNull Mode next() {
             return values()[(this.ordinal() + 1) % values().length];
+        }
+
+        @Override
+        public TagAccessor<Mode> apply(Class<Mode> type, String fieldName, TagField tag) throws SerializationException {
+            Serializer<Mode> serializer = (nbt, mode) -> {
+                if (mode == null) return;
+                nbt.setString(fieldName, mode.getName());
+            };
+            Deserializer<Mode> deserializer = (nbt, world) -> {
+                String name = nbt.getString(fieldName);
+                return fromName(name);
+            };
+            return new TagAccessor<>(serializer, deserializer);
+        }
+
+        public @NotNull String getName() {
+            return this.name;
+        }
+
+        private static @NotNull Mode fromName(@NotNull String name) {
+            return Arrays.stream(values())
+                    .filter(mode -> mode.getName().equals(name))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Unknown mode: " + name));
         }
     }
 }

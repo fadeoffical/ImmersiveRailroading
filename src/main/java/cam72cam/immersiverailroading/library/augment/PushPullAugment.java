@@ -7,6 +7,7 @@ import cam72cam.mod.item.ItemStack;
 import cam72cam.mod.math.Vec3d;
 import cam72cam.mod.render.Color;
 import cam72cam.mod.resource.Identifier;
+import cam72cam.mod.serialization.TagField;
 import cam72cam.mod.text.PlayerMessage;
 import cam72cam.mod.util.Facing;
 import org.jetbrains.annotations.NotNull;
@@ -15,6 +16,7 @@ import org.jetbrains.annotations.NotNull;
 //       and have a Push, Pull, and Neutral(?) mode
 public abstract class PushPullAugment extends Augment {
 
+    @TagField("PushPull")
     private boolean pushPull;
 
     public PushPullAugment(@NotNull Identifier id, @NotNull Color color) {
@@ -39,8 +41,6 @@ public abstract class PushPullAugment extends Augment {
 
     @Override
     public boolean onClick(@NotNull TileRailBase rail, @NotNull Player player, Player.@NotNull Hand hand, @NotNull Facing facing, @NotNull Vec3d hit) {
-        if (super.onClick(rail, player, hand, facing, hit)) return true;
-
         ItemStack heldItem = player.getHeldItem(hand);
         if (heldItem.is(Fuzzy.PISTON)) {
             this.pushPull = !this.pushPull;
@@ -48,8 +48,7 @@ public abstract class PushPullAugment extends Augment {
             if (rail.getWorld().isServer) player.sendMessage(message);
             return true;
         }
-
-        return false;
+        return super.onClick(rail, player, hand, facing, hit);
     }
 
     protected boolean isPushPull() {

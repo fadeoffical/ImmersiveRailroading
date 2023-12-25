@@ -55,40 +55,29 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
 
     private final SingleCache<Vec3i, Vec3i> parentCache = new SingleCache<>(parent -> parent.add(this.getPos()));
     private final SingleCache<Double, IBoundingBox> boundingBox = new SingleCache<>(height -> IBoundingBox.ORIGIN.expand(new Vec3d(1, height, 1)));
-
-
+    Double cachedGauge;
+    ItemStack railBedCache;
     @TagField("flexible")
     private boolean flexible;
-
     @TagField("parent")
     private Vec3i parent;
-
     @TagField("height")
     private float bedHeight = 0;
-
     @TagField("railHeight")
     private float railHeight = 0;
-
     @TagField("augment")
     private Augment augment;
-
     @TagField("snowLayers")
     private int snowLayers = 0;
-
     @TagField("replaced")
     private TagCompound replaced;
-
     @TagField("stockTag")
     private @Nullable String stockTag;
-
     private @Nullable EntityMovableRollingStock overhead;
     private Collection<TileRail> tiles;
     private boolean willBeReplaced = false;
     private int ticksExisted;
     private boolean blockUpdate;
-
-    Double cachedGauge;
-    ItemStack railBedCache;
 
     public float getBedHeight() {
         if (this.replaced != null && this.replaced.hasKey("height")) {
@@ -217,7 +206,7 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
         if (this.augment != null) {
             ItemStack stack = new ItemStack(IRItems.ITEM_AUGMENT, 1);
             ItemRailAugment.Data data = new ItemRailAugment.Data(stack);
-            data.setAugment(this.augment);
+            data.setAugmentId(this.augment.getId());
             data.setGauge(Gauge.getClosestGauge(this.getTrackGauge()));
             data.write();
             this.getWorld().dropItem(stack, this.getPos());
@@ -435,13 +424,6 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
         return stock.tank;
     }
 
-    public <Type extends EntityRollingStock> Type getStockOverhead(Class<Type> type) {
-        if (this.overhead == null) return null;
-        if (this.augment != null && !this.augment.filter(this.overhead.getDefinitionId())) return null;
-        if (this.stockTag != null && this.stockTag.equals(this.overhead.tag)) return null;
-        return this.overhead.as(type);
-    }
-
     public @Nullable Augment getAugment() {
         return this.augment;
     }
@@ -503,13 +485,13 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
         return this.boundingBox.get(this.getFullHeight() + 0.1 * (this.getTrackGauge() / Gauges.STANDARD));
     }
 
-    /*
-     * Capabilities tie ins
-     */
-
     private float getFullHeight() {
         return this.bedHeight + this.snowLayers / 8f;
     }
+
+    /*
+     * Capabilities tie ins
+     */
 
     @Override
     public double getTrackGauge() {
@@ -533,6 +515,13 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
         return this.getNextPositionShort(currentPosition, motion);
     }
 
+    public <Type extends EntityRollingStock> Type getStockOverhead(Class<Type> type) {
+        if (this.overhead == null) return null;
+        if (this.augment != null && !this.augment.filter(this.overhead.getDefinitionId())) return null;
+        if (this.stockTag != null && this.stockTag.equals(this.overhead.tag)) return null;
+        return this.overhead.as(type);
+    }
+
     public TagCompound getReplaced() {
         return this.replaced;
     }
@@ -541,14 +530,14 @@ public class TileRailBase extends BlockEntityTrackTickable implements IRedstoneP
         this.replaced = replaced;
     }
 
-    public boolean hasAugment() {
-        return this.augment != null;
-    }
-
     @SuppressWarnings("unchecked") // checked
     public <Type extends Augment> void ifAugmentPresent(@NotNull Consumer<@NotNull Type> augment) {
         if (!this.hasAugment()) return;
         augment.accept((Type) this.augment);
+    }
+
+    public boolean hasAugment() {
+        return this.augment != null;
     }
 
     public boolean isAugmentOfType(@NotNull Class<? extends Augment> augmentType) {
