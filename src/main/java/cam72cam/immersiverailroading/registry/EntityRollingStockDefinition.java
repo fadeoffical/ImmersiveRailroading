@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
 
 @TagMapped(EntityRollingStockDefinition.TagMapper.class)
 public abstract class EntityRollingStockDefinition {
-    private static final Identifier DEFAULT_PARTICLE_TEXTURE = new Identifier(ImmersiveRailroading.MODID, "textures/light.png");
+    private static final Identifier DEFAULT_PARTICLE_TEXTURE = new Identifier(ImmersiveRailroading.MOD_ID, "textures/light.png");
 
     public final String defID;
     public final List<String> itemGroups;
@@ -178,7 +178,7 @@ public abstract class EntityRollingStockDefinition {
     }
 
     protected Identifier defaultDataLocation() {
-        return new Identifier(ImmersiveRailroading.MODID, "rolling_stock/default/base.caml");
+        return new Identifier(ImmersiveRailroading.MOD_ID, "rolling_stock/default/base.caml");
     }
 
     private DataBlock withImports(DataBlock data) throws IOException {
@@ -232,7 +232,7 @@ public abstract class EntityRollingStockDefinition {
         try {
             List<DataBlock> alternates = new ArrayList<>();
 
-            Identifier alt_textures = new Identifier(ImmersiveRailroading.MODID, this.defID.replace(".caml", ".json").replace(".json", "_variants.json"));
+            Identifier alt_textures = new Identifier(ImmersiveRailroading.MOD_ID, this.defID.replace(".caml", ".json").replace(".json", "_variants.json"));
             List<InputStream> alts = alt_textures.getResourceStreamAll();
             for (InputStream input : alts) alternates.add(JSON.parse(input));
 
@@ -530,7 +530,7 @@ public abstract class EntityRollingStockDefinition {
 
     public String name() {
         String[] split = this.defID.replaceAll(".json", "").split("/");
-        String localStr = String.format("%s:entity.%s.%s", ImmersiveRailroading.MODID, split[split.length - 2], split[split.length - 1]);
+        String localStr = String.format("%s:entity.%s.%s", ImmersiveRailroading.MOD_ID, split[split.length - 2], split[split.length - 1]);
         String transStr = TextUtil.translate(localStr);
         return !localStr.equals(transStr) ? transStr : this.name;
     }
@@ -603,7 +603,7 @@ public abstract class EntityRollingStockDefinition {
     }
 
     protected GuiBuilder getDefaultOverlay(DataBlock data) throws IOException {
-        return this.hasIndependentBrake() ? GuiBuilder.parse(new Identifier(ImmersiveRailroading.MODID, "gui/default/independent.caml")) : null;
+        return this.hasIndependentBrake() ? GuiBuilder.parse(new Identifier(ImmersiveRailroading.MOD_ID, "gui/default/independent.caml")) : null;
     }
 
     public GuiBuilder getOverlay() {
@@ -709,7 +709,7 @@ public abstract class EntityRollingStockDefinition {
     }
 
     public static class LightDefinition {
-        public static final Identifier default_light_tex = new Identifier(ImmersiveRailroading.MODID, "textures/light.png");
+        public static final Identifier default_light_tex = new Identifier(ImmersiveRailroading.MOD_ID, "textures/light.png");
 
         public final float blinkIntervalSeconds;
         public final float blinkOffsetSeconds;

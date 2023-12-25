@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 @Comment("Configuration File")
 @Name("general")
 @File("immersiverailroading.cfg")
-public class Config {
+public final class Config {
 
     public static void init() {
         if (ConfigBalance.dieselFuels.isEmpty()) {
@@ -50,7 +50,7 @@ public class Config {
     }
 
     public static boolean isFuelRequired(Gauge gauge) {
-        return !(!ConfigBalance.FuelRequired || (!ConfigBalance.ModelFuelRequired && gauge.isModelGauge()));
+        return ConfigBalance.FuelRequired || (ConfigBalance.ModelFuelRequired && gauge.isModelGauge());
     }
 
     @Name("damage")

@@ -22,7 +22,7 @@ public class TenderDefinition extends CarTankDefinition {
 
     @Override
     protected Identifier defaultDataLocation() {
-        return new Identifier(ImmersiveRailroading.MODID, "rolling_stock/default/tender.caml");
+        return new Identifier(ImmersiveRailroading.MOD_ID, "rolling_stock/default/tender.caml");
     }
 
     @Override

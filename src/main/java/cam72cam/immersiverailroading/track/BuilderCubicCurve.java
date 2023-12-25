@@ -1,7 +1,7 @@
 package cam72cam.immersiverailroading.track;
 
 import cam72cam.immersiverailroading.library.SwitchState;
-import cam72cam.immersiverailroading.library.TrackItems;
+import cam72cam.immersiverailroading.library.TrackType;
 import cam72cam.immersiverailroading.util.PlacementInfo;
 import cam72cam.immersiverailroading.util.RailInfo;
 import cam72cam.immersiverailroading.util.VecUtil;
@@ -40,7 +40,7 @@ public class BuilderCubicCurve extends BuilderIterator {
                 //delta = delta.subtract(new Vec3i(delta)); // Relative position within the block
                 PlacementInfo startPos = new PlacementInfo(subCurve.p1.add(delta), info.placementInfo.direction, subCurve.angleStart(), subCurve.ctrl1.add(delta));
                 PlacementInfo endPos = new PlacementInfo(subCurve.p2.add(delta), info.placementInfo.direction, subCurve.angleStop(), subCurve.ctrl2.add(delta));
-                RailInfo subInfo = new RailInfo(info.settings.with(b -> b.setType(TrackItems.CUSTOM)), startPos, endPos, SwitchState.NONE, SwitchState.NONE, 0);
+                RailInfo subInfo = new RailInfo(info.settings.with(b -> b.setType(TrackType.CUSTOM)), startPos, endPos, SwitchState.NONE, SwitchState.NONE, 0);
 
                 BuilderCubicCurve subBuilder = new BuilderCubicCurve(subInfo, world, sPos);
                 if (this.subBuilders.size() != 0) {

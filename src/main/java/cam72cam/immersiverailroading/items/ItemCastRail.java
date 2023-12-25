@@ -15,7 +15,7 @@ import java.util.List;
 public class ItemCastRail extends CustomItem {
 
     public ItemCastRail() {
-        super(ImmersiveRailroading.MODID, "item_cast_rail");
+        super(ImmersiveRailroading.MOD_ID, "item_cast_rail");
     }
 
     @Override

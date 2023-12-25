@@ -33,7 +33,7 @@ public abstract class LocomotiveDefinition extends FreightDefinition {
 
     @Override
     protected Identifier defaultDataLocation() {
-        return new Identifier(ImmersiveRailroading.MODID, "rolling_stock/default/locomotive.caml");
+        return new Identifier(ImmersiveRailroading.MOD_ID, "rolling_stock/default/locomotive.caml");
     }
 
     @Override

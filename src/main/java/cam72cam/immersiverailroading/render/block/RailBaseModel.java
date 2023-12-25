@@ -1,9 +1,9 @@
 package cam72cam.immersiverailroading.render.block;
 
 import cam72cam.immersiverailroading.IRItems;
-import cam72cam.immersiverailroading.library.Augment;
 import cam72cam.immersiverailroading.library.Gauge;
-import cam72cam.immersiverailroading.library.TrackItems;
+import cam72cam.immersiverailroading.library.TrackType;
+import cam72cam.immersiverailroading.library.augment.Augment;
 import cam72cam.immersiverailroading.render.rail.RailRender;
 import cam72cam.immersiverailroading.tile.TileRail;
 import cam72cam.immersiverailroading.tile.TileRailBase;
@@ -17,10 +17,7 @@ import util.Matrix4;
 public class RailBaseModel {
     public static StandardModel getModel(TileRailBase te) {
         ItemStack bed = te.getRenderRailBed();
-        if (bed == null) {
-            // wait for tile to be initialized
-            return null;
-        }
+        if (bed == null) return null;
 
         float height = te.getBedHeight();
         float tileHeight = height;
@@ -33,11 +30,11 @@ public class RailBaseModel {
         if (te instanceof TileRail && ((TileRail) te).info != null) {
             model.addCustom((state, pt) -> {
                 RailInfo info = ((TileRail) te).info;
-                if (info.settings.type == TrackItems.SWITCH) {
+                if (info.settings.type == TrackType.SWITCH) {
                     //TODO render switch and don't render turn
-                    info = info.withSettings(b -> b.setType(TrackItems.STRAIGHT));
+                    info = info.withSettings(b -> b.setType(TrackType.STRAIGHT));
                 }
-                if (info.settings.type == TrackItems.TURNTABLE) {
+                if (info.settings.type == TrackType.TURNTABLE) {
                     ItemStack held = MinecraftClient.getPlayer().getHeldItem(Player.Hand.PRIMARY);
                     if (held.is(IRItems.ITEM_TRACK_BLUEPRINT) || held.is(IRItems.ITEM_GOLDEN_SPIKE)) {
                         info = info.with(b -> b.itemHeld = true);
@@ -51,7 +48,7 @@ public class RailBaseModel {
         if (augment != null) {
             height += 0.1f * (float) gauge.scale() * 1.25f;
 
-            model.addColorBlock(augment.color(), new Matrix4().scale(1, height, 1));
+            model.addColorBlock(augment.getColor(), new Matrix4().scale(1, height, 1));
             return model;
         }
 

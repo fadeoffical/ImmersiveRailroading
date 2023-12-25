@@ -8,6 +8,8 @@ import cam72cam.immersiverailroading.library.GuiTypes;
 import cam72cam.immersiverailroading.library.KeyTypes;
 import cam72cam.immersiverailroading.library.Particles;
 import cam72cam.immersiverailroading.library.Permissions;
+import cam72cam.immersiverailroading.library.augment.AugmentRegistry;
+import cam72cam.immersiverailroading.library.augment.impl.*;
 import cam72cam.immersiverailroading.model.StockModel;
 import cam72cam.immersiverailroading.multiblock.*;
 import cam72cam.immersiverailroading.net.*;
@@ -45,9 +47,9 @@ import cam72cam.mod.text.Command;
 
 import java.util.function.Function;
 
-public class ImmersiveRailroading extends ModCore.Mod {
+public final class ImmersiveRailroading extends ModCore.Mod {
 
-    public static final String MODID = "immersiverailroading";
+    public static final String MOD_ID = "immersiverailroading";
 
     public static final int ENTITY_SYNC_DISTANCE = 512;
     private static ImmersiveRailroading instance;
@@ -58,7 +60,7 @@ public class ImmersiveRailroading extends ModCore.Mod {
 
     @Override
     public String modID() {
-        return MODID;
+        return MOD_ID;
     }
 
     @Override
@@ -67,13 +69,22 @@ public class ImmersiveRailroading extends ModCore.Mod {
 
         switch (event) {
             case CONSTRUCT:
-                EntityRegistry.register(ImmersiveRailroading.instance, CarFreight::new, ImmersiveRailroading.ENTITY_SYNC_DISTANCE);
-                EntityRegistry.register(ImmersiveRailroading.instance, CarPassenger::new, ImmersiveRailroading.ENTITY_SYNC_DISTANCE);
-                EntityRegistry.register(ImmersiveRailroading.instance, CarTank::new, ImmersiveRailroading.ENTITY_SYNC_DISTANCE);
-                EntityRegistry.register(ImmersiveRailroading.instance, HandCar::new, ImmersiveRailroading.ENTITY_SYNC_DISTANCE);
-                EntityRegistry.register(ImmersiveRailroading.instance, LocomotiveDiesel::new, ImmersiveRailroading.ENTITY_SYNC_DISTANCE);
-                EntityRegistry.register(ImmersiveRailroading.instance, SteamLocomotive::new, ImmersiveRailroading.ENTITY_SYNC_DISTANCE);
-                EntityRegistry.register(ImmersiveRailroading.instance, Tender::new, ImmersiveRailroading.ENTITY_SYNC_DISTANCE);
+                AugmentRegistry.register(ActuatorAugment.ID, ActuatorAugment.class);
+                AugmentRegistry.register(ControllerAugment.ID, ControllerAugment.class);
+                AugmentRegistry.register(CouplerAugment.ID, CouplerAugment.class);
+                AugmentRegistry.register(DetectorAugment.ID, DetectorAugment.class);
+                AugmentRegistry.register(FluidLoaderAugment.ID, FluidLoaderAugment.class);
+                AugmentRegistry.register(FluidUnloaderAugment.ID, FluidUnloaderAugment.class);
+                AugmentRegistry.register(ItemLoaderAugment.ID, ItemLoaderAugment.class);
+                AugmentRegistry.register(ItemUnloaderAugment.ID, ItemLoaderAugment.class);
+
+                EntityRegistry.register(instance, CarFreight::new, ENTITY_SYNC_DISTANCE);
+                EntityRegistry.register(instance, CarPassenger::new, ENTITY_SYNC_DISTANCE);
+                EntityRegistry.register(instance, CarTank::new, ENTITY_SYNC_DISTANCE);
+                EntityRegistry.register(instance, HandCar::new, ENTITY_SYNC_DISTANCE);
+                EntityRegistry.register(instance, LocomotiveDiesel::new, ENTITY_SYNC_DISTANCE);
+                EntityRegistry.register(instance, SteamLocomotive::new, ENTITY_SYNC_DISTANCE);
+                EntityRegistry.register(instance, Tender::new, ENTITY_SYNC_DISTANCE);
 
                 // todo: umc: change to Packet.register(Supplier<Class<? extends Packet>>, PacketDirection)
                 Packet.register(BuildableStockSyncPacket::new, PacketDirection.ServerToClient);
@@ -131,37 +142,33 @@ public class ImmersiveRailroading extends ModCore.Mod {
                 BlockRender.register(IRBlocks.BLOCK_MULTIBLOCK, TileMultiblockRender::render, TileMultiblock.class);
 
                 ItemRender.register(IRItems.ITEM_PLATE, new PlateItemModel());
-                ItemRender.register(IRItems.ITEM_AUGMENT, new RailAugmentItemModel());
+                ItemRender.register(IRItems.ITEM_AUGMENT, RailAugmentItemModel.create());
                 ItemRender.register(IRItems.ITEM_RAIL, new RailItemRender());
                 ItemRender.register(IRItems.ITEM_CAST_RAIL, new RailCastItemRender());
                 ItemRender.register(IRItems.ITEM_TRACK_BLUEPRINT, new TrackBlueprintItemModel());
                 ItemRender.register(IRItems.ITEM_ROLLING_STOCK_COMPONENT, new StockItemComponentModel());
                 ItemRender.register(IRItems.ITEM_ROLLING_STOCK, new StockItemModel());
-                ItemRender.register(IRItems.ITEM_LARGE_WRENCH, ObjItemRender.getModelFor(new Identifier(MODID, "models/item/wrench/wrench.obj"), new Vec3d(0.5, 0, 0.5), 2));
-                ItemRender.register(IRItems.ITEM_CONDUCTOR_WHISTLE, ObjItemRender.getModelFor(new Identifier(MODID, "models/item/whistle.obj"), new Vec3d(0.5, 0.75, 0.5), 0.1f));
-                ItemRender.register(IRItems.ITEM_GOLDEN_SPIKE, ObjItemRender.getModelFor(new Identifier(MODID, "models/item/goldenspike/goldenspike.obj"), new Vec3d(0.5, 0.5, 0.5), 0.1f));
-                ItemRender.register(IRItems.ITEM_HOOK, ObjItemRender.getModelFor(new Identifier(MODID, "models/item/brake_stick.obj"), new Vec3d(0.5, 0, 0.5), 2));
-                ItemRender.register(IRItems.ITEM_SWITCH_KEY, ObjItemRender.getModelFor(new Identifier(MODID, "models/item/switch_key/switch_key.obj"), new Vec3d(0.5, 0, 0.5), 1));
-                ItemRender.register(IRItems.ITEM_PAINT_BRUSH, ObjItemRender.getModelFor(new Identifier(MODID, "models/item/paint_brush.obj"), new Vec3d(0.5, 0.25, 0.5), 3));
-                ItemRender.register(IRItems.ITEM_RADIO_CONTROL_CARD, new Identifier(MODID, "items/radio_card"));
-                ItemRender.register(IRItems.ITEM_MANUAL, new Identifier(MODID, "items/engineerslexicon"));
+                ItemRender.register(IRItems.ITEM_LARGE_WRENCH, ObjItemRender.getModelFor(new Identifier(MOD_ID, "models/item/wrench/wrench.obj"), new Vec3d(0.5, 0, 0.5), 2));
+                ItemRender.register(IRItems.ITEM_CONDUCTOR_WHISTLE, ObjItemRender.getModelFor(new Identifier(MOD_ID, "models/item/whistle.obj"), new Vec3d(0.5, 0.75, 0.5), 0.1f));
+                ItemRender.register(IRItems.ITEM_GOLDEN_SPIKE, ObjItemRender.getModelFor(new Identifier(MOD_ID, "models/item/goldenspike/goldenspike.obj"), new Vec3d(0.5, 0.5, 0.5), 0.1f));
+                ItemRender.register(IRItems.ITEM_HOOK, ObjItemRender.getModelFor(new Identifier(MOD_ID, "models/item/brake_stick.obj"), new Vec3d(0.5, 0, 0.5), 2));
+                ItemRender.register(IRItems.ITEM_SWITCH_KEY, ObjItemRender.getModelFor(new Identifier(MOD_ID, "models/item/switch_key/switch_key.obj"), new Vec3d(0.5, 0, 0.5), 1));
+                ItemRender.register(IRItems.ITEM_PAINT_BRUSH, ObjItemRender.getModelFor(new Identifier(MOD_ID, "models/item/paint_brush.obj"), new Vec3d(0.5, 0.25, 0.5), 3));
+                ItemRender.register(IRItems.ITEM_RADIO_CONTROL_CARD, new Identifier(MOD_ID, "items/radio_card"));
+                ItemRender.register(IRItems.ITEM_MANUAL, new Identifier(MOD_ID, "items/engineerslexicon"));
                 ItemRender.register(IRItems.ITEM_TRACK_EXCHANGER, new TrackExchangerModel());
 
                 IEntityRender<EntityMovableRollingStock> stockRender = new IEntityRender<EntityMovableRollingStock>() {
                     @Override
                     public void render(EntityMovableRollingStock entity, RenderState state, float partialTicks) {
                         StockModel<?, ?> renderer = entity.getDefinition().getModel();
-                        if (renderer != null) {
-                            renderer.render(entity, state, partialTicks);
-                        }
+                        if (renderer != null) renderer.render(entity, state, partialTicks);
                     }
 
                     @Override
                     public void postRender(EntityMovableRollingStock entity, RenderState state, float partialTicks) {
                         StockModel<?, ?> renderer = entity.getDefinition().getModel();
-                        if (renderer != null) {
-                            renderer.postRender(entity, state, partialTicks);
-                        }
+                        if (renderer != null) renderer.postRender(entity, state, partialTicks);
                     }
                 };
                 EntityRenderer.register(SteamLocomotive.class, stockRender);
@@ -174,23 +181,23 @@ public class ImmersiveRailroading extends ModCore.Mod {
 
 
                 Function<KeyTypes, Runnable> onKeyPress = type -> () -> new KeyPressPacket(type).sendToServer();
-                Keyboard.registerKey("ir_keys.increase_throttle", KeyCode.NUMPAD8, "key.categories." + ImmersiveRailroading.MODID, onKeyPress.apply(KeyTypes.THROTTLE_UP));
-                Keyboard.registerKey("ir_keys.zero_throttle", KeyCode.NUMPAD5, "key.categories." + ImmersiveRailroading.MODID, onKeyPress.apply(KeyTypes.THROTTLE_ZERO));
-                Keyboard.registerKey("ir_keys.decrease_throttle", KeyCode.NUMPAD2, "key.categories." + ImmersiveRailroading.MODID, onKeyPress.apply(KeyTypes.THROTTLE_DOWN));
-                Keyboard.registerKey("ir_keys.increase_reverser", KeyCode.NUMPAD9, "key.categories." + ImmersiveRailroading.MODID, onKeyPress.apply(KeyTypes.REVERSER_UP));
-                Keyboard.registerKey("ir_keys.zero_reverser", KeyCode.NUMPAD6, "key.categories." + ImmersiveRailroading.MODID, onKeyPress.apply(KeyTypes.REVERSER_ZERO));
-                Keyboard.registerKey("ir_keys.decrease_reverser", KeyCode.NUMPAD3, "key.categories." + ImmersiveRailroading.MODID, onKeyPress.apply(KeyTypes.REVERSER_DOWN));
-                Keyboard.registerKey("ir_keys.increase_brake", KeyCode.NUMPAD7, "key.categories." + ImmersiveRailroading.MODID, onKeyPress.apply(KeyTypes.TRAIN_BRAKE_UP));
-                Keyboard.registerKey("ir_keys.zero_brake", KeyCode.NUMPAD4, "key.categories." + ImmersiveRailroading.MODID, onKeyPress.apply(KeyTypes.TRAIN_BRAKE_ZERO));
-                Keyboard.registerKey("ir_keys.decrease_brake", KeyCode.NUMPAD1, "key.categories." + ImmersiveRailroading.MODID, onKeyPress.apply(KeyTypes.TRAIN_BRAKE_DOWN));
-                Keyboard.registerKey("ir_keys.increase_independent_brake", KeyCode.NUMPAD7, "key.categories." + ImmersiveRailroading.MODID, onKeyPress.apply(KeyTypes.INDEPENDENT_BRAKE_UP));
-                Keyboard.registerKey("ir_keys.zero_independent_brake", KeyCode.NUMPAD4, "key.categories." + ImmersiveRailroading.MODID, onKeyPress.apply(KeyTypes.INDEPENDENT_BRAKE_ZERO));
-                Keyboard.registerKey("ir_keys.decrease_independent_brake", KeyCode.NUMPAD1, "key.categories." + ImmersiveRailroading.MODID, onKeyPress.apply(KeyTypes.INDEPENDENT_BRAKE_DOWN));
-                Keyboard.registerKey("ir_keys.horn", KeyCode.NUMPADENTER, "key.categories." + ImmersiveRailroading.MODID, onKeyPress.apply(KeyTypes.HORN));
-                Keyboard.registerKey("ir_keys.dead_mans_switch", KeyCode.MULTIPLY, "key.categories." + ImmersiveRailroading.MODID, onKeyPress.apply(KeyTypes.DEAD_MANS_SWITCH));
-                Keyboard.registerKey("ir_keys.start_stop_engine", KeyCode.ADD, "key.categories." + ImmersiveRailroading.MODID, onKeyPress.apply(KeyTypes.START_STOP_ENGINE));
-                Keyboard.registerKey("ir_keys.bell", KeyCode.SUBTRACT, "key.categories." + ImmersiveRailroading.MODID, onKeyPress.apply(KeyTypes.BELL));
-                Keyboard.registerKey("ir_keys.config", KeyCode.DIVIDE, "key.categories." + ImmersiveRailroading.MODID, () -> GuiTypes.CONFIG.open(MinecraftClient.getPlayer()));
+                Keyboard.registerKey("ir_keys.increase_throttle", KeyCode.NUMPAD8, "key.categories." + ImmersiveRailroading.MOD_ID, onKeyPress.apply(KeyTypes.THROTTLE_UP));
+                Keyboard.registerKey("ir_keys.zero_throttle", KeyCode.NUMPAD5, "key.categories." + ImmersiveRailroading.MOD_ID, onKeyPress.apply(KeyTypes.THROTTLE_ZERO));
+                Keyboard.registerKey("ir_keys.decrease_throttle", KeyCode.NUMPAD2, "key.categories." + ImmersiveRailroading.MOD_ID, onKeyPress.apply(KeyTypes.THROTTLE_DOWN));
+                Keyboard.registerKey("ir_keys.increase_reverser", KeyCode.NUMPAD9, "key.categories." + ImmersiveRailroading.MOD_ID, onKeyPress.apply(KeyTypes.REVERSER_UP));
+                Keyboard.registerKey("ir_keys.zero_reverser", KeyCode.NUMPAD6, "key.categories." + ImmersiveRailroading.MOD_ID, onKeyPress.apply(KeyTypes.REVERSER_ZERO));
+                Keyboard.registerKey("ir_keys.decrease_reverser", KeyCode.NUMPAD3, "key.categories." + ImmersiveRailroading.MOD_ID, onKeyPress.apply(KeyTypes.REVERSER_DOWN));
+                Keyboard.registerKey("ir_keys.increase_brake", KeyCode.NUMPAD7, "key.categories." + ImmersiveRailroading.MOD_ID, onKeyPress.apply(KeyTypes.TRAIN_BRAKE_UP));
+                Keyboard.registerKey("ir_keys.zero_brake", KeyCode.NUMPAD4, "key.categories." + ImmersiveRailroading.MOD_ID, onKeyPress.apply(KeyTypes.TRAIN_BRAKE_ZERO));
+                Keyboard.registerKey("ir_keys.decrease_brake", KeyCode.NUMPAD1, "key.categories." + ImmersiveRailroading.MOD_ID, onKeyPress.apply(KeyTypes.TRAIN_BRAKE_DOWN));
+                Keyboard.registerKey("ir_keys.increase_independent_brake", KeyCode.NUMPAD7, "key.categories." + ImmersiveRailroading.MOD_ID, onKeyPress.apply(KeyTypes.INDEPENDENT_BRAKE_UP));
+                Keyboard.registerKey("ir_keys.zero_independent_brake", KeyCode.NUMPAD4, "key.categories." + ImmersiveRailroading.MOD_ID, onKeyPress.apply(KeyTypes.INDEPENDENT_BRAKE_ZERO));
+                Keyboard.registerKey("ir_keys.decrease_independent_brake", KeyCode.NUMPAD1, "key.categories." + ImmersiveRailroading.MOD_ID, onKeyPress.apply(KeyTypes.INDEPENDENT_BRAKE_DOWN));
+                Keyboard.registerKey("ir_keys.horn", KeyCode.NUMPADENTER, "key.categories." + ImmersiveRailroading.MOD_ID, onKeyPress.apply(KeyTypes.HORN));
+                Keyboard.registerKey("ir_keys.dead_mans_switch", KeyCode.MULTIPLY, "key.categories." + ImmersiveRailroading.MOD_ID, onKeyPress.apply(KeyTypes.DEAD_MANS_SWITCH));
+                Keyboard.registerKey("ir_keys.start_stop_engine", KeyCode.ADD, "key.categories." + ImmersiveRailroading.MOD_ID, onKeyPress.apply(KeyTypes.START_STOP_ENGINE));
+                Keyboard.registerKey("ir_keys.bell", KeyCode.SUBTRACT, "key.categories." + ImmersiveRailroading.MOD_ID, onKeyPress.apply(KeyTypes.BELL));
+                Keyboard.registerKey("ir_keys.config", KeyCode.DIVIDE, "key.categories." + ImmersiveRailroading.MOD_ID, () -> GuiTypes.CONFIG.open(MinecraftClient.getPlayer()));
 
                 Audio.setSoundChannels(ConfigSound.customAudioChannels);
                 break;

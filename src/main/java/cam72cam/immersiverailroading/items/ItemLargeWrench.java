@@ -2,10 +2,10 @@ package cam72cam.immersiverailroading.items;
 
 import cam72cam.immersiverailroading.IRItems;
 import cam72cam.immersiverailroading.ImmersiveRailroading;
-import cam72cam.immersiverailroading.library.Augment;
 import cam72cam.immersiverailroading.library.Gauge;
 import cam72cam.immersiverailroading.library.Permissions;
-import cam72cam.immersiverailroading.library.TrackItems;
+import cam72cam.immersiverailroading.library.TrackType;
+import cam72cam.immersiverailroading.library.augment.Augment;
 import cam72cam.immersiverailroading.multiblock.MultiBlockRegistry;
 import cam72cam.immersiverailroading.tile.TileRail;
 import cam72cam.immersiverailroading.tile.TileRailBase;
@@ -24,13 +24,10 @@ import java.util.List;
 
 public class ItemLargeWrench extends CustomItem {
     public ItemLargeWrench() {
-        super(ImmersiveRailroading.MODID, "item_large_wrench");
+        super(ImmersiveRailroading.MOD_ID, "item_large_wrench");
 
         Fuzzy steel = Fuzzy.STEEL_INGOT;
-        IRFuzzy.registerSteelRecipe(this, 3,
-                null, steel, null,
-                steel, steel, steel,
-                steel, null, steel);
+        IRFuzzy.registerSteelRecipe(this, 3, null, steel, null, steel, steel, steel, steel, null, steel);
     }
 
     @Override
@@ -56,8 +53,8 @@ public class ItemLargeWrench extends CustomItem {
                 if (world.isServer && player.hasPermission(Permissions.AUGMENT_TRACK)) {
                     ItemStack stack = new ItemStack(IRItems.ITEM_AUGMENT, 1);
                     ItemRailAugment.Data data = new ItemRailAugment.Data(stack);
-                    data.augment = augment;
-                    data.gauge = Gauge.getClosestGauge(tileRailBase.getTrackGauge());
+                    data.setAugment(augment);
+                    data.setGauge(Gauge.getClosestGauge(tileRailBase.getTrackGauge()));
                     data.write();
                     world.dropItem(stack, pos);
                 }
@@ -68,7 +65,7 @@ public class ItemLargeWrench extends CustomItem {
             while (tileRailBase != null) {
                 System.out.println(tileRailBase);
                 TileRail parent = tileRailBase.getParentTile();
-                if (parent != null && parent.info.settings.type == TrackItems.TURNTABLE) {
+                if (parent != null && parent.info.settings.type == TrackType.TURNTABLE) {
                     // Odd shaped turntables don't work
                     parent.setTablePosition(VecUtil.toWrongYaw(new Vec3d(parent.getPos()).add(0.5, 0, 0.5)
                             .subtract(hit.add(pos))) + parent.info.placementInfo.yaw);
@@ -77,11 +74,14 @@ public class ItemLargeWrench extends CustomItem {
                 tileRailBase = tileRailBase.getReplacedTile();
             }
         } else if (player.hasPermission(Permissions.MACHINIST)) {
-            for (String key : MultiBlockRegistry.keys()) {
-                if (MultiBlockRegistry.get(key).tryCreate(world, pos)) {
-                    return ClickResult.ACCEPTED;
-                }
-            }
+            ClickResult result = MultiBlockRegistry.keys()
+                    .stream()
+                    .map(MultiBlockRegistry::get)
+                    .filter(multiBlock -> multiBlock.tryCreate(world, pos))
+                    .map(multiBlock -> ClickResult.ACCEPTED)
+                    .findFirst()
+                    .orElse(null);
+            if (result != null) return result;
         }
 
         return ClickResult.PASS;

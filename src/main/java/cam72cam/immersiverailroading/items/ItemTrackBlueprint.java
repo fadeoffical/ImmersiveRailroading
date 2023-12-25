@@ -27,7 +27,7 @@ import java.util.List;
 public class ItemTrackBlueprint extends CustomItem {
 
     public ItemTrackBlueprint() {
-        super(ImmersiveRailroading.MODID, "item_rail");
+        super(ImmersiveRailroading.MOD_ID, "item_rail");
 
         Fuzzy steel = Fuzzy.STEEL_INGOT;
         IRFuzzy.registerSteelRecipe(this, 3,

@@ -10,10 +10,11 @@ public enum AssemblyStep {
     ;
 
     public static AssemblyStep[] reverse() {
-        AssemblyStep[] ret = new AssemblyStep[values().length];
+        // todo: replace with ArrayUtils.reverse?
+        AssemblyStep[] value = new AssemblyStep[values().length];
         for (int i = 0; i < values().length; i++) {
-            ret[i] = values()[values().length - 1 - i];
+            value[i] = values()[values().length - 1 - i];
         }
-        return ret;
+        return value;
     }
 }

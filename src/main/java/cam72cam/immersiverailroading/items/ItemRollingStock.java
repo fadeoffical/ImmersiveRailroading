@@ -7,6 +7,7 @@ import cam72cam.immersiverailroading.library.ChatText;
 import cam72cam.immersiverailroading.library.CraftingType;
 import cam72cam.immersiverailroading.library.Gauge;
 import cam72cam.immersiverailroading.library.GuiText;
+import cam72cam.immersiverailroading.library.augment.Augment;
 import cam72cam.immersiverailroading.registry.CarPassengerDefinition;
 import cam72cam.immersiverailroading.registry.DefinitionManager;
 import cam72cam.immersiverailroading.registry.EntityRollingStockDefinition;
@@ -34,7 +35,7 @@ import java.util.stream.Collectors;
 public class ItemRollingStock extends BaseItemRollingStock {
 
     public ItemRollingStock() {
-        super(ImmersiveRailroading.MODID, "item_rolling_stock");
+        super(ImmersiveRailroading.MOD_ID, "item_rolling_stock");
     }
 
     @Override
@@ -115,33 +116,30 @@ public class ItemRollingStock extends BaseItemRollingStock {
     public ClickResult onClickBlock(Player player, World world, Vec3i pos, Player.Hand hand, Facing facing, Vec3d hit) {
         if (BlockUtil.isIRRail(world, pos)) {
             TileRailBase railBase = world.getBlockEntity(pos, TileRailBase.class);
-            if (railBase.getAugment() != null) {
-                switch (railBase.getAugment()) {
-                    case DETECTOR:
-                    case LOCO_CONTROL:
-                    case FLUID_LOADER:
-                    case FLUID_UNLOADER:
-                    case ITEM_LOADER:
-                    case ITEM_UNLOADER:
-                        if (!world.isServer) return ClickResult.ACCEPTED;
-                        Data data = new Data(player.getHeldItem(hand));
-                        EntityRollingStockDefinition rollingStockDefinition = data.rollingStockDefinition;
+            railBase.ifAugmentPresent(augment -> {
+                if (augment.doesNotFilter()) return;
+                if (!world.isServer) return;
 
-                        String definitionID = rollingStockDefinition != null ? rollingStockDefinition.defID : null;
+                Data data = new Data(player.getHeldItem(hand));
+                EntityRollingStockDefinition rollingStockDefinition = data.rollingStockDefinition;
+                String definitionId = rollingStockDefinition == null ? null : rollingStockDefinition.defID;
+                String stockName = rollingStockDefinition == null ? "Unknown" : rollingStockDefinition.name();
 
-                        boolean set = railBase.setAugmentFilter(definitionID);
-                        if (set) {
-                            String humanReadableDefinitionName = rollingStockDefinition != null ? rollingStockDefinition.name() : "Unknown";
-                            player.sendMessage(ChatText.SET_AUGMENT_FILTER.getMessage(humanReadableDefinitionName));
-                        } else player.sendMessage(ChatText.RESET_AUGMENT_FILTER.getMessage());
-                        return ClickResult.ACCEPTED;
-                    default:
-                        break;
-                }
-            }
+                augment.updateFilter(definitionId, result -> {
+                    if (result == Augment.FilterUpdateResult.SET) {
+                        player.sendMessage(ChatText.SET_AUGMENT_FILTER.getMessage(stockName));
+                    } else if (result == Augment.FilterUpdateResult.RESET) {
+                        player.sendMessage(ChatText.RESET_AUGMENT_FILTER.getMessage());
+                    } else if (result == Augment.FilterUpdateResult.UNSUPPORTED) {
+                        player.sendMessage(ChatText.UNSUPPORTED_AUGMENT_FILTER.getMessage());
+                    }
+                });
+            });
+            return ClickResult.ACCEPTED;
         }
         return tryPlaceStock(player, world, pos, hand, null);
     }
+
 
     @Override
     public boolean isValidArmor(ItemStack stack, ArmorSlot armorType, Entity entity) {

@@ -23,7 +23,7 @@ import java.util.List;
 public class ItemManual extends CustomItem {
 
     public ItemManual() {
-        super(ImmersiveRailroading.MODID, "item_manual");
+        super(ImmersiveRailroading.MOD_ID, "item_manual");
 
         Fuzzy steel = Fuzzy.STEEL_INGOT;
         IRFuzzy.registerSteelRecipe(this, 3,

@@ -14,12 +14,12 @@ public final class IRCommand extends Command {
 
     @Override
     public String getPrefix() {
-        return ImmersiveRailroading.MODID;
+        return ImmersiveRailroading.MOD_ID;
     }
 
     @Override
     public String getUsage() {
-        return "Usage: " + ImmersiveRailroading.MODID + " (reload|debug)";
+        return "Usage: " + ImmersiveRailroading.MOD_ID + " (reload|debug)";
     }
 
     @Override

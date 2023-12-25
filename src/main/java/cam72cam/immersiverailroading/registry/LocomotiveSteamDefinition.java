@@ -33,7 +33,7 @@ public class LocomotiveSteamDefinition extends LocomotiveDefinition {
 
     @Override
     protected Identifier defaultDataLocation() {
-        return new Identifier(ImmersiveRailroading.MODID, "rolling_stock/default/steam.caml");
+        return new Identifier(ImmersiveRailroading.MOD_ID, "rolling_stock/default/steam.caml");
     }
 
     @Override
@@ -70,7 +70,7 @@ public class LocomotiveSteamDefinition extends LocomotiveDefinition {
             this.quill = new Quilling(quilling);
         }
         if (this.whistle == null && (this.quill == null || !this.quill.canLoad())) {
-            this.quill = new Quilling(new Identifier(ImmersiveRailroading.MODID, "sounds/steam/default/quill.ogg"));
+            this.quill = new Quilling(new Identifier(ImmersiveRailroading.MOD_ID, "sounds/steam/default/quill.ogg"));
         }
     }
 
@@ -87,8 +87,8 @@ public class LocomotiveSteamDefinition extends LocomotiveDefinition {
     @Override
     protected GuiBuilder getDefaultOverlay(DataBlock data) throws IOException {
         return this.readCabCarFlag(data) ?
-                GuiBuilder.parse(new Identifier(ImmersiveRailroading.MODID, "gui/default/cab_car.caml")) :
-                GuiBuilder.parse(new Identifier(ImmersiveRailroading.MODID, "gui/default/steam.caml"));
+                GuiBuilder.parse(new Identifier(ImmersiveRailroading.MOD_ID, "gui/default/cab_car.caml")) :
+                GuiBuilder.parse(new Identifier(ImmersiveRailroading.MOD_ID, "gui/default/steam.caml"));
     }
 
     public FluidQuantity getTankCapacity(Gauge gauge) {

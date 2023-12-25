@@ -2,7 +2,7 @@ package cam72cam.immersiverailroading.util;
 
 import cam72cam.immersiverailroading.Config;
 import cam72cam.immersiverailroading.library.SwitchState;
-import cam72cam.immersiverailroading.library.TrackItems;
+import cam72cam.immersiverailroading.library.TrackType;
 import cam72cam.immersiverailroading.tile.TileRail;
 import cam72cam.immersiverailroading.tile.TileRailBase;
 import cam72cam.immersiverailroading.track.IIterableTrack;
@@ -23,12 +23,12 @@ public final class SwitchUtil {
     public static SwitchState getSwitchState(TileRail rail, Vec3d position) {
         if (rail == null) return SwitchState.NONE;
 
-        if (rail.info.settings.type != TrackItems.TURN && rail.info.settings.type != TrackItems.CUSTOM)
+        if (rail.info.settings.type != TrackType.TURN && rail.info.settings.type != TrackType.CUSTOM)
             return SwitchState.NONE;
 
         TileRail parent = rail.getParentTile();
         if (parent == null) return SwitchState.NONE;
-        if (parent.info.settings.type != TrackItems.SWITCH) return SwitchState.NONE;
+        if (parent.info.settings.type != TrackType.SWITCH) return SwitchState.NONE;
 
         if (position != null) {
             IIterableTrack switchBuilder = (IIterableTrack) parent.info.getBuilder(rail.getWorld());

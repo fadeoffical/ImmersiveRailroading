@@ -11,7 +11,7 @@ import java.util.function.Consumer;
 @TagMapped(RailSettings.Mapper.class)
 public class RailSettings {
     public final Gauge gauge;
-    public final TrackItems type;
+    public final TrackType type;
     public final int length;
     public final float degrees;
     public final float curvosity;
@@ -24,7 +24,7 @@ public class RailSettings {
     public final boolean isGradeCrossing;
     public final String track;
 
-    public RailSettings(Gauge gauge, String track, TrackItems type, int length, float degrees, float curvosity, TrackPositionType posType, TrackSmoothing smoothing, TrackDirection direction, ItemStack railBed, ItemStack railBedFill, boolean isPreview, boolean isGradeCrossing) {
+    public RailSettings(Gauge gauge, String track, TrackType type, int length, float degrees, float curvosity, TrackPositionType posType, TrackSmoothing smoothing, TrackDirection direction, ItemStack railBed, ItemStack railBedFill, boolean isPreview, boolean isGradeCrossing) {
         this.gauge = gauge;
         this.track = track;
         this.type = type;
@@ -93,7 +93,7 @@ public class RailSettings {
                         if (nbt.hasKey(fieldName)) {
                             return nbt.getEnum(fieldName, type);
                         }
-                        return nbt.getEnum("type", TrackItems.class) == TrackItems.SLOPE ?
+                        return nbt.getEnum("type", TrackType.class) == TrackType.SLOPE ?
                                 TrackSmoothing.NEITHER : TrackSmoothing.BOTH;
                     }
             ) {
@@ -111,7 +111,7 @@ public class RailSettings {
         private Gauge gauge;
 
         @TagField("type")
-        private TrackItems type;
+        private TrackType type;
 
         @TagField("length")
         private int length;
@@ -165,7 +165,7 @@ public class RailSettings {
         private Mutable(TagCompound data) throws SerializationException {
             // Defaults
             this.setGauge(Gauge.getClosestGauge(Gauges.STANDARD));
-            this.setType(TrackItems.STRAIGHT);
+            this.setType(TrackType.STRAIGHT);
             this.setTrack("default");
             this.setLength(10);
             this.setDegrees(90);
@@ -207,11 +207,11 @@ public class RailSettings {
             this.gauge = gauge;
         }
 
-        public TrackItems getType() {
+        public TrackType getType() {
             return this.type;
         }
 
-        public void setType(TrackItems type) {
+        public void setType(TrackType type) {
             this.type = type;
         }
 

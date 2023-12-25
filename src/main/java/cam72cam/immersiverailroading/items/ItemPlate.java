@@ -21,7 +21,7 @@ import java.util.List;
 public class ItemPlate extends CustomItem {
 
     public ItemPlate() {
-        super(ImmersiveRailroading.MODID, "item_plate");
+        super(ImmersiveRailroading.MOD_ID, "item_plate");
     }
 
     @Override

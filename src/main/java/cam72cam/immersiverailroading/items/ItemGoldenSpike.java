@@ -23,7 +23,7 @@ import java.util.List;
 
 public class ItemGoldenSpike extends CustomItem {
     public ItemGoldenSpike() {
-        super(ImmersiveRailroading.MODID, "item_golden_spike");
+        super(ImmersiveRailroading.MOD_ID, "item_golden_spike");
 
         Fuzzy gold = Fuzzy.GOLD_INGOT;
         Recipes.shapedRecipe(this, 2,

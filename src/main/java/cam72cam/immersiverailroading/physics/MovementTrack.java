@@ -2,7 +2,7 @@ package cam72cam.immersiverailroading.physics;
 
 import cam72cam.immersiverailroading.ImmersiveRailroading;
 import cam72cam.immersiverailroading.library.Gauge;
-import cam72cam.immersiverailroading.library.TrackItems;
+import cam72cam.immersiverailroading.library.TrackType;
 import cam72cam.immersiverailroading.thirdparty.trackapi.Track;
 import cam72cam.immersiverailroading.tile.TileRail;
 import cam72cam.immersiverailroading.tile.TileRailBase;
@@ -111,10 +111,10 @@ public class MovementTrack {
         double distance = delta.length();
         double heightOffset = railHeight * rail.info.settings.gauge.scale();
 
-        if (rail.info.settings.type == TrackItems.CROSSING) {
+        if (rail.info.settings.type == TrackType.CROSSING) {
             delta = VecUtil.fromWrongYaw(distance, Facing.fromAngle(VecUtil.toWrongYaw(delta)).getAngle());
             return currentPosition.add(delta);
-        } else if (rail.info.settings.type == TrackItems.TURNTABLE) {
+        } else if (rail.info.settings.type == TrackType.TURNTABLE) {
             double tablePos = rail.getParentTile().info.tablePos;
 
             currentPosition = currentPosition.add(delta);

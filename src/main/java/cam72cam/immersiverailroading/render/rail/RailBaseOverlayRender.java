@@ -10,7 +10,7 @@ import cam72cam.mod.render.opengl.Texture;
 
 import java.util.List;
 
-public class RailBaseOverlayRender {
+public final class RailBaseOverlayRender {
     private static final ExpireableMap<String, DirectDraw> cache = new ExpireableMap<String, DirectDraw>() {
         @Override
         public int lifespan() {
@@ -41,47 +41,47 @@ public class RailBaseOverlayRender {
 
         for (TrackBase base : tracks) {
             boolean canPlace = base.canPlaceTrack();
-            if (!canPlace) {
-                Vec3i tpos = base.getPos();
-                tpos = tpos.subtract(placePos);
+            if (canPlace) continue;
 
-                double width = 1.002;
-                double height = base.getBedHeight() + 0.2f;
-                double x = tpos.x + -0.001;
-                double y = tpos.y;
-                double z = tpos.z + 0.001 + 1;
+            Vec3i tpos = base.getPos();
+            tpos = tpos.subtract(placePos);
 
-                // front
-                draw.vertex(x + 0.0f, y + 0.0f, z + 0.0f);
-                draw.vertex(x + width, y + 0.0f, z + 0.0f);
-                draw.vertex(x + width, y + height, z + 0.0f);
-                draw.vertex(x + 0.0f, y + height, z + 0.0f);
-                // back
-                draw.vertex(x + 0.0f, y + height, z + -width);
-                draw.vertex(x + width, y + height, z + -width);
-                draw.vertex(x + width, y + 0.0f, z + -width);
-                draw.vertex(x + 0.0f, y + 0.0f, z + -width);
-                // right
-                draw.vertex(x + width, y + 0.0f, z + 0.0f);
-                draw.vertex(x + width, y + 0.0f, z + -width);
-                draw.vertex(x + width, y + height, z + -width);
-                draw.vertex(x + width, y + height, z + 0.0f);
-                // left
-                draw.vertex(x + 0.0f, y + height, z + 0.0f);
-                draw.vertex(x + 0.0f, y + height, z + -width);
-                draw.vertex(x + 0.0f, y + 0.0f, z + -width);
-                draw.vertex(x + 0.0f, y + 0.0f, z + 0.0f);
-                // top
-                draw.vertex(x + 0.0f, y + height, z + 0.0f);
-                draw.vertex(x + width, y + height, z + 0.0f);
-                draw.vertex(x + width, y + height, z + -width);
-                draw.vertex(x + 0.0f, y + height, z + -width);
-                // bottom
-                draw.vertex(x + 0.0f, y + 0.0f, z + 0.0f);
-                draw.vertex(x + width, y + 0.0f, z + 0.0f);
-                draw.vertex(x + width, y + 0.0f, z + -width);
-                draw.vertex(x + 0.0f, y + 0.0f, z + -width);
-            }
+            double width = 1.002;
+            double height = base.getBedHeight() + 0.2f;
+            double x = tpos.x - 0.001;
+            double y = tpos.y;
+            double z = tpos.z + 0.001 + 1;
+
+            // front
+            draw.vertex(x + 0.0f, y + 0.0f, z + 0.0f);
+            draw.vertex(x + width, y + 0.0f, z + 0.0f);
+            draw.vertex(x + width, y + height, z + 0.0f);
+            draw.vertex(x + 0.0f, y + height, z + 0.0f);
+            // back
+            draw.vertex(x + 0.0f, y + height, z - width);
+            draw.vertex(x + width, y + height, z - width);
+            draw.vertex(x + width, y + 0.0f, z - width);
+            draw.vertex(x + 0.0f, y + 0.0f, z - width);
+            // right
+            draw.vertex(x + width, y + 0.0f, z + 0.0f);
+            draw.vertex(x + width, y + 0.0f, z - width);
+            draw.vertex(x + width, y + height, z - width);
+            draw.vertex(x + width, y + height, z + 0.0f);
+            // left
+            draw.vertex(x + 0.0f, y + height, z + 0.0f);
+            draw.vertex(x + 0.0f, y + height, z - width);
+            draw.vertex(x + 0.0f, y + 0.0f, z - width);
+            draw.vertex(x + 0.0f, y + 0.0f, z + 0.0f);
+            // top
+            draw.vertex(x + 0.0f, y + height, z + 0.0f);
+            draw.vertex(x + width, y + height, z + 0.0f);
+            draw.vertex(x + width, y + height, z - width);
+            draw.vertex(x + 0.0f, y + height, z - width);
+            // bottom
+            draw.vertex(x + 0.0f, y + 0.0f, z + 0.0f);
+            draw.vertex(x + width, y + 0.0f, z + 0.0f);
+            draw.vertex(x + width, y + 0.0f, z - width);
+            draw.vertex(x + 0.0f, y + 0.0f, z - width);
         }
         return draw;
     }

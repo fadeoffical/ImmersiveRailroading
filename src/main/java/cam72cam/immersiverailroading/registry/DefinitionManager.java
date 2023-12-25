@@ -3,11 +3,13 @@ package cam72cam.immersiverailroading.registry;
 import cam72cam.immersiverailroading.Config.ConfigPerformance;
 import cam72cam.immersiverailroading.ImmersiveRailroading;
 import cam72cam.immersiverailroading.library.Gauge;
+import cam72cam.immersiverailroading.model.StockModel;
 import cam72cam.immersiverailroading.model.TrackModel;
 import cam72cam.immersiverailroading.util.CAML;
 import cam72cam.immersiverailroading.util.DataBlock;
 import cam72cam.immersiverailroading.util.JSON;
 import cam72cam.mod.gui.Progress;
+import cam72cam.mod.model.obj.OBJModel;
 import cam72cam.mod.resource.Identifier;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -21,7 +23,8 @@ import java.util.concurrent.ForkJoinWorkerThread;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class DefinitionManager {
+public final class DefinitionManager {
+
     private static final Map<String, StockLoader> stockLoaders;
     private static Map<String, EntityRollingStockDefinition> definitions;
     private static Map<String, TrackDefinition> tracks;
@@ -50,19 +53,18 @@ public class DefinitionManager {
 
     public static void initDefinitions() {
         if (definitions != null) {
-            for (EntityRollingStockDefinition def : definitions.values()) {
-                if (def.model != null) {
-                    def.model.free();
-                }
-            }
+            definitions.values()
+                    .stream()
+                    .map(EntityRollingStockDefinition::getModel)
+                    .filter(Objects::nonNull)
+                    .forEach(StockModel::free);
         }
 
         if (tracks != null) {
-            for (TrackDefinition def : tracks.values()) {
-                for (TrackModel model : def.models) {
-                    model.free();
-                }
-            }
+            tracks.values().stream()
+                    .map(definitions -> definitions.models)
+                    .flatMap(Collection::stream)
+                    .forEach(OBJModel::free);
         }
 
 
@@ -127,13 +129,13 @@ public class DefinitionManager {
 
         List<DataBlock> blocks = new ArrayList<>();
 
-        Identifier gauges_json = new Identifier(ImmersiveRailroading.MODID, "rolling_stock/gauges.json");
+        Identifier gauges_json = new Identifier(ImmersiveRailroading.MOD_ID, "rolling_stock/gauges.json");
         List<InputStream> inputs = gauges_json.getResourceStreamAll();
         for (InputStream input : inputs) {
             blocks.add(JSON.parse(input));
         }
 
-        Identifier gauges_caml = new Identifier(ImmersiveRailroading.MODID, "rolling_stock/gauges.caml");
+        Identifier gauges_caml = new Identifier(ImmersiveRailroading.MOD_ID, "rolling_stock/gauges.caml");
         inputs = gauges_caml.getResourceStreamAll();
         for (InputStream input : inputs) {
             blocks.add(CAML.parse(input));
@@ -170,13 +172,13 @@ public class DefinitionManager {
 
         List<DataBlock> blocks = new ArrayList<>();
 
-        Identifier stock_json = new Identifier(ImmersiveRailroading.MODID, "rolling_stock/stock.json");
+        Identifier stock_json = new Identifier(ImmersiveRailroading.MOD_ID, "rolling_stock/stock.json");
         List<InputStream> inputs = stock_json.getResourceStreamAll();
         for (InputStream input : inputs) {
             blocks.add(JSON.parse(input));
         }
 
-        Identifier stock_caml = new Identifier(ImmersiveRailroading.MODID, "rolling_stock/stock.caml");
+        Identifier stock_caml = new Identifier(ImmersiveRailroading.MOD_ID, "rolling_stock/stock.caml");
         inputs = stock_caml.getResourceStreamAll();
         for (InputStream input : inputs) {
             blocks.add(CAML.parse(input));
@@ -210,30 +212,30 @@ public class DefinitionManager {
 
         Progress.Bar bar = Progress.push("Loading Models", definitionIDMap.size());
 
-        Map<String, EntityRollingStockDefinition> loaded = getStockLoadingStream(definitionIDMap.entrySet()).map(tuple -> {
-            String defID = tuple.getKey();
-            String defType = tuple.getValue();
+        Map<String, EntityRollingStockDefinition> loaded = getStockLoadingStream(definitionIDMap.entrySet()).map(entry -> {
+            String definitionId = entry.getKey();
+            String definitionType = entry.getValue();
 
-            ImmersiveRailroading.debug("Loading stock " + defID);
-            Identifier resource = new Identifier(ImmersiveRailroading.MODID, defID);
+            ImmersiveRailroading.debug("Loading stock " + definitionId);
+            Identifier resource = new Identifier(ImmersiveRailroading.MOD_ID, definitionId);
 
             try {
                 if (!resource.canLoad()) {
                     resource = new Identifier(resource.getDomain(), resource.getPath().replace(".json", ".caml"));
                 }
                 if (!resource.canLoad()) {
-                    ImmersiveRailroading.error("Unable to load stock %s: file not found", defID);
+                    ImmersiveRailroading.error("Unable to load stock %s: file not found", definitionId);
                     return null;
                 }
 
                 DataBlock block = DataBlock.load(resource);
 
-                if (definitionIDPacks.containsKey(defID) && block.getValue("pack").asString() == null) {
+                if (definitionIDPacks.containsKey(definitionId) && block.getValue("pack").asString() == null) {
                     // This is kind of a nasty hack...
-                    block.getValueMap().put("pack", definitionIDPacks.get(defID));
+                    block.getValueMap().put("pack", definitionIDPacks.get(definitionId));
                 }
 
-                EntityRollingStockDefinition stockDefinition = stockLoaders.get(defType).apply(defID, block);
+                EntityRollingStockDefinition stockDefinition = stockLoaders.get(definitionType).apply(definitionId, block);
 
                 Runtime runtime = Runtime.getRuntime();
                 if (runtime.freeMemory() < runtime.maxMemory() * 0.25) {
@@ -243,13 +245,13 @@ public class DefinitionManager {
 
                 return Pair.of(stockDefinition.defID, stockDefinition);
             } catch (Exception e) {
-                ImmersiveRailroading.error("Error loading model %s of type %s", defID, defType);
+                ImmersiveRailroading.error("Error loading model %s of type %s", definitionId, definitionType);
                 ImmersiveRailroading.catching(e);
 
                 return null;
             } finally {
                 synchronized (bar) {
-                    bar.step(defID);
+                    bar.step(definitionId);
                 }
             }
         }).filter(Objects::nonNull).collect(Collectors.toMap(Pair::getKey, Pair::getValue));
@@ -267,13 +269,13 @@ public class DefinitionManager {
 
         List<DataBlock> blocks = new ArrayList<>();
 
-        Identifier track_json = new Identifier(ImmersiveRailroading.MODID, "track/track.json");
+        Identifier track_json = new Identifier(ImmersiveRailroading.MOD_ID, "track/track.json");
         List<InputStream> inputs = track_json.getResourceStreamAll();
         for (InputStream input : inputs) {
             blocks.add(JSON.parse(input));
         }
 
-        Identifier track_caml = new Identifier(ImmersiveRailroading.MODID, "track/track.caml");
+        Identifier track_caml = new Identifier(ImmersiveRailroading.MOD_ID, "track/track.caml");
         inputs = track_caml.getResourceStreamAll();
         for (InputStream input : inputs) {
             blocks.add(CAML.parse(input));
@@ -325,13 +327,13 @@ public class DefinitionManager {
 
         List<DataBlock> blocks = new ArrayList<>();
 
-        Identifier blacklist_json = new Identifier(ImmersiveRailroading.MODID, "rolling_stock/blacklist.json");
+        Identifier blacklist_json = new Identifier(ImmersiveRailroading.MOD_ID, "rolling_stock/blacklist.json");
         List<InputStream> inputs = blacklist_json.getResourceStreamAll();
         for (InputStream input : inputs) {
             blocks.add(JSON.parse(input));
         }
 
-        Identifier blacklist_caml = new Identifier(ImmersiveRailroading.MODID, "rolling_stock/blacklist.caml");
+        Identifier blacklist_caml = new Identifier(ImmersiveRailroading.MOD_ID, "rolling_stock/blacklist.caml");
         inputs = blacklist_caml.getResourceStreamAll();
         for (InputStream input : inputs) {
             blocks.add(CAML.parse(input));
@@ -353,14 +355,11 @@ public class DefinitionManager {
      * Get a stream for a collection that is used to load stocks in a singlethreaded or a multithreaded way.
      *
      * @param collection Collection of items.
-     * @param <E>        Type of item.
+     * @param <Type>        Type of item.
      * @return Singlethreaded or multithreaded stream.
      */
-    private static <E> Stream<E> getStockLoadingStream(Collection<E> collection) {
-        if (!ConfigPerformance.multithreadedStockLoading) {
-            return collection.stream();
-        }
-        return collection.parallelStream();
+    private static <Type> Stream<Type> getStockLoadingStream(Collection<Type> collection) {
+        return !ConfigPerformance.multithreadedStockLoading ? collection.stream() : collection.parallelStream();
     }
 
     public static EntityRollingStockDefinition getDefinition(String defID) {
@@ -395,7 +394,10 @@ public class DefinitionManager {
         return def;
     }
 
+    private DefinitionManager() {}
+
     @FunctionalInterface
+
     private interface StockLoader {
         EntityRollingStockDefinition apply(String defID, DataBlock data) throws Exception;
     }

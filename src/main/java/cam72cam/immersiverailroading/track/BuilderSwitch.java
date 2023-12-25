@@ -1,6 +1,6 @@
 package cam72cam.immersiverailroading.track;
 
-import cam72cam.immersiverailroading.library.TrackItems;
+import cam72cam.immersiverailroading.library.TrackType;
 import cam72cam.immersiverailroading.util.RailInfo;
 import cam72cam.mod.item.ItemStack;
 import cam72cam.mod.math.Vec3d;
@@ -21,7 +21,7 @@ public class BuilderSwitch extends BuilderBase implements IIterableTrack {
     public BuilderSwitch(RailInfo info, World world, Vec3i pos) {
         super(info, world, pos);
 
-        RailInfo turnInfo = info.withSettings(b -> b.setType(info.customInfo.placementPosition.equals(info.placementInfo.placementPosition) ? TrackItems.TURN : TrackItems.CUSTOM));
+        RailInfo turnInfo = info.withSettings(b -> b.setType(info.customInfo.placementPosition.equals(info.placementInfo.placementPosition) ? TrackType.TURN : TrackType.CUSTOM));
         RailInfo straightInfo = info;
 
         {
@@ -45,7 +45,7 @@ public class BuilderSwitch extends BuilderBase implements IIterableTrack {
 
 
         this.straightBuilder = new BuilderStraight(straightInfo, world, pos, true);
-        this.straightBuilderReal = new BuilderStraight(straightInfo.withSettings(b -> b.setType(TrackItems.STRAIGHT)), world, pos, true);
+        this.straightBuilderReal = new BuilderStraight(straightInfo.withSettings(b -> b.setType(TrackType.STRAIGHT)), world, pos, true);
 
         this.turnBuilder.overrideFlexible = true;
 

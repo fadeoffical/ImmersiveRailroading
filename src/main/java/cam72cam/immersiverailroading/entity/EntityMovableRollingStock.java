@@ -4,10 +4,10 @@ import cam72cam.immersiverailroading.Config;
 import cam72cam.immersiverailroading.entity.physics.SimulationState;
 import cam72cam.immersiverailroading.entity.physics.chrono.ChronoState;
 import cam72cam.immersiverailroading.entity.physics.chrono.ServerChronoState;
-import cam72cam.immersiverailroading.library.Augment;
 import cam72cam.immersiverailroading.library.KeyTypes;
 import cam72cam.immersiverailroading.library.ModelComponentType;
 import cam72cam.immersiverailroading.library.Permissions;
+import cam72cam.immersiverailroading.library.augment.impl.SpeedRetarderAugment;
 import cam72cam.immersiverailroading.library.unit.Speed;
 import cam72cam.immersiverailroading.model.part.Control;
 import cam72cam.immersiverailroading.net.SoundPacket;
@@ -25,6 +25,7 @@ import cam72cam.mod.serialization.TagField;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public abstract class EntityMovableRollingStock extends EntityRidableRollingStock implements ICollision {
@@ -151,16 +152,15 @@ public abstract class EntityMovableRollingStock extends EntityRidableRollingStoc
                             .scale()), this.soundScale(), SoundPacket.PacketSoundCategory.COLLISION).sendToObserving(this);
                 }
 
-                for (Vec3i bp : state.blocksToBreak) {
-                    this.getWorld().breakBlock(bp, Config.ConfigDamage.dropSnowBalls || !this.getWorld().isSnow(bp));
-                }
-                for (Vec3i bp : state.trackToUpdate) {
-                    TileRailBase te = this.getWorld().getBlockEntity(bp, TileRailBase.class);
-                    if (te != null) {
-                        te.cleanSnow();
-                        te.stockOverhead(this);
-                    }
-                }
+                state.blocksToBreak.forEach(blockPosition -> this.getWorld()
+                        .breakBlock(blockPosition, Config.ConfigDamage.dropSnowBalls || !this.getWorld().isSnow(blockPosition)));
+                state.trackToUpdate.stream()
+                        .map(blockPosition -> this.getWorld().getBlockEntity(blockPosition, TileRailBase.class))
+                        .filter(Objects::nonNull)
+                        .forEach(rail -> {
+                            rail.cleanSnow();
+                            rail.stockOverhead(this);
+                        });
             }
         }
 
@@ -443,23 +443,19 @@ public abstract class EntityMovableRollingStock extends EntityRidableRollingStoc
 
     @Override
     protected float defaultControlPosition(Control<?> control) {
-        switch (control.part.type) {
-            case INDEPENDENT_BRAKE_X:
-                return this.getDefinition().isLinearBrakeControl() ? 0 : 0.5f;
-            default:
-                return super.defaultControlPosition(control);
+        if (Objects.requireNonNull(control.part.type) == ModelComponentType.INDEPENDENT_BRAKE_X) {
+            return this.getDefinition().isLinearBrakeControl() ? 0 : 0.5f;
         }
+        return super.defaultControlPosition(control);
     }
 
     @Override
     public void onDrag(Control<?> control, double newValue) {
         super.onDrag(control, newValue);
-        switch (control.part.type) {
-            case INDEPENDENT_BRAKE_X:
-                if (this.getDefinition().isLinearBrakeControl()) {
-                    this.setIndependentBrake(this.getControlPosition(control));
-                }
-                break;
+        if (Objects.requireNonNull(control.part.type) == ModelComponentType.INDEPENDENT_BRAKE_X) {
+            if (this.getDefinition().isLinearBrakeControl()) {
+                this.setIndependentBrake(this.getControlPosition(control));
+            }
         }
     }
 
@@ -491,20 +487,23 @@ public abstract class EntityMovableRollingStock extends EntityRidableRollingStoc
     }
 
     public double getDirectFrictionNewtons(List<Vec3i> track) {
+
+        double retarderNewtons = track.stream()
+                .map(position -> this.getWorld().getBlockEntity(position, TileRailBase.class))
+                .filter(Objects::nonNull)
+                .filter(tileRailBase -> tileRailBase.isAugmentOfType(SpeedRetarderAugment.class))
+                .map(TileRailBase::getPos)
+                .mapToInt(position -> this.getWorld().getRedstone(position))
+                .sum();
+
+        retarderNewtons /= 15f / track.size();
+
+        double directFrictionCoefficient = this.getDefinition().directFrictionCoefficient;
+        double independentNewtons = this.getIndependentBrake() * directFrictionCoefficient;
+        double pressureNewtons = this.getBrakePressure() * directFrictionCoefficient;
+
         double newtons = this.getWeight() * 9.8;
-        double retardedNewtons = 0;
-        for (Vec3i bp : track) {
-            TileRailBase te = this.getWorld().getBlockEntity(bp, TileRailBase.class);
-            if (te != null) {
-                if (te.getAugment() == Augment.SPEED_RETARDER) {
-                    double red = this.getWorld().getRedstone(bp);
-                    retardedNewtons += red / 15f / track.size() * newtons;
-                }
-            }
-        }
-        double independentNewtons = this.getDefinition().directFrictionCoefficient * this.getIndependentBrake() * newtons;
-        double pressureNewtons = this.getDefinition().directFrictionCoefficient * this.getBrakePressure() * newtons;
-        return retardedNewtons + independentNewtons + pressureNewtons;
+        return (retarderNewtons + independentNewtons + pressureNewtons) * newtons;
     }
 
     public float getBrakePressure() {

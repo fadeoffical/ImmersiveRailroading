@@ -7,7 +7,7 @@ import cam72cam.immersiverailroading.entity.Tender;
 import cam72cam.immersiverailroading.entity.physics.chrono.ServerChronoState;
 import cam72cam.immersiverailroading.library.Gauge;
 import cam72cam.immersiverailroading.library.PhysicalMaterials;
-import cam72cam.immersiverailroading.library.TrackItems;
+import cam72cam.immersiverailroading.library.TrackType;
 import cam72cam.immersiverailroading.physics.MovementTrack;
 import cam72cam.immersiverailroading.thirdparty.trackapi.Track;
 import cam72cam.immersiverailroading.tile.TileRailBase;
@@ -238,13 +238,13 @@ public class SimulationState {
                     (
                             //frontBase.getTicksExisted() < 100 ||
                             frontBase.getParentTile() != null &&
-                                    frontBase.getParentTile().info.settings.type == TrackItems.TURNTABLE
+                                    frontBase.getParentTile().info.settings.type == TrackType.TURNTABLE
                     );
             isTurnTable = isTurnTable || rearBase != null &&
                     (
                             //rearBase.getTicksExisted() < 100 ||
                             rearBase.getParentTile() != null &&
-                                    rearBase.getParentTile().info.settings.type == TrackItems.TURNTABLE
+                                    rearBase.getParentTile().info.settings.type == TrackType.TURNTABLE
                     );
 
             if (!isTurnTable) {

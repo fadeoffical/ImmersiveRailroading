@@ -26,7 +26,7 @@ public class CarFreightDefinition extends FreightDefinition {
 
     @Override
     protected Identifier defaultDataLocation() {
-        return new Identifier(ImmersiveRailroading.MODID, "rolling_stock/default/freight.caml");
+        return new Identifier(ImmersiveRailroading.MOD_ID, "rolling_stock/default/freight.caml");
     }
 
     @Override

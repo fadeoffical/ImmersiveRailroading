@@ -4,6 +4,9 @@ import cam72cam.immersiverailroading.render.SmokeParticle.SmokeParticleData;
 
 import java.util.function.Consumer;
 
-public class Particles {
+public final class Particles {
+
     public static Consumer<SmokeParticleData> SMOKE;
+
+    private Particles() {}
 }

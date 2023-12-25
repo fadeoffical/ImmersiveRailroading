@@ -51,7 +51,7 @@ public class StockItemModel implements ItemRender.ISpriteItemModel {
             return null;
         }
         return new Identifier(
-                ImmersiveRailroading.MODID,
+                ImmersiveRailroading.MOD_ID,
                 data.rollingStockDefinition.defID + "_" +
                         data.rollingStockDefinition.getModel().hash + "_" +
                         (!ConfigGraphics.stockItemVariants || data.texture == null ? "" : data.texture)

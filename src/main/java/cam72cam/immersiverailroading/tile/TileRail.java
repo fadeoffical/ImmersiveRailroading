@@ -5,7 +5,7 @@ import cam72cam.immersiverailroading.IRBlocks;
 import cam72cam.immersiverailroading.entity.EntityCoupleableRollingStock;
 import cam72cam.immersiverailroading.entity.physics.Simulation;
 import cam72cam.immersiverailroading.library.SwitchState;
-import cam72cam.immersiverailroading.library.TrackItems;
+import cam72cam.immersiverailroading.library.TrackType;
 import cam72cam.immersiverailroading.registry.DefinitionManager;
 import cam72cam.immersiverailroading.track.TrackBase;
 import cam72cam.immersiverailroading.util.MathUtil;
@@ -19,9 +19,13 @@ import cam72cam.mod.serialization.TagField;
 import cam72cam.mod.serialization.TagMapper;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-public class TileRail extends TileRailBase {
+public final class TileRail extends TileRailBase {
+
+    private static final float FULL_CIRCLE = 360f;
+
     @TagField("info")
     public RailInfo info;
 
@@ -36,37 +40,34 @@ public class TileRail extends TileRailBase {
 
     @Override
     public IBoundingBox getRenderBoundingBox() {
-        if (this.info == null) {
-            return IBoundingBox.ORIGIN;
+        if (this.info == null) return IBoundingBox.ORIGIN;
+
+        if (this.boundingBox != null) return this.boundingBox;
+
+        int length = this.info.settings.length;
+        if (this.info.settings.type == TrackType.CUSTOM && !this.info.customInfo.placementPosition.equals(this.info.placementInfo.placementPosition)) {
+            length = (int) this.info.customInfo.placementPosition.distanceTo(this.info.placementInfo.placementPosition);
         }
-        if (this.boundingBox == null) {
-            int length = this.info.settings.length;
-            if (this.info.settings.type == TrackItems.CUSTOM && !this.info.customInfo.placementPosition.equals(this.info.placementInfo.placementPosition)) {
-                length = (int) this.info.customInfo.placementPosition.distanceTo(this.info.placementInfo.placementPosition);
-            }
-            this.boundingBox = IBoundingBox.ORIGIN.grow(new Vec3d(length, length, length));
-        }
+        this.boundingBox = IBoundingBox.ORIGIN.grow(new Vec3d(length, length, length));
         return this.boundingBox;
     }
 
     @Override
     public double getRenderDistance() {
-        return 8 * 32;
+        return 256;
     }
 
     public void setSwitchState(SwitchState state) {
-        if (state != this.info.switchState) {
-            this.info = this.info.with(b -> b.switchState = state);
-            this.markDirty();
-        }
+        if (state == this.info.switchState) return;
+        this.info = this.info.with(b -> b.switchState = state);
+        this.markDirty();
     }
 
     public void setTablePosition(float angle) {
-
-        angle = ((angle % 360) + 360) % 360;
+        angle = ((angle % FULL_CIRCLE) + FULL_CIRCLE) % FULL_CIRCLE;
         int slotsPerCircle = Config.ConfigBalance.AnglePlacementSegmentation * 4;
         // 0 -> slotsPerCircle
-        int dest = Math.round((angle / (360f / slotsPerCircle)));
+        int dest = Math.round((angle / (FULL_CIRCLE / slotsPerCircle)));
 
         // This is probably stupidly overcomplicated, but it works...
         int delta = MathUtil.deltaMod(this.tableIndex, dest, slotsPerCircle);
@@ -89,7 +90,7 @@ public class TileRail extends TileRailBase {
     }
 
     public List<ItemStack> getDrops() {
-        return this.drops;
+        return Collections.unmodifiableList(this.drops);
     }
 
     public void setDrops(List<ItemStack> drops) {
@@ -97,9 +98,7 @@ public class TileRail extends TileRailBase {
     }
 
     public void markAllDirty() {
-        if (this.info.settings == null) {
-            return;
-        }
+        if (this.info.settings == null) return;
         this.percentFloating(); // initialize track cache
 
         for (TrackBase track : this.tracks) {
@@ -114,28 +113,25 @@ public class TileRail extends TileRailBase {
     }
 
     public double percentFloating() {
-        int floating = 0;
-        int total = 0;
-
-        if (this.info.settings == null) {
-            return 0;
-        }
+        if (this.info.settings == null) return 0;
 
         if (this.tracks == null) {
-            this.tracks = (this.info.settings.type == TrackItems.SWITCH ? this.info.withSettings(b -> b.setType(TrackItems.STRAIGHT)) : this.info).getBuilder(this.getWorld(), new Vec3i(this.info.placementInfo.placementPosition).add(this.getPos()))
+            this.tracks = (this.info.settings.type == TrackType.SWITCH ? this.info.withSettings(b -> b.setType(TrackType.STRAIGHT)) : this.info).getBuilder(this.getWorld(), new Vec3i(this.info.placementInfo.placementPosition).add(this.getPos()))
                     .getTracksForFloating();
             // This is just terrible
             Vec3i offset = this.getPos().subtract(this.tracks.get(0).getPos());
-            this.tracks = (this.info.settings.type == TrackItems.SWITCH ? this.info.withSettings(b -> b.setType(TrackItems.STRAIGHT)) : this.info).getBuilder(this.getWorld(), new Vec3i(this.info.placementInfo.placementPosition).add(this.getPos().add(offset)))
+            this.tracks = (this.info.settings.type == TrackType.SWITCH ? this.info.withSettings(b -> b.setType(TrackType.STRAIGHT)) : this.info).getBuilder(this.getWorld(), new Vec3i(this.info.placementInfo.placementPosition).add(this.getPos().add(offset)))
                     .getTracksForFloating();
         }
 
 
+        int floating = 0;
+        int total = 0;
         for (TrackBase track : this.tracks) {
-            Vec3i tpos = track.getPos();
+            Vec3i trackPosition = track.getPos();
             total++;
 
-            if (!this.getWorld().isBlockLoaded(tpos) || !((this.getWorld().isBlock(tpos, IRBlocks.BLOCK_RAIL) || this.getWorld().isBlock(tpos, IRBlocks.BLOCK_RAIL_GAG)))) {
+            if (!this.getWorld().isBlockLoaded(trackPosition) || !((this.getWorld().isBlock(trackPosition, IRBlocks.BLOCK_RAIL) || this.getWorld().isBlock(trackPosition, IRBlocks.BLOCK_RAIL_GAG)))) {
                 return 0;
             }
             if (!track.isDownSolid(false)) {
@@ -165,61 +161,59 @@ public class TileRail extends TileRailBase {
     public void update() {
         super.update();
 
-        if (this.getWorld().isServer && this.info != null && this.info.settings.type == TrackItems.TURNTABLE) {
-            int slotsPerCircle = Config.ConfigBalance.AnglePlacementSegmentation * 4;
-            float desiredPosition = (360f / slotsPerCircle) * this.tableIndex;
-            double speed = Config.ConfigBalance.TurnTableSpeed;
-            if (desiredPosition != this.info.tablePos) {
-                if (Math.abs(desiredPosition - this.info.tablePos) < speed) {
-                    this.info = this.info.with(b -> b.tablePos = desiredPosition);
-                } else {
-                    // Again, this math is horrific and is probably wayyyyy overcomplicated
-                    double dp = MathUtil.deltaAngle(this.info.tablePos + speed, desiredPosition);
-                    double dn = MathUtil.deltaAngle(this.info.tablePos - speed, desiredPosition);
-                    dp = MathUtil.deltaAngle(0, dp + 360);
-                    dn = MathUtil.deltaAngle(0, dn + 360);
-                    double delta = Math.abs(dp) <
-                            Math.abs(dn) ?
-                            speed : -speed;
-                    this.info = this.info.with(b -> b.tablePos = (((b.tablePos + delta) % 360) + 360) % 360);
-                }
-                this.markDirty();
-                List<EntityCoupleableRollingStock> ents = this.getWorld().getEntities((EntityCoupleableRollingStock stock) -> stock.getPosition()
-                        .distanceTo(new Vec3d(this.getPos())) < this.info.settings.length, EntityCoupleableRollingStock.class);
-                for (EntityCoupleableRollingStock stock : ents) {
-                    stock.states.forEach(state -> state.dirty = true);
-                    Simulation.forceQuickUpdates = true;
-                }
-            }
+        if (!this.getWorld().isServer) return;
+        if (this.info == null) return;
+        if (this.info.settings.type == TrackType.TURNTABLE) return;
+
+        int slotsPerCircle = Config.ConfigBalance.AnglePlacementSegmentation * 4;
+        float desiredPosition = (FULL_CIRCLE / slotsPerCircle) * this.tableIndex;
+        double speed = Config.ConfigBalance.TurnTableSpeed;
+
+        if (desiredPosition == this.info.tablePos) return;
+
+        if (Math.abs(desiredPosition - this.info.tablePos) < speed) {
+            this.info = this.info.with(b -> b.tablePos = desiredPosition);
+        } else {
+            // Again, this math is horrific and is probably wayyyyy overcomplicated
+            double dp = MathUtil.deltaAngle(this.info.tablePos + speed, desiredPosition);
+            double dn = MathUtil.deltaAngle(this.info.tablePos - speed, desiredPosition);
+            dp = MathUtil.deltaAngle(0, dp + FULL_CIRCLE);
+            dn = MathUtil.deltaAngle(0, dn + FULL_CIRCLE);
+            double delta = Math.abs(dp) < Math.abs(dn) ? speed : -speed;
+            this.info = this.info.with(b -> b.tablePos = (((b.tablePos + delta) % FULL_CIRCLE) + FULL_CIRCLE) % FULL_CIRCLE);
+        }
+        this.markDirty();
+        List<EntityCoupleableRollingStock> ents = this.getWorld().getEntities((EntityCoupleableRollingStock stock) -> stock.getPosition()
+                .distanceTo(new Vec3d(this.getPos())) < this.info.settings.length, EntityCoupleableRollingStock.class);
+        for (EntityCoupleableRollingStock stock : ents) {
+            stock.states.forEach(state -> state.dirty = true);
+            Simulation.forceQuickUpdates = true;
         }
     }
 
     @Override
     public void onBreak() {
-        this.spawnDrops();
         super.onBreak();
+        this.spawnDrops();
     }
 
     public void spawnDrops() {
         this.spawnDrops(new Vec3d(this.getPos()));
     }
 
-    public void spawnDrops(Vec3d pos) {
-        if (this.getWorld().isServer) {
-            if (this.drops != null && this.drops.size() != 0) {
-                for (ItemStack drop : this.drops) {
-                    this.getWorld().dropItem(drop, pos);
-                }
-                this.drops = new ArrayList<>();
-            }
-        }
+    private void spawnDrops(Vec3d pos) {
+        if (!this.getWorld().isServer) return;
+
+        if (this.drops == null) return;
+        if (this.drops.isEmpty()) return;
+
+        this.drops.forEach(drop -> this.getWorld().dropItem(drop, pos));
+        this.drops = new ArrayList<>();
     }
 
     @Override
     public boolean clacks() {
-        if (this.info == null) {
-            return false;
-        }
+        if (this.info == null) return false;
         return DefinitionManager.getTrack(this.info.settings.track).clack;
     }
 
@@ -237,6 +231,11 @@ public class TileRail extends TileRailBase {
             return false;
         }
         return DefinitionManager.getTrack(this.info.settings.track).cog;
+    }
+
+    @Override
+    public boolean isFlexible() {
+        return super.isFlexible();
     }
 
     private static class DropsMapper implements TagMapper<List<ItemStack>> {

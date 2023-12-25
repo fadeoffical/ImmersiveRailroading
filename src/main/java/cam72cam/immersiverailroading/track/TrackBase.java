@@ -29,7 +29,6 @@ public abstract class TrackBase {
         this.block = block;
     }
 
-    @SuppressWarnings("deprecation")
     public boolean canPlaceTrack() {
         Vec3i pos = this.getPos();
 

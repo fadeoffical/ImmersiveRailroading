@@ -93,7 +93,7 @@ public class RailInfo {
         if (this.customInfo.control != null) {
             id += this.customInfo.control;
         }
-        if (this.settings.type == TrackItems.TURNTABLE) {
+        if (this.settings.type == TrackType.TURNTABLE) {
             id += Config.ConfigBalance.AnglePlacementSegmentation;
             id += this.itemHeld;
         }
@@ -318,13 +318,13 @@ public class RailInfo {
                 return null;
             }
 
-            TrackItems type = TrackItems.valueOf(nbt.getString("type"));
+            TrackType type = TrackType.valueOf(nbt.getString("type"));
             int length = nbt.getInteger("length");
             int quarters = nbt.getInteger("turnQuarters");
             ItemStack railBed = new ItemStack(nbt.get("railBed"));
             Gauge gauge = Gauge.getClosestGauge(nbt.getDouble("gauge"));
 
-            if (type == TrackItems.SWITCH) {
+            if (type == TrackType.SWITCH) {
                 quarters = 4;
             }
 
@@ -341,7 +341,7 @@ public class RailInfo {
             SwitchState switchForced = SwitchState.values()[nbt.getInteger("switchForced")];
             double tablePos = nbt.getDouble("tablePos");
 
-            RailSettings settings = new RailSettings(gauge, "default", type, length, quarters / 4F * 90, 1, TrackPositionType.FIXED, type == TrackItems.SLOPE ? TrackSmoothing.NEITHER : TrackSmoothing.BOTH, TrackDirection.NONE, railBed, cam72cam.mod.item.ItemStack.EMPTY, false, false);
+            RailSettings settings = new RailSettings(gauge, "default", type, length, quarters / 4F * 90, 1, TrackPositionType.FIXED, type == TrackType.SLOPE ? TrackSmoothing.NEITHER : TrackSmoothing.BOTH, TrackDirection.NONE, railBed, cam72cam.mod.item.ItemStack.EMPTY, false, false);
             return new RailInfo(settings, placementInfo, null, switchState, switchForced, tablePos);
         }
     }

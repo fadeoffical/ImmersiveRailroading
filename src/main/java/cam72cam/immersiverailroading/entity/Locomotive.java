@@ -598,8 +598,8 @@ public abstract class Locomotive extends FreightTank {
         return this.throttle;
     }
 
-    public void setThrottle(float newThrottle) {
-        this.setRealThrottle(newThrottle);
+    public void setThrottle(float throttle) {
+        this.setRealThrottle(throttle);
         if (this.getDefinition().muliUnitCapable) {
             this.mapTrain(this, true, false, this::copySettings);
         }

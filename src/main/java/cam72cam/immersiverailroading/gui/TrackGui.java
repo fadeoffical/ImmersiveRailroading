@@ -54,7 +54,7 @@ public class TrackGui implements IScreen {
     private final RailSettings.Mutable settings;
 
     private ListSelector<Gauge> gaugeSelector;
-    private ListSelector<TrackItems> typeSelector;
+    private ListSelector<TrackType> typeSelector;
     private ListSelector<TrackDefinition> trackSelector;
     private ListSelector<ItemStack> railBedSelector;
     private ListSelector<ItemStack> railBedFillSelector;
@@ -99,7 +99,7 @@ public class TrackGui implements IScreen {
                 return false;
             }
             int max = 1000;
-            if (this.settings.getType() == TrackItems.TURNTABLE) {
+            if (this.settings.getType() == TrackType.TURNTABLE) {
                 max = BuilderTurnTable.maxLength(this.settings.getGauge());
             }
             if (val > 0 && val <= max) {
@@ -120,7 +120,7 @@ public class TrackGui implements IScreen {
             public void onClick(Gauge gauge) {
                 TrackGui.this.settings.setGauge(gauge);
                 TrackGui.this.gaugeButton.setText(GuiText.SELECTOR_GAUGE.translate(TrackGui.this.settings.getGauge()));
-                if (TrackGui.this.settings.getType() == TrackItems.TURNTABLE) {
+                if (TrackGui.this.settings.getType() == TrackType.TURNTABLE) {
                     TrackGui.this.lengthInput.setText("" + Math.min(Integer.parseInt(TrackGui.this.lengthInput.getText()), BuilderTurnTable.maxLength(TrackGui.this.settings.getGauge()))); // revalidate
                 }
             }
@@ -133,20 +133,20 @@ public class TrackGui implements IScreen {
         };
         ytop += height;
 
-        this.typeSelector = new ListSelector<TrackItems>(screen, width, 100, height, this.settings.getType(),
-                Arrays.stream(TrackItems.values())
-                        .filter(i -> i != TrackItems.CROSSING)
-                        .collect(Collectors.toMap(TrackItems::toString, g -> g, (u, v) -> u, LinkedHashMap::new))
+        this.typeSelector = new ListSelector<TrackType>(screen, width, 100, height, this.settings.getType(),
+                Arrays.stream(TrackType.values())
+                        .filter(i -> i != TrackType.CROSSING)
+                        .collect(Collectors.toMap(TrackType::toString, g -> g, (u, v) -> u, LinkedHashMap::new))
         ) {
             @Override
-            public void onClick(TrackItems option) {
+            public void onClick(TrackType option) {
                 TrackGui.this.settings.setType(option);
                 TrackGui.this.typeButton.setText(GuiText.SELECTOR_TYPE.translate(TrackGui.this.settings.getType()));
                 TrackGui.this.degreesSlider.setVisible(TrackGui.this.settings.getType().hasQuarters());
                 TrackGui.this.curvositySlider.setVisible(TrackGui.this.settings.getType().hasCurvosity());
                 TrackGui.this.smoothingButton.setVisible(TrackGui.this.settings.getType().hasSmoothing());
                 TrackGui.this.directionButton.setVisible(TrackGui.this.settings.getType().hasDirection());
-                if (TrackGui.this.settings.getType() == TrackItems.TURNTABLE) {
+                if (TrackGui.this.settings.getType() == TrackType.TURNTABLE) {
                     TrackGui.this.lengthInput.setText("" + Math.min(Integer.parseInt(TrackGui.this.lengthInput.getText()), BuilderTurnTable.maxLength(TrackGui.this.settings.getGauge()))); // revalidate
                 }
             }
@@ -351,7 +351,7 @@ public class TrackGui implements IScreen {
             RailInfo info = new RailInfo(
                     this.settings.immutable().with(rendered -> {
                         rendered.setLength(5);
-                        rendered.setType(TrackItems.STRAIGHT);
+                        rendered.setType(TrackType.STRAIGHT);
                     }),
                     new PlacementInfo(new Vec3d(0.5, 0, 0.5), TrackDirection.NONE, 0, null),
                     null, SwitchState.NONE, SwitchState.NONE, 0, true);
@@ -390,7 +390,7 @@ public class TrackGui implements IScreen {
             RailInfo info = new RailInfo(
                     this.settings.immutable().with(rendered -> {
                         rendered.setLength(3);
-                        rendered.setType(TrackItems.STRAIGHT);
+                        rendered.setType(TrackType.STRAIGHT);
                     }),
                     new PlacementInfo(new Vec3d(0.5, 0, 0.5), TrackDirection.NONE, 0, null),
                     null, SwitchState.NONE, SwitchState.NONE, 0, true);
@@ -437,17 +437,17 @@ public class TrackGui implements IScreen {
                     if (length < 5) {
                         length = 5;
                     }
-                    if (this.settings.getType() == TrackItems.TURNTABLE) {
+                    if (this.settings.getType() == TrackType.TURNTABLE) {
                         length = Math.min(25, Math.max(10, length));
                     }
                     b.setLength(length);
                 }),
                 new PlacementInfo(new Vec3d(0.5, 0, 0.5), this.settings.getDirection(), 0, null),
-                null, SwitchState.NONE, SwitchState.NONE, this.settings.getType() == TrackItems.TURNTABLE ? (this.frame / 2.0) % 360 : 0, true);
+                null, SwitchState.NONE, SwitchState.NONE, this.settings.getType() == TrackType.TURNTABLE ? (this.frame / 2.0) % 360 : 0, true);
 
         int length = info.settings.length;
         double scale = (GUIHelpers.getScreenWidth() / (length * 2.25)) * this.zoom;
-        if (this.settings.getType() == TrackItems.TURNTABLE) {
+        if (this.settings.getType() == TrackType.TURNTABLE) {
             scale /= 2;
         }
 
@@ -466,7 +466,7 @@ public class TrackGui implements IScreen {
                     break;
             }
         }
-        if (this.settings.getType() == TrackItems.CUSTOM) {
+        if (this.settings.getType() == TrackType.CUSTOM) {
             state.translate(-length / 2.0, 0, 0);
         }
         RailRender.get(info).renderRailModel(state);

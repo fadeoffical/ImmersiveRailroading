@@ -138,7 +138,7 @@ public class CastingGUI implements IScreen {
             data.write();
         } else if (this.currentItem.is(IRItems.ITEM_AUGMENT)) {
             ItemRailAugment.Data data = new ItemRailAugment.Data(this.currentItem);
-            data.gauge = this.gauge;
+            data.setGauge(this.gauge);
             data.write();
         } else if (this.currentItem.is(IRItems.ITEM_ROLLING_STOCK)) {
             ItemRollingStock.Data data = new ItemRollingStock.Data(this.currentItem);

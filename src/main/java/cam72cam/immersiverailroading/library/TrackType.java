@@ -2,7 +2,8 @@ package cam72cam.immersiverailroading.library;
 
 import cam72cam.mod.text.TextUtil;
 
-public enum TrackItems {
+// todo: rename to smth better like TrackType or smthn
+public enum TrackType {
     STRAIGHT("straight", false, false, false, false),
     CROSSING("crossing", false, false, false, false),
     SLOPE("slope", false, false, true, false),
@@ -17,7 +18,7 @@ public enum TrackItems {
     private final boolean hasSmoothing;
     private final boolean hasDirection;
 
-    TrackItems(String name, boolean hasQuarters, boolean hasCurvosity, boolean hasSmoothing, boolean hasDirection) {
+    TrackType(String name, boolean hasQuarters, boolean hasCurvosity, boolean hasSmoothing, boolean hasDirection) {
         this.name = name;
         this.hasQuarters = hasQuarters;
         this.hasCurvosity = hasCurvosity;

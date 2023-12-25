@@ -22,7 +22,7 @@ public class ItemPaintBrush extends CustomItem {
     private static final Random rand = new Random(System.currentTimeMillis());
 
     public ItemPaintBrush() {
-        super(ImmersiveRailroading.MODID, "item_paint_brush");
+        super(ImmersiveRailroading.MOD_ID, "item_paint_brush");
 
         Recipes.shapedRecipe(this, 1,
                 Fuzzy.WOOL_BLOCK, Fuzzy.IRON_INGOT, Fuzzy.WOOD_STICK);

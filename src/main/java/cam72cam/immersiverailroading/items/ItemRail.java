@@ -14,7 +14,7 @@ import java.util.List;
 
 public class ItemRail extends CustomItem {
     public ItemRail() {
-        super(ImmersiveRailroading.MODID, "item_rail_part");
+        super(ImmersiveRailroading.MOD_ID, "item_rail_part");
     }
 
     @Override

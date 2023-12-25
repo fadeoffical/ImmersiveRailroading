@@ -1,8 +1,10 @@
 package cam72cam.immersiverailroading.tile;
 
-public class TileRailGag extends TileRailBase {
-    public void setFlexible(boolean flexible) {
-        this.flexible = flexible;
+public final class TileRailGag extends TileRailBase {
+
+    @Override
+    public boolean isFlexible() {
+        return true;
     }
 
     public double getRenderDistance() {

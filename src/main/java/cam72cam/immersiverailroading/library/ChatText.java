@@ -21,6 +21,7 @@ public enum ChatText {
     BUILD_MISSING("build.missing"),
     SET_AUGMENT_FILTER("augment.set"),
     RESET_AUGMENT_FILTER("augment.reset"),
+    UNSUPPORTED_AUGMENT_FILTER("augment.unsupported"),
     WOOD_PLANKS("misc.wood_planks"),
     INVALID_BLOCK("build.invalid_block"),
     RADIO_LINK("radio.link"),

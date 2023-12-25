@@ -29,7 +29,7 @@ public class ItemSwitchKey extends CustomItem {
     public static final String LAST_USED_AT_KEY = "lastUsedAt";
 
     public ItemSwitchKey() {
-        super(ImmersiveRailroading.MODID, "item_switch_key");
+        super(ImmersiveRailroading.MOD_ID, "item_switch_key");
 
         Fuzzy steel = Fuzzy.STEEL_INGOT;
         IRFuzzy.registerSteelRecipe(this, 2,
@@ -167,7 +167,6 @@ public class ItemSwitchKey extends CustomItem {
                 player.sendMessage(ChatText.SWITCH_LOCKED.getMessage(newSwitchForcedState.toString()));
             }
 
-            return ClickResult.ACCEPTED;
         } else {
             if (world.isServer) {
                 data.clear();
@@ -178,8 +177,8 @@ public class ItemSwitchKey extends CustomItem {
                 player.sendMessage(ChatText.SWITCH_UNLOCKED.getMessage());
             }
 
-            return ClickResult.ACCEPTED;
         }
+        return ClickResult.ACCEPTED;
     }
 
     public static class Data extends ItemDataSerializer {

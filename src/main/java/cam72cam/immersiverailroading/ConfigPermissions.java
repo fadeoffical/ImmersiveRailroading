@@ -7,9 +7,11 @@ import cam72cam.mod.config.ConfigFile.Name;
 @Comment("Configuration File")
 @Name("Permissions")
 @File("immersiverailroading_permissions.cfg")
-public class ConfigPermissions {
+public final class ConfigPermissions {
+
     @Comment("If op should be required by default for these permissions, set the entry to true")
-    public static class Defaults {
+    public static final class Defaults {
+
         public static boolean LOCOMOTIVE_CONTROL = false;
         public static boolean BRAKE_CONTROL = false;
         public static boolean FREIGHT_INVENTORY = false;

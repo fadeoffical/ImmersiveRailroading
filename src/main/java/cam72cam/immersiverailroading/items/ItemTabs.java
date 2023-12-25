@@ -7,16 +7,16 @@ import cam72cam.mod.item.ItemStack;
 
 public final class ItemTabs {
 
-    public static final CreativeTab MAIN_TAB = new CreativeTab(ImmersiveRailroading.MODID + ".main", () -> new ItemStack(IRItems.ITEM_LARGE_WRENCH, 1));
+    public static final CreativeTab MAIN_TAB = new CreativeTab(ImmersiveRailroading.MOD_ID + ".main", () -> new ItemStack(IRItems.ITEM_LARGE_WRENCH, 1));
     public static CreativeTab LOCOMOTIVE_TAB;
     public static CreativeTab STOCK_TAB;
     public static CreativeTab PASSENGER_TAB;
     // public static CreativeTab COMPONENT_TAB;
 
     static {
-        LOCOMOTIVE_TAB = new CreativeTab(ImmersiveRailroading.MODID + ".locomotive", () -> getIcon(LOCOMOTIVE_TAB));
-        STOCK_TAB = new CreativeTab(ImmersiveRailroading.MODID + ".stock", () -> getIcon(STOCK_TAB));
-        PASSENGER_TAB = new CreativeTab(ImmersiveRailroading.MODID + ".passenger", () -> getIcon(PASSENGER_TAB));
+        LOCOMOTIVE_TAB = new CreativeTab(ImmersiveRailroading.MOD_ID + ".locomotive", () -> getIcon(LOCOMOTIVE_TAB));
+        STOCK_TAB = new CreativeTab(ImmersiveRailroading.MOD_ID + ".stock", () -> getIcon(STOCK_TAB));
+        PASSENGER_TAB = new CreativeTab(ImmersiveRailroading.MOD_ID + ".passenger", () -> getIcon(PASSENGER_TAB));
         // COMPONENT_TAB = new CreativeTab(ImmersiveRailroading.MODID + ".components", () -> getIcon(COMPONENT_TAB));
     }
 

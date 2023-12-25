@@ -139,7 +139,7 @@ public interface DataBlock {
 
         default Identifier asIdentifier() {
             String value = this.asString();
-            return value != null ? new Identifier(ImmersiveRailroading.MODID, new Identifier(value).getPath()) : null;
+            return value != null ? new Identifier(ImmersiveRailroading.MOD_ID, new Identifier(value).getPath()) : null;
         }
     }
 }

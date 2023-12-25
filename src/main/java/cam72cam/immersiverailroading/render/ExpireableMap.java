@@ -4,16 +4,15 @@ import java.util.*;
 
 public class ExpireableMap<K, V> {
 
-    private final Map<K, V> map = new HashMap<K, V>();
-    private final Map<K, Long> mapUsage = new HashMap<K, Long>();
+    private final Map<K, V> map = new HashMap<>();
+    private final Map<K, Long> mapUsage = new HashMap<>();
     private long lastTime = timeS();
 
     public V get(K key) {
         synchronized (this) {
             if (this.lastTime + this.lifespan() < timeS()) {
                 // clear unused
-                Set<K> ks = new HashSet<K>();
-                ks.addAll(this.map.keySet());
+                Set<K> ks = new HashSet<>(this.map.keySet());
                 for (K dk : ks) {
                     if (dk != key && this.mapUsage.get(dk) + this.lifespan() < timeS()) {
                         this.onRemove(dk, this.map.get(dk));
@@ -76,8 +75,7 @@ public class ExpireableMap<K, V> {
         synchronized (this) {
             if (this.lastTime + this.lifespan() < timeS()) {
                 // clear unused
-                Set<K> ks = new HashSet<K>();
-                ks.addAll(this.map.keySet());
+                Set<K> ks = new HashSet<>(this.map.keySet());
                 for (K dk : ks) {
                     if (this.mapUsage.get(dk) + this.lifespan() < timeS()) {
                         this.onRemove(dk, this.map.get(dk));

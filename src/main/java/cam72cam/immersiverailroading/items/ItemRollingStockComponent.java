@@ -23,7 +23,7 @@ import java.util.List;
 public class ItemRollingStockComponent extends BaseItemRollingStock {
 
     public ItemRollingStockComponent() {
-        super(ImmersiveRailroading.MODID, "item_rolling_stock_component");
+        super(ImmersiveRailroading.MOD_ID, "item_rolling_stock_component");
     }
 
     @Override

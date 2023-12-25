@@ -2,7 +2,7 @@ package cam72cam.immersiverailroading.track;
 
 import cam72cam.immersiverailroading.Config.ConfigBalance;
 import cam72cam.immersiverailroading.Config.ConfigDamage;
-import cam72cam.immersiverailroading.library.TrackItems;
+import cam72cam.immersiverailroading.library.TrackType;
 import cam72cam.immersiverailroading.thirdparty.trackapi.Track;
 import cam72cam.immersiverailroading.tile.TileRail;
 import cam72cam.immersiverailroading.tile.TileRailBase;
@@ -123,7 +123,7 @@ public abstract class BuilderBase {
                 if (!Track.isRail(this.world, main) && !this.world.isSnow(main)) {
                     this.world.setToAir(main);
                 }
-                if (this.info.settings.gauge.isModelGauge() && ConfigDamage.enableSideBlockClearing && this.info.settings.type != TrackItems.SLOPE && this.info.settings.type != TrackItems.TURNTABLE) {
+                if (this.info.settings.gauge.isModelGauge() && ConfigDamage.enableSideBlockClearing && this.info.settings.type != TrackType.SLOPE && this.info.settings.type != TrackType.TURNTABLE) {
                     for (Facing facing : Facing.HORIZONTALS) {
                         Vec3i pos = main.offset(facing);
                         if (!Track.isRail(this.world, pos)) {

@@ -1,6 +1,6 @@
 package cam72cam.immersiverailroading.render.item;
 
-import cam72cam.immersiverailroading.library.TrackItems;
+import cam72cam.immersiverailroading.library.TrackType;
 import cam72cam.immersiverailroading.render.ExpireableMap;
 import cam72cam.immersiverailroading.render.rail.RailRender;
 import cam72cam.immersiverailroading.tile.TileRailBase;
@@ -66,7 +66,7 @@ public class TrackBlueprintItemModel implements ItemRender.IItemModel {
         state.cull_face(false);
         state.lighting(false);
 
-        if (info.settings.type == TrackItems.TURN || info.settings.type == TrackItems.SWITCH) {
+        if (info.settings.type == TrackType.TURN || info.settings.type == TrackType.SWITCH) {
             state.translate(0, 0, -0.1 * (info.settings.degrees / 90 * 4));
         }
 
@@ -76,10 +76,10 @@ public class TrackBlueprintItemModel implements ItemRender.IItemModel {
 
 
         double scale = 0.95 / info.settings.length;
-        if (info.settings.type == TrackItems.CROSSING) {
+        if (info.settings.type == TrackType.CROSSING) {
             scale = 0.95 / 3;
         }
-        if (info.settings.type == TrackItems.TURNTABLE) {
+        if (info.settings.type == TrackType.TURNTABLE) {
             scale *= 0.25;
         }
         state.scale(-scale, -scale * 2, scale);

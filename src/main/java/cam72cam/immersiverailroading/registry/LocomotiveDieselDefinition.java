@@ -29,7 +29,7 @@ public class LocomotiveDieselDefinition extends LocomotiveDefinition {
 
     @Override
     protected Identifier defaultDataLocation() {
-        return new Identifier(ImmersiveRailroading.MODID, "rolling_stock/default/diesel.caml");
+        return new Identifier(ImmersiveRailroading.MOD_ID, "rolling_stock/default/diesel.caml");
     }
 
     @Override
@@ -72,8 +72,8 @@ public class LocomotiveDieselDefinition extends LocomotiveDefinition {
     @Override
     protected GuiBuilder getDefaultOverlay(DataBlock data) throws IOException {
         return this.readCabCarFlag(data) ?
-                GuiBuilder.parse(new Identifier(ImmersiveRailroading.MODID, "gui/default/cab_car.caml")) :
-                GuiBuilder.parse(new Identifier(ImmersiveRailroading.MODID, "gui/default/diesel.caml"));
+                GuiBuilder.parse(new Identifier(ImmersiveRailroading.MOD_ID, "gui/default/cab_car.caml")) :
+                GuiBuilder.parse(new Identifier(ImmersiveRailroading.MOD_ID, "gui/default/diesel.caml"));
     }
 
     //checks to see if horn is sustained, on by default

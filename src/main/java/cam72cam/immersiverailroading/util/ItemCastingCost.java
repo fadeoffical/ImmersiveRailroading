@@ -21,7 +21,7 @@ public final class ItemCastingCost {
         } else if (item.is(IRItems.ITEM_CAST_RAIL)) {
             cost = (int) Math.ceil(20 * new ItemCastRail.Data(item).gauge.scale());
         } else if (item.is(IRItems.ITEM_AUGMENT)) {
-            cost = (int) Math.ceil(8 * new ItemRailAugment.Data(item).gauge.scale());
+            cost = (int) Math.ceil(8 * new ItemRailAugment.Data(item).getGauge().scale());
             count = 8;
         } else if (IRFuzzy.steelBlockOrFallback().matches(item)) {
             cost = 9;

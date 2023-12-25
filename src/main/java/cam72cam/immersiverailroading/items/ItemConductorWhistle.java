@@ -26,7 +26,7 @@ public class ItemConductorWhistle extends CustomItem {
     private static final HashMap<UUID, Integer> cooldown = new HashMap<>();
 
     public ItemConductorWhistle() {
-        super(ImmersiveRailroading.MODID, "item_conductor_whistle");
+        super(ImmersiveRailroading.MOD_ID, "item_conductor_whistle");
 
         Fuzzy gold = Fuzzy.GOLD_INGOT;
         Recipes.shapedRecipe(this, 2, gold, gold, gold, gold, gold, gold);
@@ -59,7 +59,7 @@ public class ItemConductorWhistle extends CustomItem {
         double conductorDistance = Config.ConfigBalance.villagerConductorDistance;
         double soundDistance = conductorDistance * 1.2f;
         Vec3d playerPosition = player.getPosition();
-        SoundPacket packet = new SoundPacket(new Identifier(ImmersiveRailroading.MODID, "sounds/conductor_whistle.ogg"), playerPosition, Vec3d.ZERO, 0.7f, (float) (Math.random() / 4 + 0.75), (int) (soundDistance), 1, SoundPacket.PacketSoundCategory.WHISTLE);
+        SoundPacket packet = new SoundPacket(new Identifier(ImmersiveRailroading.MOD_ID, "sounds/conductor_whistle.ogg"), playerPosition, Vec3d.ZERO, 0.7f, (float) (Math.random() / 4 + 0.75), (int) (soundDistance), 1, SoundPacket.PacketSoundCategory.WHISTLE);
         packet.sendToAllAround(world, playerPosition, soundDistance);
 
         // todo: shouldn't this be a sphere or at least cylinder? current implementation is a cube which feels weird
